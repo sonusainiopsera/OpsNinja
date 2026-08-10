@@ -15,6 +15,10 @@
     "./messaging": {
       "import": "./dist/messaging/index.js",
       "types": "./dist/messaging/index.d.ts"
+    },
+    "./identity": {
+      "import": "./dist/identity/index.js",
+      "types": "./dist/identity/index.d.ts"
     }
   },
   "scripts": {

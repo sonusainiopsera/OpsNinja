@@ -41,6 +41,46 @@ Creates the full foundation schema for all core entities.
 
 - `ensure_monthly_partitions(table_name, months_ahead)` — idempotently creates N months of range partitions.
 
+### 0005_outbox_backoff.sql
+
+Additive migration for the outbox drain worker (WO-007).
+
+**Changes:** Adds `outbox_seq` (bigint sequence for ordering tiebreaker), `next_attempt_at`, and `status` check constraint (`pending|published|dead_letter`) to `outbox_events`. Updates `retention_policies` minimum for `audit_logs` to 12 months. Confirms `REVOKE UPDATE, DELETE ON audit_logs FROM app_user`.
+
+---
+
+### 0009_identity_rls.sql
+
+Identity persistence layer and Row-Level Security (WO-009).
+
+**New tables:**
+
+| Table | Scope | Notes |
+|---|---|---|
+| `roles` | Global | Canonical RBAC role catalog; no tenant_id; no RLS |
+| `permissions` | Global | Permission codes in `resource:action` format |
+| `role_permissions` | Global | Role→permission junction |
+| `user_roles` | Tenant-scoped | Normalized FK to `roles`; RLS policy `tenant_isolation` |
+| `refresh_sessions` | Tenant-scoped | Token stored as SHA-256; RLS applied |
+| `email_verification_tokens` | Nullable tenant | Nullable `tenant_id` for pre-bind signups; special RLS |
+| `pending_user_approvals` | Nullable tenant | Admin approval queue; nullable `tenant_id`; special RLS |
+
+**Schema expansions to existing tables:**
+
+- `users`: adds `email_normalized text` (unique index per tenant), `display_name text`, `user_type text CHECK (staff|portal|machine)`. The legacy `kind` column is retained.
+
+**RLS policies:** `ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECURITY` applied to all tenant-scoped tables (including tables from 0001). Policy predicate uses `app_current_tenant()` helper which:
+- Returns `NULL` (fail-closed) when `app.current_tenant` is unset or empty.
+- Returns `NULL` (fail-closed, no 500 error) when `app.current_tenant` is an invalid UUID string.
+
+**Application role:** Creates `app_user` (NOSUPERUSER, NOBYPASSRLS, NOLOGIN) and grants minimum DML on all identity and supporting tables. The role never has BYPASSRLS even in development.
+
+**Rollback story:** This migration is expand-only (no destructive DDL). Rolling back in production means:
+1. Revert the application to the prior release (the `app_user` role and RLS policies are additive; old code ignores the new tables).
+2. The `user_roles`, `refresh_sessions`, `email_verification_tokens`, and `pending_user_approvals` tables contain no data in a fresh deployment, so they can be dropped in a subsequent cleanup migration if the WO is fully reverted.
+3. New columns on `users` (`email_normalized`, `display_name`, `user_type`) are nullable; old code that doesn't write them sees NULLs, which is safe.
+4. RLS policies can be dropped without data loss (`DROP POLICY IF EXISTS tenant_isolation ON <table>`).
+
 ---
 
 ## Known FK Exceptions

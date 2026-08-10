@@ -34,21 +34,27 @@ export const users = pgTable(
       .notNull()
       .references(() => tenants.id),
     id: uuid('id').notNull().defaultRandom(),
-    /**
-     * external_subject: the OIDC `sub` claim from the IdP, or null for
-     * portal users who use magic-link / email verification.
-     */
     externalSubject: text('external_subject'),
     email: text('email').notNull(),
     /**
-     * kind: staff | portal
-     * staff = internal agent/admin/manager/lead
-     * portal = external customer user
-     * Check constraint enforced in SQL migration.
+     * email_normalized: lowercase-trimmed email for case-insensitive
+     * uniqueness. Unique index (tenant_id, email_normalized) is in migration.
+     */
+    emailNormalized: text('email_normalized'),
+    displayName: text('display_name'),
+    /**
+     * kind: staff | portal (legacy column, retained for backward compat)
+     * Prefer user_type for new code.
      */
     kind: text('kind').notNull(),
     /**
-     * status: active | inactive | pending
+     * user_type: staff | portal | machine
+     * machine = integration principals (Jira sync worker, etc.).
+     * Check constraint enforced in SQL migration.
+     */
+    userType: text('user_type'),
+    /**
+     * status: active | pending | disabled
      * Check constraint enforced in SQL migration.
      */
     status: text('status').notNull().default('active'),
@@ -149,6 +155,7 @@ export const agentOrgScopes = pgTable(
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+export type UserType = 'staff' | 'portal' | 'machine';
 export type CustomerContact = typeof customerContacts.$inferSelect;
 export type NewCustomerContact = typeof customerContacts.$inferInsert;
 export type RoleAssignment = typeof roleAssignments.$inferSelect;
