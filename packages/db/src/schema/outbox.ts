@@ -1,0 +1,85 @@
+/**
+ * Outbox schema module.
+ *
+ * `outbox_events` implements the transactional outbox pattern: every state
+ * change inserts a row in the same database transaction as the business write.
+ * The outbox drain loop polls unpublished rows and publishes them to SNS/SQS,
+ * guaranteeing at-least-once delivery with no dual-write inconsistency.
+ *
+ * `retention_policies` is a data-driven configuration table consumed by the
+ * future purge job so retention months are not hardcoded in application logic.
+ *
+ * Columns align with the WOREF-007 outbox contract:
+ *   aggregate_type, aggregate_id, event_type, payload (jsonb),
+ *   created_at, published_at, attempts.
+ */
+import {
+  integer,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uuid,
+} from 'drizzle-orm/pg-core';
+import { tenants } from './tenants.js';
+
+export const outboxEvents = pgTable(
+  'outbox_events',
+  {
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id),
+    id: uuid('id').notNull().defaultRandom(),
+    /**
+     * aggregate_type: the domain entity type that produced the event, e.g.
+     * 'ticket', 'organization', 'comment'.
+     */
+    aggregateType: text('aggregate_type').notNull(),
+    /**
+     * aggregate_id: UUID of the specific entity instance.
+     */
+    aggregateId: uuid('aggregate_id').notNull(),
+    /**
+     * event_type: domain event name, e.g. 'ticket.created', 'ticket.resolved',
+     * 'comment.added'.
+     */
+    eventType: text('event_type').notNull(),
+    /**
+     * payload: full event envelope in JSONB. Consumers deserialise this
+     * according to event_type.
+     */
+    payload: jsonb('payload').notNull().default({}),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * published_at: set by the outbox drain loop after successful SNS publish.
+     * NULL means the event has not yet been published.
+     */
+    publishedAt: timestamp('published_at', { withTimezone: true }),
+    /**
+     * attempts: incremented on each publish attempt by the drain loop.
+     * Used to detect stuck events and trigger dead-letter handling.
+     */
+    attempts: integer('attempts').notNull().default(0),
+  },
+  (table) => [primaryKey({ columns: [table.tenantId, table.id] })],
+);
+
+/**
+ * retention_policies maps each high-volume table to its data retention
+ * period in months. The purge job reads this table to determine which
+ * monthly partitions to DETACH and drop.
+ *
+ * This table is NOT tenant-scoped because retention is a platform-wide
+ * operational concern set by the platform team.
+ */
+export const retentionPolicies = pgTable('retention_policies', {
+  tableName: text('table_name').primaryKey(),
+  retentionMonths: integer('retention_months').notNull().default(24),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type OutboxEvent = typeof outboxEvents.$inferSelect;
+export type NewOutboxEvent = typeof outboxEvents.$inferInsert;
+export type RetentionPolicy = typeof retentionPolicies.$inferSelect;
+export type NewRetentionPolicy = typeof retentionPolicies.$inferInsert;
