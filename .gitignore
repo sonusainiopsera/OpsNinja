@@ -1,0 +1,37 @@
+.claude/
+CLAUDE.md
+
+# Node
+node_modules/
+dist/
+build/
+.pnpm-store/
+
+# Environment files (secrets never committed)
+.env
+.env.*
+!.env.example
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# TypeScript
+*.tsbuildinfo
+
+# Vitest
+.vitest/

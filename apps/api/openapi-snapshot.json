@@ -1,0 +1,67 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "OpsNinja API",
+    "description": "Multi-tenant ITSM platform API. All endpoints under /api/v1 require a valid JWT unless noted.",
+    "version": "1",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "observability",
+      "description": "Health and readiness probes"
+    }
+  ],
+  "servers": [
+    {
+      "url": "/api/v1",
+      "description": "Versioned API base path"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "access-token": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    }
+  },
+  "paths": {
+    "/healthz": {
+      "get": {
+        "operationId": "HealthController_liveness",
+        "summary": "Liveness probe",
+        "description": "Always 200; no dependency checks.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "observability"
+        ]
+      }
+    },
+    "/readyz": {
+      "get": {
+        "operationId": "HealthController_readiness",
+        "summary": "Readiness probe",
+        "description": "200 when dependencies are healthy; 503 with dependency map otherwise.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "503": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "observability"
+        ]
+      }
+    }
+  }
+}
