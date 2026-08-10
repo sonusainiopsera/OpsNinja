@@ -11,17 +11,20 @@
  *
  * Columns align with the WOREF-007 outbox contract:
  *   aggregate_type, aggregate_id, event_type, payload (jsonb),
- *   created_at, published_at, attempts.
+ *   created_at, published_at, attempts, status, next_attempt_at, outbox_seq.
+ *
+ * Backoff and drain infrastructure added by 0005_outbox_backoff.sql.
  */
 import {
+  bigint,
   integer,
   jsonb,
   pgTable,
   primaryKey,
   text,
   timestamp,
-  uuid,
 } from 'drizzle-orm/pg-core';
+import { uuid } from 'drizzle-orm/pg-core';
 import { tenants } from './tenants.js';
 
 export const outboxEvents = pgTable(
@@ -52,15 +55,36 @@ export const outboxEvents = pgTable(
     payload: jsonb('payload').notNull().default({}),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     /**
-     * published_at: set by the outbox drain loop after successful SNS publish.
+     * published_at: set by the outbox drain loop after successful publish.
      * NULL means the event has not yet been published.
      */
     publishedAt: timestamp('published_at', { withTimezone: true }),
     /**
      * attempts: incremented on each publish attempt by the drain loop.
-     * Used to detect stuck events and trigger dead-letter handling.
+     * Used to detect stuck events and drive exponential backoff.
      */
     attempts: integer('attempts').notNull().default(0),
+    /**
+     * status: current processing state.
+     *   pending     — eligible for the drain loop.
+     *   published   — successfully delivered; drain loop ignores.
+     *   dead_letter — max attempts exceeded; requires operator replay.
+     * Added by migration 0005_outbox_backoff.sql.
+     */
+    status: text('status').notNull().default('pending'),
+    /**
+     * next_attempt_at: when the drain loop may next attempt delivery.
+     * NULL means "eligible immediately" (new rows).
+     * Set to now() + backoff_seconds after a failed attempt.
+     * Added by migration 0005_outbox_backoff.sql.
+     */
+    nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }),
+    /**
+     * outbox_seq: monotonic sequence for per-aggregate ordering tiebreaker.
+     * Breaks ties when two events share the same created_at timestamp.
+     * Added by migration 0005_outbox_backoff.sql.
+     */
+    outboxSeq: bigint('outbox_seq', { mode: 'number' }).notNull().default(0),
   },
   (table) => [primaryKey({ columns: [table.tenantId, table.id] })],
 );
@@ -83,3 +107,6 @@ export type OutboxEvent = typeof outboxEvents.$inferSelect;
 export type NewOutboxEvent = typeof outboxEvents.$inferInsert;
 export type RetentionPolicy = typeof retentionPolicies.$inferSelect;
 export type NewRetentionPolicy = typeof retentionPolicies.$inferInsert;
+
+/** Outbox event status values. */
+export type OutboxStatus = 'pending' | 'published' | 'dead_letter';
