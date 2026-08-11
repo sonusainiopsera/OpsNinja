@@ -17,6 +17,7 @@
     "@nestjs/platform-express": "^10.4.0",
     "@nestjs/config": "^3.3.0",
     "@opsninja/db": "*",
+    "@opsninja/filter-compiler": "*",
     "cookie-parser": "^1.4.7",
     "drizzle-orm": "^0.38.0",
     "ioredis": "^5.4.1",

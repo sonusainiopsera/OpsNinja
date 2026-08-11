@@ -56,3 +56,10 @@
 - **Files:** 36 (+2133/-0)
 - **Duration:** 1023ss
 - **Approach:** Built the portal shell as a structurally distinct Next.js 15 App Router application. The shell composes PortalHeader (org logo + initials fallback, read-only OrgScopePill, HelpLink, theme toggle, PortalUserMenu) + PortalTabs (route-driven via usePathname, aria-current, keyboard nav) + CsatBanner (role=status, SSR-safe localStorage dismissal per survey id) + PortalFooter (legal/support links). Portal isolation is mechanical, not conventional: ESLint no-restricted-imports blocks root barrel and all agent-only paths at lint time; scripts/assert-bundle-isolation.ts scans .next/ chunks against a deny-list at build time. All portal components import exclusively from @opsninja/ui-kit/portal (the portal-safe subset). CSP is stricter than the agent app with no unsafe-inline for scripts, frame-ancestors none, X-Content-Type-Options, and Referrer-Policy.
+
+## WO-038: User Story: WO-038 - Allow-Listed Saved View Filter AST Compiler
+- **Status:** completed
+- **Commit:** `c48493f`
+- **Files:** 26 (+2786/-1)
+- **Duration:** 917ss
+- **Approach:** Delivered @opsninja/filter-compiler as a self-contained workspace package with no framework dependencies (no NestJS, no Drizzle, no @opsninja/db). The core security guarantee is that compileToPredicate emits only $n positional placeholders — user-supplied values are never interpolated into the sql string. The field registry is the single declarative allow-list: unknown fields and operator/field mismatches are impossible to persist because they are rejected at parse time with typed ValidationResult errors. tag_id and affected_area use EXISTS subqueries to prevent M:N row multiplication. Relative date tokens resolve against an injected Clock so tests are fully deterministic. computeSignature produces a canonical SHA-256 hash (sorted keys, version-prefixed) suitable as a Redis cache key. ViewsService and ReportingService are the sole API consumers — both delegate to parseFilterAst + compileToPredicate, never build filter SQL themselves.

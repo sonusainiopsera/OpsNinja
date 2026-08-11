@@ -26,6 +26,7 @@ module.exports = {
       './tsconfig.base.json',
       './apps/api/tsconfig.json',
       './packages/db/tsconfig.json',
+      './packages/filter-compiler/tsconfig.json',
     ],
     tsconfigRootDir: __dirname,
   },
@@ -92,6 +93,34 @@ module.exports = {
                 message:
                   'Direct database pool/client imports are restricted to apps/api/src/data. ' +
                   'Use TenantRepository subclasses or withTenantTransaction instead.',
+              },
+            ],
+          },
+        ],
+      },
+    },
+
+    // -----------------------------------------------------------------------
+    // Filter-compiler boundary: ticket/views/reporting modules must not import
+    // @opsninja/filter-compiler internals directly — only through the public
+    // index. This prevents bypassing validation by calling compile() directly.
+    // -----------------------------------------------------------------------
+    {
+      files: [
+        'apps/api/src/modules/views/**/*.ts',
+        'apps/api/src/modules/reporting/**/*.ts',
+        'apps/api/src/modules/tickets/**/*.ts',
+      ],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            patterns: [
+              {
+                group: ['@opsninja/filter-compiler/src/*'],
+                message:
+                  'Import from @opsninja/filter-compiler (public index) only, not internal paths. ' +
+                  'Use parseFilterAst + compileToPredicate from the package root.',
               },
             ],
           },

@@ -24,7 +24,9 @@
     "noImplicitReturns": true,
     "paths": {
       "@opsninja/db": ["./packages/db/src/index.ts"],
-      "@opsninja/db/*": ["./packages/db/src/*"]
+      "@opsninja/db/*": ["./packages/db/src/*"],
+      "@opsninja/filter-compiler": ["./packages/filter-compiler/src/index.ts"],
+      "@opsninja/filter-compiler/*": ["./packages/filter-compiler/src/*"]
     }
   }
 }
