@@ -1,0 +1,45 @@
+{
+  "_comment": "Small profile seed fixture snapshot — generated with seed=42, profile=small",
+  "_version": "1.0.0",
+  "seed": 42,
+  "profile": "small",
+  "tenants": [
+    {
+      "slug": "alpha-corp",
+      "name": "Alpha Corporation",
+      "active": true
+    },
+    {
+      "slug": "beta-inc",
+      "name": "Beta Industries",
+      "active": true
+    },
+    {
+      "slug": "gamma-llc",
+      "name": "Gamma LLC",
+      "active": true
+    }
+  ],
+  "collisionMatrix": {
+    "sharedEmailLocalParts": ["alice", "bob", "charlie", "support", "admin"],
+    "sharedTicketSubjects": [
+      "Cannot log in to portal",
+      "Data export request",
+      "Billing discrepancy",
+      "Feature request: bulk export",
+      "Password reset not received"
+    ],
+    "sharedOrgNames": ["Acme Corp", "Global Tech", "Startup Inc"]
+  },
+  "expectedCounts": {
+    "tenants": 3,
+    "orgsPerTenant": 4,
+    "usersPerTenant": 7,
+    "ticketsPerTenant": 135,
+    "minTotalTickets": 400,
+    "minTotalComments": 2500,
+    "minPartitionLabels": 14
+  },
+  "allowedEmailDomains": ["example.com", "example.org", "test.invalid"],
+  "checksum": "00000000"
+}

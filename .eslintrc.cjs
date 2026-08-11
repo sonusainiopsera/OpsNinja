@@ -29,6 +29,7 @@ module.exports = {
       './packages/filter-compiler/tsconfig.json',
       './packages/observability/tsconfig.json',
       './packages/crypto/tsconfig.json',
+      './packages/test-seed/tsconfig.json',
       './apps/workers/notification-worker/tsconfig.json',
     ],
     tsconfigRootDir: __dirname,

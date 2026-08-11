@@ -30,7 +30,9 @@
       "@opsninja/observability": ["./packages/observability/src/index.ts"],
       "@opsninja/observability/*": ["./packages/observability/src/*"],
       "@opsninja/crypto": ["./packages/crypto/src/index.ts"],
-      "@opsninja/crypto/*": ["./packages/crypto/src/*"]
+      "@opsninja/crypto/*": ["./packages/crypto/src/*"],
+      "@opsninja/test-seed": ["./packages/test-seed/src/index.ts"],
+      "@opsninja/test-seed/*": ["./packages/test-seed/src/*"]
     }
   }
 }

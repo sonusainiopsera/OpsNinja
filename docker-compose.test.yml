@@ -1,0 +1,32 @@
+version: '3.9'
+
+# Test-only Docker Compose — provides a disposable PostgreSQL 16 instance
+# for integration tests and seed runs.
+#
+# Usage:
+#   docker compose -f docker-compose.test.yml up -d postgres-test
+#   DATABASE_URL=postgresql://opsninja_test:test_password@localhost:5433/opsninja_test \
+#     npm run seed:small -w @opsninja/test-seed
+
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: opsninja-postgres-test
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: opsninja_test
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_DB: opsninja_test
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres-test-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U opsninja_test -d opsninja_test']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-test-data:
+    driver: local
