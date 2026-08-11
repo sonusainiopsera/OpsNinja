@@ -287,3 +287,10 @@
 - **Files:** 8 (+614/-2)
 - **Duration:** 543ss
 - **Approach:** N/A
+
+## WO-076: User Story: WO-076 - Streaming CSV Export Worker To S3
+- **Status:** completed
+- **Commit:** `eda88ef`
+- **Files:** 6 (+477/-8)
+- **Duration:** 474ss
+- **Approach:** N/A
