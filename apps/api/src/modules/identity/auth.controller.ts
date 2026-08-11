@@ -31,6 +31,7 @@ import {
 import { Request, Response } from 'express';
 
 import { NoTenantContext } from '../../common/tenant/no-tenant-context.decorator';
+import { Public } from '../../common/auth/public.decorator';
 import { TokenService } from './services/token.service';
 import { SessionService } from './services/session.service';
 
@@ -38,6 +39,7 @@ export const REFRESH_COOKIE_NAME = 'refresh_token';
 export const REFRESH_COOKIE_PATH = '/api/v1/auth';
 export const REFRESH_TTL_SECONDS = 28_800; // 8 hours
 
+@Public()
 @NoTenantContext()
 @Controller('auth')
 export class AuthController {

@@ -134,6 +134,43 @@ export type RefreshSession = typeof refreshSessions.$inferSelect;
 export type NewRefreshSession = typeof refreshSessions.$inferInsert;
 
 // ---------------------------------------------------------------------------
+// Audit log (append-only, cross-cutting security events)
+//
+// Written by the auth guard BEFORE a tenant transaction is open, so this table
+// does NOT carry a FK to tenants — actor/tenant fields use text so pre-auth
+// failures (token missing, token invalid) can be recorded with null values.
+// No RLS policy: this table is managed by the app role directly.
+// ---------------------------------------------------------------------------
+
+export const auditLogs = pgTable(
+  'audit_logs',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    /** Nullable — unknown for pre-authentication failures. */
+    tenantId: text('tenant_id'),
+    /** Nullable — unknown for token-missing errors. */
+    actorId: text('actor_id'),
+    actorKind: text('actor_kind'),
+    /** Dot-namespaced type: 'auth.token_missing' | 'authz.permission_denied' | etc. */
+    eventType: text('event_type').notNull(),
+    outcome: text('outcome').notNull(),
+    requiredPermission: text('required_permission'),
+    route: text('route'),
+    ipAddress: text('ip_address'),
+    traceId: text('trace_id').notNull(),
+    metadata: jsonb('metadata'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    tenantCreatedIdx: index('audit_logs_tenant_created_idx').on(t.tenantId, t.createdAt),
+    traceIdx: index('audit_logs_trace_id_idx').on(t.traceId),
+  }),
+);
+
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type NewAuditLog = typeof auditLogs.$inferInsert;
+
+// ---------------------------------------------------------------------------
 // Schema type exports
 // ---------------------------------------------------------------------------
 

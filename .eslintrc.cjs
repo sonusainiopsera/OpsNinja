@@ -75,6 +75,8 @@ module.exports = {
         'apps/api/src/data/**/*.ts',
         // Identity repositories access the DB directly (auth runs outside tenant context).
         'apps/api/src/modules/identity/repositories/**/*.ts',
+        // Auth guard / audit service write to audit_logs before a tenant transaction opens.
+        'apps/api/src/common/auth/**/*.ts',
         'packages/db/src/**/*.ts',
         '**/*.spec.ts',
         '**/*.e2e-spec.ts',

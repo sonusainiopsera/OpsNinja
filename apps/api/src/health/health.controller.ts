@@ -7,7 +7,9 @@
 
 import { Controller, Get } from '@nestjs/common';
 import { NoTenantContext } from '../common/tenant/no-tenant-context.decorator';
+import { Public } from '../common/auth/public.decorator';
 
+@Public()
 @NoTenantContext()
 @Controller('health')
 export class HealthController {

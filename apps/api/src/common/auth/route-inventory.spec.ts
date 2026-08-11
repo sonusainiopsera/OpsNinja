@@ -1,0 +1,117 @@
+/**
+ * Route-inventory test — ensures all registered routes either declare a
+ * required permission or are explicitly marked @Public.
+ *
+ * An undeclared, non-public route would be denied by default by the AuthGuard.
+ * While this is the correct security posture, it means a new controller method
+ * would silently become unreachable without an obvious error. This test
+ * catches that at build time and forces the author to make an explicit choice.
+ *
+ * When a new controller is added, import it here and add it to CONTROLLERS.
+ */
+
+import 'reflect-metadata';
+
+import { REQUIRE_PERMISSION_KEY } from './require-permission.decorator';
+import { PUBLIC_KEY } from './public.decorator';
+import { HealthController } from '../../health/health.controller';
+import { AuthController } from '../../modules/identity/auth.controller';
+
+// NestJS sets 'path' and 'method' metadata keys on route handler methods.
+const PATH_METADATA = 'path';
+const METHOD_METADATA = 'method';
+
+/**
+ * All registered application controllers.
+ * !! ADD NEW CONTROLLERS HERE when they are created !!
+ */
+const CONTROLLERS: Function[] = [
+  HealthController,
+  AuthController,
+];
+
+// ---------------------------------------------------------------------------
+// Helper
+// ---------------------------------------------------------------------------
+
+interface UndeclaredRoute {
+  controller: string;
+  method: string;
+}
+
+function findUndeclaredRoutes(controllers: Function[]): UndeclaredRoute[] {
+  const undeclared: UndeclaredRoute[] = [];
+
+  for (const Controller of controllers) {
+    // Class-level @Public or @RequirePermission applies to all methods
+    const isPublicClass = Reflect.getMetadata(PUBLIC_KEY, Controller) as boolean | undefined;
+    const classPermissions = Reflect.getMetadata(REQUIRE_PERMISSION_KEY, Controller) as
+      | string[]
+      | undefined;
+
+    if (isPublicClass || (classPermissions && classPermissions.length > 0)) {
+      continue; // all methods in this controller are covered
+    }
+
+    const prototype = Controller.prototype as Record<string, unknown>;
+    const methodNames = Object.getOwnPropertyNames(prototype).filter(
+      (m) => m !== 'constructor',
+    );
+
+    for (const methodName of methodNames) {
+      const handler = prototype[methodName];
+      if (typeof handler !== 'function') continue;
+
+      // Only inspect methods that are route handlers (have NestJS routing metadata)
+      const hasPath = Reflect.getMetadata(PATH_METADATA, handler) !== undefined;
+      const hasHttpMethod = Reflect.getMetadata(METHOD_METADATA, handler) !== undefined;
+      if (!hasPath && !hasHttpMethod) continue;
+
+      const isPublicMethod = Reflect.getMetadata(PUBLIC_KEY, handler) as boolean | undefined;
+      const methodPermissions = Reflect.getMetadata(REQUIRE_PERMISSION_KEY, handler) as
+        | string[]
+        | undefined;
+
+      if (!isPublicMethod && (!methodPermissions || methodPermissions.length === 0)) {
+        undeclared.push({
+          controller: Controller.name,
+          method: methodName,
+        });
+      }
+    }
+  }
+
+  return undeclared;
+}
+
+// ---------------------------------------------------------------------------
+// Test
+// ---------------------------------------------------------------------------
+
+describe('Route inventory', () => {
+  it('all registered routes have either @RequirePermission or @Public', () => {
+    const undeclared = findUndeclaredRoutes(CONTROLLERS);
+
+    if (undeclared.length > 0) {
+      const formatted = undeclared
+        .map((r) => `  ${r.controller}.${r.method}`)
+        .join('\n');
+      throw new Error(
+        `The following route handlers lack a @RequirePermission or @Public declaration.\n` +
+          `Add @Public() to bypass auth, or @RequirePermission(...) to enforce RBAC:\n${formatted}`,
+      );
+    }
+
+    expect(undeclared).toHaveLength(0);
+  });
+
+  it('HealthController is @Public', () => {
+    const isPublic = Reflect.getMetadata(PUBLIC_KEY, HealthController) as boolean | undefined;
+    expect(isPublic).toBe(true);
+  });
+
+  it('AuthController is @Public', () => {
+    const isPublic = Reflect.getMetadata(PUBLIC_KEY, AuthController) as boolean | undefined;
+    expect(isPublic).toBe(true);
+  });
+});

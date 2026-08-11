@@ -1,49 +1,53 @@
 /**
- * Unit test asserting the global interceptor registration order in AppModule.
+ * Unit tests asserting the global guard and interceptor registration order in AppModule.
  *
- * The tenant-context interceptor reads request.user populated by the JWT auth
- * guard. If they were swapped, the interceptor would always see an empty principal
- * and reject every request with 500 TENANT_CONTEXT_MISSING.
+ * NestJS executes guards before interceptors. The AuthGuard (APP_GUARD) verifies
+ * the JWT and attaches request.user; TenantContextInterceptor (APP_INTERCEPTOR)
+ * reads request.user to open the tenant-scoped transaction.
  *
- * This test asserts that TenantContextInterceptor is registered as APP_INTERCEPTOR
- * in AppModule's providers metadata, preventing a silent inversion by a future
- * refactor.
+ * If either registration is silently removed by a future refactor, every request
+ * would either be unauthenticated (no guard) or fail with TENANT_CONTEXT_MISSING
+ * (no interceptor). These tests catch that regression at the metadata level without
+ * spinning up a full NestJS application.
  */
 
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { AuthGuard } from './common/auth/auth.guard';
 import { TenantContextInterceptor } from './common/tenant/tenant-context.interceptor';
 
-describe('AppModule registration order', () => {
+type ProviderMeta = { provide: symbol | string; useClass?: unknown };
+
+function getProviders(): ProviderMeta[] {
+  const meta = Reflect.getMetadata('providers', AppModule) as { providers?: ProviderMeta[] } | undefined;
+  return meta?.providers ?? (meta as unknown as ProviderMeta[]) ?? [];
+}
+
+describe('AppModule — global provider registration', () => {
+  // ── AuthGuard ─────────────────────────────────────────────────────────────
+
+  it('registers AuthGuard as a global APP_GUARD', () => {
+    const guardProviders = getProviders().filter((p) => p.provide === APP_GUARD);
+    expect(guardProviders.length).toBeGreaterThan(0);
+
+    const authGuardProvider = guardProviders.find((p) => p.useClass === AuthGuard);
+    expect(authGuardProvider).toBeDefined();
+  });
+
+  // ── TenantContextInterceptor ──────────────────────────────────────────────
+
   it('registers TenantContextInterceptor as a global APP_INTERCEPTOR', () => {
-    // Retrieve the providers metadata registered on the module class.
-    const moduleMetadata: { providers?: Array<{ provide: symbol; useClass?: unknown }> } =
-      Reflect.getMetadata('providers', AppModule) ?? {};
-
-    const interceptorProviders = (moduleMetadata.providers ?? []).filter(
-      (p) => p.provide === APP_INTERCEPTOR,
-    );
-
+    const interceptorProviders = getProviders().filter((p) => p.provide === APP_INTERCEPTOR);
     expect(interceptorProviders.length).toBeGreaterThan(0);
 
     const tenantInterceptorProvider = interceptorProviders.find(
       (p) => p.useClass === TenantContextInterceptor,
     );
-
     expect(tenantInterceptorProvider).toBeDefined();
   });
 
   it('TenantContextInterceptor is the first APP_INTERCEPTOR registered', () => {
-    const moduleMetadata: { providers?: Array<{ provide: symbol; useClass?: unknown }> } =
-      Reflect.getMetadata('providers', AppModule) ?? {};
-
-    const interceptorProviders = (moduleMetadata.providers ?? []).filter(
-      (p) => p.provide === APP_INTERCEPTOR,
-    );
-
-    // If there are multiple APP_INTERCEPTORs in the future, TenantContext must
-    // remain first because it opens the transaction and sets up the context
-    // that subsequent interceptors may depend on.
+    const interceptorProviders = getProviders().filter((p) => p.provide === APP_INTERCEPTOR);
     expect(interceptorProviders[0]?.useClass).toBe(TenantContextInterceptor);
   });
 });

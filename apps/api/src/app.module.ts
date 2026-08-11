@@ -1,18 +1,22 @@
 /**
  * Root application module.
  *
- * Global interceptor registration order is CRITICAL for correctness:
- *  1. APP_GUARD (JwtAuthGuard) — verifies JWT signature, attaches principal to request.user
+ * Global provider registration order is CRITICAL for correctness:
+ *  1. APP_GUARD (AuthGuard) — verifies JWT, resolves permissions, attaches principal to request.user
  *  2. APP_INTERCEPTOR (TenantContextInterceptor) — reads principal, opens tenant transaction
  *
- * A unit test in app.module.spec.ts asserts this order cannot be silently inverted
- * by a future refactor.
+ * NestJS executes guards before interceptors in the request pipeline, so this
+ * ordering is guaranteed by the framework regardless of registration order.
+ *
+ * Unit tests in app.module.spec.ts assert both registrations cannot be silently removed.
  */
 
 import { Module } from '@nestjs/common';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { TenantContextInterceptor } from './common/tenant/tenant-context.interceptor';
+import { AuthGuard } from './common/auth/auth.guard';
+import { AuthModule } from './common/auth/auth.module';
 import { RedisModule } from './common/redis/redis.module';
 import { HealthModule } from './health/health.module';
 import { IdentityModule } from './modules/identity/identity.module';
@@ -24,21 +28,22 @@ import { IdentityModule } from './modules/identity/identity.module';
       envFilePath: ['.env.local', '.env'],
     }),
     RedisModule,
-    HealthModule,
     IdentityModule,
+    AuthModule,
+    HealthModule,
   ],
   providers: [
-    // ---------------------------------------------------------------------------
-    // Global interceptor: TenantContextInterceptor
-    //
-    // Registered as APP_INTERCEPTOR so it applies to every route that is not
-    // decorated with @NoTenantContext. It must be listed AFTER the auth guard
-    // (APP_GUARD) because it reads request.user which the guard populates.
-    //
-    // TEST ASSERTION: apps/api/src/app.module.spec.ts verifies that
-    // TenantContextInterceptor appears as the first (and currently only)
-    // APP_INTERCEPTOR in the module metadata.
-    // ---------------------------------------------------------------------------
+    // ── Global guard: AuthGuard ───────────────────────────────────────────────
+    // Runs before every interceptor. Verifies the JWT, resolves RBAC permissions,
+    // and attaches request.user for TenantContextInterceptor.
+    // Routes decorated with @Public() bypass the guard entirely.
+    {
+      provide: APP_GUARD,
+      useClass: AuthGuard,
+    },
+    // ── Global interceptor: TenantContextInterceptor ──────────────────────────
+    // Reads request.user (set by AuthGuard), opens the tenant-scoped transaction,
+    // and wraps the handler inside withTenantTransaction.
     {
       provide: APP_INTERCEPTOR,
       useClass: TenantContextInterceptor,
