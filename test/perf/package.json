@@ -1,0 +1,33 @@
+{
+  "name": "@opsninja/perf",
+  "version": "0.0.1",
+  "private": true,
+  "description": "OpsNinja performance and SLO validation test suite",
+  "scripts": {
+    "test": "vitest run unit",
+    "test:watch": "vitest unit",
+    "load:agent-queue": "k6 run scenarios/agent-queue-read.ts",
+    "load:ticket-create": "k6 run scenarios/ticket-create.ts",
+    "load:dashboard": "k6 run scenarios/dashboard-realtime.ts",
+    "load:report-export": "k6 run scenarios/report-and-export.ts",
+    "load:all-steady": "k6 run --env PROFILE=steady_state scenarios/agent-queue-read.ts",
+    "load:all-peak": "k6 run --env PROFILE=peak scenarios/agent-queue-read.ts",
+    "stress:filter-compiler": "ts-node stress/saved-view-compiler.ts",
+    "stress:sla-contention": "ts-node stress/sla-scheduler-contention.ts",
+    "stress:outbox-drain": "ts-node stress/outbox-drain-throughput.ts",
+    "stress:export-memory": "ts-node stress/export-memory-envelope.ts",
+    "report:compare": "ts-node reporting/compare-to-baseline.ts"
+  },
+  "dependencies": {
+    "@opsninja/filter-compiler": "*",
+    "@opsninja/test-seed": "*",
+    "@opsninja/db": "*"
+  },
+  "devDependencies": {
+    "@types/k6": "^0.54.0",
+    "@types/node": "^22.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.0.0"
+  }
+}
