@@ -1,0 +1,5 @@
+/* OpsNinja UI Kit — Combined theme entry point.
+ * Import this single file to load both light and dark themes.
+ */
+@import './light.css';
+@import './dark.css';

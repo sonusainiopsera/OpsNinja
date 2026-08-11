@@ -1,0 +1,40 @@
+{
+  "name": "@opsninja/ui-kit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": ["**/*.css"],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./tailwind": {
+      "import": "./src/tailwind/preset.ts",
+      "types": "./src/tailwind/preset.ts"
+    },
+    "./themes.css": "./src/tokens/themes/themes.css",
+    "./light.css": "./src/tokens/themes/light.css",
+    "./dark.css": "./src/tokens/themes/dark.css"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@vitest/coverage-v8": "^2.1.8",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.8"
+  }
+}

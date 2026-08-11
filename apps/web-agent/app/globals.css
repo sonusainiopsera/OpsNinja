@@ -1,0 +1,9 @@
+@import '@opsninja/ui-kit/themes.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Ensure html defaults to light theme before themeScript runs */
+:root {
+  color-scheme: light dark;
+}

@@ -1,0 +1,85 @@
+/* OpsNinja UI Kit — Light Theme
+ * Generated from packages/ui-kit/src/tokens/semantic.ts LIGHT_TOKENS
+ * TOKENS_VERSION: 1.0.0
+ *
+ * All colours are WCAG 2.2 AA compliant for body text (4.5:1) and
+ * large text / UI boundaries (3:1) in the documented pairings.
+ */
+
+[data-theme="light"] {
+  --on-color-surface: #ffffff;
+  --on-color-surface-raised: #ffffff;
+  --on-color-surface-sunken: #f3f4f6;
+  --on-color-border-default: #e5e7eb;
+  --on-color-border-subtle: #f3f4f6;
+  --on-color-text-primary: #111827;
+  --on-color-text-secondary: #4b5563;
+  --on-color-text-muted: #6b7280;
+  --on-color-text-inverse: #ffffff;
+  --on-color-accent: #4f46e5;
+  --on-color-accent-hover: #4338ca;
+  --on-color-accent-fg: #ffffff;
+  --on-color-focus-ring: #818cf8;
+  --on-color-danger: #dc2626;
+  --on-color-warning: #d97706;
+  --on-color-success: #16a34a;
+  --on-color-info: #2563eb;
+  --on-color-sla-running: #16a34a;
+  --on-color-sla-warning: #d97706;
+  --on-color-sla-paused: #6b7280;
+  --on-color-sla-breached: #dc2626;
+}
+
+/* Forced-colors (Windows High Contrast) — degrade to system colours */
+@media (forced-colors: active) {
+  [data-theme="light"] {
+    --on-color-surface: Canvas;
+    --on-color-surface-raised: Canvas;
+    --on-color-surface-sunken: Canvas;
+    --on-color-border-default: ButtonBorder;
+    --on-color-border-subtle: ButtonBorder;
+    --on-color-text-primary: CanvasText;
+    --on-color-text-secondary: CanvasText;
+    --on-color-text-muted: GrayText;
+    --on-color-text-inverse: Canvas;
+    --on-color-accent: Highlight;
+    --on-color-accent-hover: Highlight;
+    --on-color-accent-fg: HighlightText;
+    --on-color-focus-ring: Highlight;
+    --on-color-danger: LinkText;
+    --on-color-warning: CanvasText;
+    --on-color-success: CanvasText;
+    --on-color-info: LinkText;
+    --on-color-sla-running: CanvasText;
+    --on-color-sla-warning: CanvasText;
+    --on-color-sla-paused: GrayText;
+    --on-color-sla-breached: LinkText;
+  }
+}
+
+/* Print always forces light theme */
+@media print {
+  :root {
+    --on-color-surface: #ffffff;
+    --on-color-surface-raised: #ffffff;
+    --on-color-surface-sunken: #f3f4f6;
+    --on-color-border-default: #e5e7eb;
+    --on-color-border-subtle: #f3f4f6;
+    --on-color-text-primary: #111827;
+    --on-color-text-secondary: #4b5563;
+    --on-color-text-muted: #6b7280;
+    --on-color-text-inverse: #ffffff;
+    --on-color-accent: #4f46e5;
+    --on-color-accent-hover: #4338ca;
+    --on-color-accent-fg: #ffffff;
+    --on-color-focus-ring: #818cf8;
+    --on-color-danger: #dc2626;
+    --on-color-warning: #d97706;
+    --on-color-success: #16a34a;
+    --on-color-info: #2563eb;
+    --on-color-sla-running: #16a34a;
+    --on-color-sla-warning: #d97706;
+    --on-color-sla-paused: #6b7280;
+    --on-color-sla-breached: #dc2626;
+  }
+}

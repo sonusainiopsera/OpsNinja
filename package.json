@@ -16,10 +16,14 @@
     "db:seed": "pnpm --filter @opsninja/db seed",
     "db:test": "pnpm --filter @opsninja/db test",
     "shared:test": "pnpm --filter @opsninja/shared test",
+    "ui-kit:test": "pnpm --filter @opsninja/ui-kit test",
+    "ui-kit:build": "pnpm --filter @opsninja/ui-kit build",
     "api:test": "pnpm --filter @opsninja/api test",
     "api:test:e2e": "pnpm --filter @opsninja/api test:e2e",
     "worker-outbox:test": "pnpm --filter @opsninja/worker-outbox test",
-    "test:all": "pnpm --filter ./packages/db test && pnpm --filter @opsninja/shared test && pnpm --filter @opsninja/api test && pnpm --filter @opsninja/worker-outbox test"
+    "web-agent:dev": "pnpm --filter @opsninja/web-agent dev",
+    "web-portal:dev": "pnpm --filter @opsninja/web-portal dev",
+    "test:all": "pnpm --filter ./packages/db test && pnpm --filter @opsninja/shared test && pnpm --filter @opsninja/ui-kit test && pnpm --filter @opsninja/api test && pnpm --filter @opsninja/worker-outbox test"
   },
   "devDependencies": {
     "typescript": "^5.6.0"

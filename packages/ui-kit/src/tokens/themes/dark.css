@@ -1,0 +1,58 @@
+/* OpsNinja UI Kit — Dark Theme
+ * Generated from packages/ui-kit/src/tokens/semantic.ts DARK_TOKENS
+ * TOKENS_VERSION: 1.0.0
+ *
+ * All colours are WCAG 2.2 AA compliant for body text (4.5:1) and
+ * large text / UI boundaries (3:1) in the documented pairings.
+ */
+
+[data-theme="dark"] {
+  --on-color-surface: #111827;
+  --on-color-surface-raised: #1f2937;
+  --on-color-surface-sunken: #030712;
+  --on-color-border-default: #374151;
+  --on-color-border-subtle: #1f2937;
+  --on-color-text-primary: #f9fafb;
+  --on-color-text-secondary: #9ca3af;
+  --on-color-text-muted: #9ca3af;
+  --on-color-text-inverse: #111827;
+  --on-color-accent: #818cf8;
+  --on-color-accent-hover: #a5b4fc;
+  --on-color-accent-fg: #111827;
+  --on-color-focus-ring: #a5b4fc;
+  --on-color-danger: #f87171;
+  --on-color-warning: #fbbf24;
+  --on-color-success: #4ade80;
+  --on-color-info: #60a5fa;
+  --on-color-sla-running: #4ade80;
+  --on-color-sla-warning: #fbbf24;
+  --on-color-sla-paused: #9ca3af;
+  --on-color-sla-breached: #f87171;
+}
+
+/* Forced-colors (Windows High Contrast) — degrade to system colours */
+@media (forced-colors: active) {
+  [data-theme="dark"] {
+    --on-color-surface: Canvas;
+    --on-color-surface-raised: Canvas;
+    --on-color-surface-sunken: Canvas;
+    --on-color-border-default: ButtonBorder;
+    --on-color-border-subtle: ButtonBorder;
+    --on-color-text-primary: CanvasText;
+    --on-color-text-secondary: CanvasText;
+    --on-color-text-muted: GrayText;
+    --on-color-text-inverse: Canvas;
+    --on-color-accent: Highlight;
+    --on-color-accent-hover: Highlight;
+    --on-color-accent-fg: HighlightText;
+    --on-color-focus-ring: Highlight;
+    --on-color-danger: LinkText;
+    --on-color-warning: CanvasText;
+    --on-color-success: CanvasText;
+    --on-color-info: LinkText;
+    --on-color-sla-running: CanvasText;
+    --on-color-sla-warning: CanvasText;
+    --on-color-sla-paused: GrayText;
+    --on-color-sla-breached: LinkText;
+  }
+}
