@@ -253,6 +253,15 @@ export const customFieldDefs = pgTable(
 
     displayOrder: integer('display_order').notNull().default(0),
 
+    /**
+     * Per-type validation constraints (added by WO-026).
+     * string:        { maxLength?: number, regex?: string }
+     * number:        { min?: number, max?: number, integer?: boolean }
+     * multi_select:  { maxItems?: number }
+     * Null means no additional constraints.
+     */
+    constraints: jsonb('constraints'),
+
     /** Soft-delete: set to archive. Null = active definition. */
     archivedAt: timestamp('archived_at', { withTimezone: true }),
 

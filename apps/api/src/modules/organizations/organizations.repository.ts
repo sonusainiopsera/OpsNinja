@@ -55,7 +55,7 @@ export class OrganizationsRepository extends TenantRepository {
     tenantId: string,
     query: ListOrganizationsQuery,
   ): Promise<PaginatedOrganizations> {
-    const { limit = 25, cursor, tier, region, status, q } = query;
+    const { limit = 25, cursor, tier, region, status, q, customField } = query;
     const fetchLimit = limit + 1; // fetch one extra to detect next page
 
     // Base conditions
@@ -72,6 +72,17 @@ export class OrganizationsRepository extends TenantRepository {
           ilike(organizationsRegistry.name, pattern),
           ilike(sql`COALESCE(${organizationsRegistry.slug}, '')`, pattern),
         ),
+      );
+    }
+    // JSONB containment filter via GIN index (WO-026)
+    // Format: "fieldKey:value" → custom_field_values @> '{"fieldKey":"value"}'::jsonb
+    if (customField) {
+      const colonIdx = customField.indexOf(':');
+      const cfKey = customField.slice(0, colonIdx);
+      const cfVal = customField.slice(colonIdx + 1);
+      const containsJson = JSON.stringify({ [cfKey]: cfVal });
+      conditions.push(
+        sql`${organizationsRegistry.customFieldValues} @> ${containsJson}::jsonb`,
       );
     }
 
@@ -377,6 +388,58 @@ export class OrganizationsRepository extends TenantRepository {
       id,
       'organization.reactivated',
       { previousStatus: 'inactive', newStatus: 'active', actorId, occurredAt: new Date().toISOString() },
+      traceId,
+    );
+
+    return rows[0]!;
+  }
+
+  // --------------------------------------------------------------------------
+  // Custom field values (WO-026)
+  // --------------------------------------------------------------------------
+
+  /**
+   * Atomically replace an organization's custom_field_values with validated,
+   * normalised values. Uses optimistic concurrency via the version column.
+   *
+   * Returns the updated org, or 'VERSION_CONFLICT' / 'NOT_FOUND'.
+   */
+  @Auditable()
+  async putCustomFieldValues(
+    tenantId: string,
+    id: string,
+    currentVersion: number,
+    normalizedValues: Record<string, unknown>,
+    traceId?: string,
+  ): Promise<OrganizationRegistry | 'VERSION_CONFLICT' | 'NOT_FOUND'> {
+    const rows = await this.tx
+      .update(organizationsRegistry)
+      .set({
+        customFieldValues: normalizedValues,
+        version: sql`${organizationsRegistry.version} + 1`,
+        updatedAt: sql`now()`,
+      })
+      .where(
+        and(
+          eq(organizationsRegistry.tenantId, tenantId),
+          eq(organizationsRegistry.id, id),
+          eq(organizationsRegistry.version, currentVersion),
+        ),
+      )
+      .returning();
+
+    if (rows.length === 0) {
+      // Could be not found or version conflict — check existence
+      const exists = await this.findById(tenantId, id);
+      return exists ? 'VERSION_CONFLICT' : 'NOT_FOUND';
+    }
+
+    await this.emitOutboxEvent(
+      tenantId,
+      'organization',
+      id,
+      'organization.custom_fields_updated',
+      { fieldCount: Object.keys(normalizedValues).length },
       traceId,
     );
 

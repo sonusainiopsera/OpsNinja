@@ -231,3 +231,10 @@
 - **Files:** 13 (+932/-12)
 - **Duration:** 421ss
 - **Approach:** N/A
+
+## WO-026: User Story: WO-026 - DevOps metadata custom field definitions and JSONB validation
+- **Status:** completed
+- **Commit:** `53c6314`
+- **Files:** 11 (+1324/-5)
+- **Duration:** 618ss
+- **Approach:** N/A

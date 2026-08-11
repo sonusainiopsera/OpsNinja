@@ -38,6 +38,28 @@ export const ListOrganizationsQuerySchema = z
      * SQL wildcards (%, _) in the search term are treated as literals.
      */
     q: z.string().trim().max(200).optional(),
+    /**
+     * JSONB containment filter on custom_field_values.
+     * Format: "fieldKey:value"  e.g. "cloudProvider:aws"
+     *
+     * Translates to:  custom_field_values @> '{"cloudProvider":"aws"}'::jsonb
+     * Uses the GIN index created in migration 0005.
+     *
+     * Only string values are supported via the query-string format; for complex
+     * types use the reporting API.
+     */
+    customField: z
+      .string()
+      .trim()
+      .max(400)
+      .refine(
+        (v) => {
+          const colon = v.indexOf(':');
+          return colon > 0 && colon < v.length - 1;
+        },
+        { message: 'customField must be in "fieldKey:value" format' },
+      )
+      .optional(),
   })
   .strict();
 

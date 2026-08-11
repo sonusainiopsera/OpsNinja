@@ -30,12 +30,17 @@ import type { ListOrganizationsQuery } from './dto/list-organizations.query';
 import type { PaginatedOrganizations } from './organizations.repository';
 import type { DeactivateOrganizationDto } from './dto/deactivate-organization.dto';
 import type { ReactivateOrganizationDto } from './dto/reactivate-organization.dto';
+import type { PutCustomFieldValuesDto } from './custom-fields/dto/custom-field-def.dto';
+import { CustomFieldDefsService } from './custom-fields/custom-field-defs.service';
 
 @Injectable()
 export class OrganizationsService {
   private readonly logger = new Logger(OrganizationsService.name);
 
-  constructor(private readonly repo: OrganizationsRepository) {}
+  constructor(
+    private readonly repo: OrganizationsRepository,
+    private readonly customFieldDefsService: CustomFieldDefsService,
+  ) {}
 
   // --------------------------------------------------------------------------
   // List
@@ -103,6 +108,21 @@ export class OrganizationsService {
 
     const slug = dto.slug ?? this.slugify(dto.name);
 
+    // Validate custom field values against active definitions (WO-026)
+    const cfValues = (dto.customFieldValues ?? {}) as Record<string, unknown>;
+    if (Object.keys(cfValues).length > 0) {
+      const cfResult = await this.customFieldDefsService.validateValues(tenantId, cfValues);
+      if (!cfResult.valid) {
+        throw new BadRequestException({
+          error: {
+            code: 'CUSTOM_FIELD_VALIDATION_FAILED',
+            message: 'One or more custom field values are invalid.',
+            details: cfResult.errors,
+          },
+        });
+      }
+    }
+
     const created = await this.repo.createOrganization(
       tenantId,
       {
@@ -110,7 +130,7 @@ export class OrganizationsService {
         slug,
         slaTier: dto.slaTier,
         region: dto.region ?? null,
-        customFieldValues: dto.customFieldValues ?? {},
+        customFieldValues: cfValues,
         status: 'active',
         version: 1,
       },
@@ -175,6 +195,23 @@ export class OrganizationsService {
     }
 
     const { version: suppliedVersion, ...changes } = dto;
+
+    // Validate custom field values if being updated (WO-026)
+    if (changes.customFieldValues !== undefined) {
+      const cfValues = changes.customFieldValues as Record<string, unknown>;
+      if (Object.keys(cfValues).length > 0) {
+        const cfResult = await this.customFieldDefsService.validateValues(tenantId, cfValues);
+        if (!cfResult.valid) {
+          throw new BadRequestException({
+            error: {
+              code: 'CUSTOM_FIELD_VALIDATION_FAILED',
+              message: 'One or more custom field values are invalid.',
+              details: cfResult.errors,
+            },
+          });
+        }
+      }
+    }
 
     const result = await this.repo.updateOrganization(
       tenantId,
