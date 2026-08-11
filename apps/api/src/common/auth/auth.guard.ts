@@ -39,6 +39,7 @@ import { REQUIRE_PERMISSION_KEY } from './require-permission.decorator';
 import { PermissionResolverService } from './permission-resolver.service';
 import { AuditService } from './audit.service';
 import { type Permission, MACHINE_PERMISSIONS } from './permission.catalog';
+import { PORTAL_ROUTE_KEY } from './portal-route.decorator';
 
 // ---------------------------------------------------------------------------
 // Shape of request.user after the guard succeeds.
@@ -51,6 +52,11 @@ export interface AuthenticatedPrincipal {
   roles: string[];
   /** Populated with [] here; org-scope WO fills this from Redis cache. */
   orgScopeIds: string[];
+  /**
+   * Present when principalKind === 'portal'. The single organisation this
+   * portal user is bound to, extracted from the bound_org_id JWT claim.
+   */
+  boundOrganizationId?: string;
 }
 
 declare module 'express' {
@@ -123,12 +129,15 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException({ code, message, traceId });
     }
 
-    // ── 4. Required permissions from metadata ─────────────────────────────────
+    // ── 4. Required permissions + portal route metadata ──────────────────────
     const requiredPermissions =
       this.reflector.getAllAndOverride<Permission[]>(REQUIRE_PERMISSION_KEY, [
         handler,
         controller,
       ]) ?? [];
+
+    const isPortalRoute =
+      this.reflector.getAllAndOverride<boolean>(PORTAL_ROUTE_KEY, [handler, controller]) ?? false;
 
     // ── 5. Deny by default (no declaration, not @Public) ──────────────────────
     if (requiredPermissions.length === 0) {
@@ -156,7 +165,7 @@ export class AuthGuard implements CanActivate {
 
     // ── 6. Audience / user-type mismatch check ─────────────────────────────────
     const userType = claims.user_type;
-    const audienceMismatch = this.checkAudienceMismatch(userType, requiredPermissions);
+    const audienceMismatch = this.checkAudienceMismatch(userType, requiredPermissions, isPortalRoute);
     if (audienceMismatch) {
       await this.auditService.writeAuthEvent({
         tenantId: claims.tenant_id,
@@ -231,7 +240,8 @@ export class AuthGuard implements CanActivate {
       tenantId: claims.tenant_id,
       principalKind: userType as AuthenticatedPrincipal['principalKind'],
       roles: claims.roles,
-      orgScopeIds: [],
+      orgScopeIds: claims.bound_org_id ? [claims.bound_org_id] : [],
+      boundOrganizationId: claims.bound_org_id,
     };
 
     this.logger.debug('AUTHZ_ALLOWED', {
@@ -257,21 +267,31 @@ export class AuthGuard implements CanActivate {
   }
 
   /**
-   * Returns true if the principal's user_type is incompatible with the
-   * required permissions. Examples:
-   *   - A machine token accessing a staff-only ticket route → mismatch
-   *   - A portal token accessing a machine:jira_sync route → mismatch
+   * Returns true when the principal's user_type is incompatible with the route.
+   *
+   * Surface separation rules:
+   *   - machine: may only satisfy machine:* permissions.
+   *   - portal:  may only be used on @PortalRoute() routes.
+   *   - staff:   may not be used on @PortalRoute() routes.
    */
   private checkAudienceMismatch(
     userType: string,
     requiredPermissions: Permission[],
+    isPortalRoute: boolean,
   ): boolean {
     if (userType === 'machine') {
-      // Machine tokens may ONLY satisfy machine:* permissions
       return requiredPermissions.some((p) => !MACHINE_PERMISSIONS.has(p));
     }
-    if (userType === 'portal' || userType === 'staff') {
-      // Non-machine tokens must NOT satisfy machine:* permissions
+    if (userType === 'portal') {
+      // Portal tokens are only valid on portal-surface routes.
+      if (!isPortalRoute) return true;
+      // Portal tokens cannot satisfy machine:* permissions.
+      return requiredPermissions.every((p) => MACHINE_PERMISSIONS.has(p));
+    }
+    if (userType === 'staff') {
+      // Staff tokens cannot be used on portal-surface routes.
+      if (isPortalRoute) return true;
+      // Staff tokens cannot satisfy machine:* permissions.
       return requiredPermissions.every((p) => MACHINE_PERMISSIONS.has(p));
     }
     return false;

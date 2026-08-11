@@ -41,6 +41,7 @@ interface PrincipalContextOverrides {
   roles?: string[];
   orgScopeIds?: string[];
   traceId?: string;
+  boundOrganizationId?: string;
 }
 
 function buildPrincipal(overrides: PrincipalContextOverrides): PrincipalContext {
@@ -51,6 +52,7 @@ function buildPrincipal(overrides: PrincipalContextOverrides): PrincipalContext 
     roles: overrides.roles ?? ['agent'],
     orgScopeIds: overrides.orgScopeIds ?? [],
     traceId: overrides.traceId ?? randomUUID(),
+    boundOrganizationId: overrides.boundOrganizationId,
   };
 }
 
@@ -112,6 +114,8 @@ export function tenantAAdminPrincipal(
 
 /**
  * Portal (customer end-user) principal for tenant A.
+ * boundOrganizationId is set to TENANT_A_ORG_ID by default — portal principals
+ * are always bound to exactly one organisation.
  */
 export function tenantAPortalPrincipal(
   overrides?: PrincipalContextOverrides,
@@ -122,6 +126,7 @@ export function tenantAPortalPrincipal(
     principalKind: 'portal',
     roles: ['portal_user'],
     orgScopeIds: [TENANT_A_ORG_ID],
+    boundOrganizationId: TENANT_A_ORG_ID,
     ...overrides,
   });
 }
@@ -138,6 +143,7 @@ export function tenantBPortalPrincipal(
     principalKind: 'portal',
     roles: ['portal_user'],
     orgScopeIds: [TENANT_B_ORG_ID],
+    boundOrganizationId: TENANT_B_ORG_ID,
     ...overrides,
   });
 }
@@ -188,6 +194,7 @@ export function buildMockRequest(
     principalKind: PrincipalKind;
     roles: string[];
     orgScopeIds: string[];
+    boundOrganizationId?: string;
   };
   url: string;
   method: string;
@@ -200,6 +207,7 @@ export function buildMockRequest(
       principalKind: principal.principalKind,
       roles: principal.roles,
       orgScopeIds: principal.orgScopeIds,
+      boundOrganizationId: principal.boundOrganizationId,
     },
     url: overrides?.url ?? '/api/v1/tickets',
     method: overrides?.method ?? 'GET',

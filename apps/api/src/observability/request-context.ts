@@ -50,6 +50,13 @@ export interface PrincipalContext {
   orgScopeIds: string[];
   /** Trace ID carried through the request for correlated logging. */
   traceId: string;
+  /**
+   * Present only on portal principals (principalKind === 'portal').
+   * The single organisation this portal user is bound to — set at token mint time.
+   * Repository predicates use this to scope data access; use isPortalPrincipal()
+   * to narrow the type and guarantee this field is present.
+   */
+  boundOrganizationId?: string;
 }
 
 /**

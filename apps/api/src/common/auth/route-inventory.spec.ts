@@ -16,6 +16,8 @@ import { REQUIRE_PERMISSION_KEY } from './require-permission.decorator';
 import { PUBLIC_KEY } from './public.decorator';
 import { HealthController } from '../../health/health.controller';
 import { AuthController } from '../../modules/identity/auth.controller';
+import { PortalTicketsController } from '../../modules/tickets/portal/portal-tickets.controller';
+import { PortalAttachmentsController } from '../../modules/tickets/portal/portal-attachments.controller';
 
 // NestJS sets 'path' and 'method' metadata keys on route handler methods.
 const PATH_METADATA = 'path';
@@ -28,6 +30,8 @@ const METHOD_METADATA = 'method';
 const CONTROLLERS: Function[] = [
   HealthController,
   AuthController,
+  PortalTicketsController,
+  PortalAttachmentsController,
 ];
 
 // ---------------------------------------------------------------------------
@@ -113,5 +117,17 @@ describe('Route inventory', () => {
   it('AuthController is @Public', () => {
     const isPublic = Reflect.getMetadata(PUBLIC_KEY, AuthController) as boolean | undefined;
     expect(isPublic).toBe(true);
+  });
+
+  it('PortalTicketsController is @PortalRoute', () => {
+    const { PORTAL_ROUTE_KEY } = require('./portal-route.decorator') as { PORTAL_ROUTE_KEY: string };
+    const isPortal = Reflect.getMetadata(PORTAL_ROUTE_KEY, PortalTicketsController) as boolean | undefined;
+    expect(isPortal).toBe(true);
+  });
+
+  it('PortalAttachmentsController is @PortalRoute', () => {
+    const { PORTAL_ROUTE_KEY } = require('./portal-route.decorator') as { PORTAL_ROUTE_KEY: string };
+    const isPortal = Reflect.getMetadata(PORTAL_ROUTE_KEY, PortalAttachmentsController) as boolean | undefined;
+    expect(isPortal).toBe(true);
   });
 });

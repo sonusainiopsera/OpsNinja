@@ -86,6 +86,10 @@ export const tickets = pgTable(
     status: text('status').notNull().default('open'),
     priority: text('priority').notNull().default('P3'),
     assigneeId: uuid('assignee_id').references(() => users.id),
+    /** AI-generated summary; null until processed. Gated by per-tenant portalAiSummaryEnabled. */
+    aiSummary: text('ai_summary'),
+    /** Structured tags from AI affected-area analysis; agent-only metadata. */
+    affectedAreaTags: jsonb('affected_area_tags'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     resolvedAt: timestamp('resolved_at', { withTimezone: true }),
@@ -96,6 +100,82 @@ export const tickets = pgTable(
     statusIdx: index('tickets_status_idx').on(t.tenantId, t.status),
   }),
 );
+
+// ---------------------------------------------------------------------------
+// Ticket comments
+// ---------------------------------------------------------------------------
+
+export const ticketComments = pgTable(
+  'ticket_comments',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
+    ticketId: uuid('ticket_id').notNull().references(() => tickets.id),
+    /** Denormalised from the parent ticket for efficient portal visibility predicates. */
+    organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+    authorId: uuid('author_id').references(() => users.id),
+    body: text('body').notNull(),
+    /** 'public' — visible to portal users; 'internal' — agents/staff only. */
+    visibility: text('visibility').notNull().default('public'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    tenantIdx: index('ticket_comments_tenant_id_idx').on(t.tenantId),
+    ticketIdx: index('ticket_comments_ticket_id_idx').on(t.ticketId),
+    visibilityIdx: index('ticket_comments_visibility_idx').on(t.ticketId, t.visibility),
+  }),
+);
+
+export type TicketComment = typeof ticketComments.$inferSelect;
+export type NewTicketComment = typeof ticketComments.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Ticket attachments
+// ---------------------------------------------------------------------------
+
+export const ticketAttachments = pgTable(
+  'ticket_attachments',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
+    ticketId: uuid('ticket_id').notNull().references(() => tickets.id),
+    /** Nullable — an attachment may belong to a standalone comment or be ticket-level. */
+    commentId: uuid('comment_id').references(() => ticketComments.id),
+    /** Denormalised for portal visibility check without a join. */
+    organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+    filename: text('filename').notNull(),
+    mimeType: text('mime_type').notNull(),
+    /** S3 object key; never exposed directly in responses. */
+    s3Key: text('s3_key').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    tenantIdx: index('ticket_attachments_tenant_id_idx').on(t.tenantId),
+    ticketIdx: index('ticket_attachments_ticket_id_idx').on(t.ticketId),
+    commentIdx: index('ticket_attachments_comment_id_idx').on(t.commentId),
+  }),
+);
+
+export type TicketAttachment = typeof ticketAttachments.$inferSelect;
+export type NewTicketAttachment = typeof ticketAttachments.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Tenant settings
+// ---------------------------------------------------------------------------
+
+export const tenantSettings = pgTable('tenant_settings', {
+  tenantId: uuid('tenant_id').primaryKey().references(() => tenants.id),
+  /**
+   * When true, AI-generated summaries are included in portal ticket responses.
+   * Defaults to false — closed-by-default, must be explicitly enabled per tenant.
+   */
+  portalAiSummaryEnabled: boolean('portal_ai_summary_enabled').notNull().default(false),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type TenantSettings = typeof tenantSettings.$inferSelect;
+export type NewTenantSettings = typeof tenantSettings.$inferInsert;
 
 // ---------------------------------------------------------------------------
 // Refresh sessions (auth audit table)

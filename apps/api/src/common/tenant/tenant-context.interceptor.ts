@@ -64,6 +64,11 @@ interface JwtPrincipal {
   roles?: string[];
   /** Organisation IDs this principal may access (staff: from cache; portal: single org). */
   orgScopeIds?: string[];
+  /**
+   * Present for portal principals — the single organisation bound at token mint time.
+   * Passed through to PrincipalContext.boundOrganizationId for repository predicates.
+   */
+  boundOrganizationId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -134,6 +139,7 @@ export class TenantContextInterceptor implements NestInterceptor {
       roles: jwtPrincipal.roles ?? [],
       orgScopeIds: jwtPrincipal.orgScopeIds ?? [],
       traceId,
+      boundOrganizationId: jwtPrincipal.boundOrganizationId,
     };
 
     // ------------------------------------------------------------------

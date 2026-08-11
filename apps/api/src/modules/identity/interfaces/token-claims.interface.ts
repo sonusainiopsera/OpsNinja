@@ -23,6 +23,11 @@ export interface AccessTokenClaims {
   org_scope_version: number;
   /** OpsNinja: principal population. */
   user_type: UserType;
+  /**
+   * OpsNinja: bound organisation UUID — present only on portal tokens.
+   * Portal users are linked to exactly one organisation at token mint time.
+   */
+  bound_org_id?: string;
   /** Registered: JWT ID — unique per token, used for audit. */
   jti: string;
   /** Registered: issued-at (unix seconds). */
@@ -45,6 +50,8 @@ export interface MintTokenInput {
   roles: string[];
   orgScopeVersion: number;
   userType: UserType;
+  /** Required when userType is 'portal'; the organisation the user is bound to. */
+  boundOrgId?: string;
 }
 
 /**

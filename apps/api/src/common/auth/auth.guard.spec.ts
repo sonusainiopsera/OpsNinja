@@ -27,6 +27,7 @@ import { AuditService } from './audit.service';
 import { TokenService } from '../../modules/identity/services/token.service';
 import { PUBLIC_KEY } from './public.decorator';
 import { REQUIRE_PERMISSION_KEY } from './require-permission.decorator';
+import { PORTAL_ROUTE_KEY } from './portal-route.decorator';
 import type { Permission } from './permission.catalog';
 import type { AccessTokenClaims } from '../../modules/identity/interfaces/token-claims.interface';
 import { TENANT_A_ID, TENANT_A_STAFF_USER_ID } from '../../../test/factories/principal-context.factory';
@@ -52,6 +53,13 @@ const MACHINE_CLAIMS: AccessTokenClaims = {
   ...AGENT_CLAIMS,
   user_type: 'machine',
   roles: ['machine'],
+};
+
+const PORTAL_CLAIMS: AccessTokenClaims = {
+  ...AGENT_CLAIMS,
+  user_type: 'portal',
+  roles: ['portal_user'],
+  bound_org_id: '00000000-0000-0000-0001-000000000010',
 };
 
 function buildContext(opts: {
@@ -301,6 +309,40 @@ describe('AuthGuard', () => {
       roles: ['agent'],
       orgScopeIds: [],
     });
+  });
+
+  // ── Case 12: Portal token on non-portal route ─────────────────────────────
+
+  it('throws 403 AUTHZ_AUDIENCE_MISMATCH for portal token on non-portal route', async () => {
+    reflector.getAllAndOverride.mockImplementation((key) => {
+      if (key === PUBLIC_KEY) return false;
+      if (key === REQUIRE_PERMISSION_KEY) return ['ticket:read'] as Permission[];
+      if (key === PORTAL_ROUTE_KEY) return false; // non-portal route
+      return undefined;
+    });
+    tokenService.verifyAccessToken.mockReturnValue(PORTAL_CLAIMS);
+
+    const ctx = buildContext({ bearerToken: 'portal.token' });
+    const caught = await guard.canActivate(ctx).catch((e: ForbiddenException) => e);
+    expect(caught).toBeInstanceOf(ForbiddenException);
+    expect((caught as ForbiddenException).getResponse()).toMatchObject({ code: 'AUTHZ_AUDIENCE_MISMATCH' });
+  });
+
+  // ── Case 13: Staff token on portal route ──────────────────────────────────
+
+  it('throws 403 AUTHZ_AUDIENCE_MISMATCH for staff token on portal route', async () => {
+    reflector.getAllAndOverride.mockImplementation((key) => {
+      if (key === PUBLIC_KEY) return false;
+      if (key === REQUIRE_PERMISSION_KEY) return ['ticket:read'] as Permission[];
+      if (key === PORTAL_ROUTE_KEY) return true; // portal route
+      return undefined;
+    });
+    tokenService.verifyAccessToken.mockReturnValue(AGENT_CLAIMS);
+
+    const ctx = buildContext({ bearerToken: 'staff.token' });
+    const caught = await guard.canActivate(ctx).catch((e: ForbiddenException) => e);
+    expect(caught).toBeInstanceOf(ForbiddenException);
+    expect((caught as ForbiddenException).getResponse()).toMatchObject({ code: 'AUTHZ_AUDIENCE_MISMATCH' });
   });
 
   // ── Audit events written on denial ───────────────────────────────────────
