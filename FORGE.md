@@ -469,3 +469,10 @@
 - **Files:** 17 (+3214/-3)
 - **Duration:** 801ss
 - **Approach:** N/A
+
+## WO-086: User Story: WO-086 - Portal self-service signup with verified business email domains
+- **Status:** completed
+- **Commit:** `3a1ab9c`
+- **Files:** 11 (+1880/-3)
+- **Duration:** 935ss
+- **Approach:** N/A

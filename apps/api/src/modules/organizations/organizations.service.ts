@@ -22,6 +22,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { pool } from '@opsninja/db';
 import { OrganizationsRepository, type OrganizationDetail } from './organizations.repository';
 import type { OrganizationRegistry } from '@opsninja/db';
 import type { CreateOrganizationDto } from './dto/create-organization.dto';
@@ -461,6 +462,64 @@ export class OrganizationsService {
       tenantId,
       domainResult.domain,
     );
+  }
+
+  // --------------------------------------------------------------------------
+  // Cross-tenant domain resolution (portal signup public interface)
+  // --------------------------------------------------------------------------
+
+  /**
+   * Resolve an email domain against all tenants' verified domain registrations.
+   *
+   * This is a DELIBERATE cross-tenant read used exclusively by the portal
+   * self-service signup flow. It bypasses RLS so it can scan all tenants'
+   * verified domains without knowing the tenant up-front.
+   *
+   * Module-boundary rule: the identity/portal-signup module MUST call this
+   * method rather than querying organization_verified_domains directly.
+   *
+   * Returns an array because two organisations in different tenants could
+   * theoretically claim the same domain. Callers must handle:
+   *   [] — unmatched → pending_admin_approval
+   *   [single] — auto-bind → email_verification or sso
+   *   [multi]  — ambiguous → pending_admin_approval + operator alert
+   *
+   * Only active organisations with a 'verified' domain status are returned.
+   *
+   * @param domain  Lowercase, punycode-normalised domain (e.g. 'acmecorp.com')
+   */
+  async findByVerifiedDomain(
+    domain: string,
+  ): Promise<Array<{ tenantId: string; organizationId: string; hasSsoConnection: boolean }>> {
+    const client = await pool.connect();
+    try {
+      // Cross-tenant lookup — deliberately bypasses RLS.
+      // Excludes deactivated organisations and unverified domain entries.
+      const result = await client.query<{
+        tenant_id: string;
+        organization_id: string;
+      }>(
+        `SELECT ovd.tenant_id, ovd.organization_id
+         FROM organization_verified_domains ovd
+         JOIN organizations o
+           ON o.id = ovd.organization_id
+          AND o.tenant_id = ovd.tenant_id
+         WHERE lower(ovd.domain) = lower($1)
+           AND (o.status IS NULL OR o.status = 'active')
+           AND (ovd.status IS NULL OR ovd.status = 'verified')
+         ORDER BY ovd.tenant_id, ovd.organization_id`,
+        [domain],
+      );
+
+      return result.rows.map((row) => ({
+        tenantId: row.tenant_id,
+        organizationId: row.organization_id,
+        // SSO connections not yet implemented — always false until WO-SSO lands.
+        hasSsoConnection: false,
+      }));
+    } finally {
+      client.release();
+    }
   }
 
   // --------------------------------------------------------------------------

@@ -19,10 +19,14 @@ import { SecurityModule } from '../../common/security/security.module';
 import { PortalVerificationController } from './portal-signup/portal-verification.controller';
 import { PortalVerificationService } from './portal-signup/portal-verification.service';
 import { TokenCodec } from './portal-signup/token.codec';
+import { OrganizationsModule } from '../organizations/organizations.module';
+import { PortalSignupController } from './portal-signup/portal-signup.controller';
+import { PortalSignupService } from './portal-signup/portal-signup.service';
+import { SignupThrottleGuard } from './guards/signup-throttle.guard';
 
 @Module({
-  imports: [ConfigModule, SecurityModule],
-  controllers: [AuthController, AdminAuthController, PortalVerificationController],
+  imports: [ConfigModule, SecurityModule, OrganizationsModule],
+  controllers: [AuthController, AdminAuthController, PortalVerificationController, PortalSignupController],
   providers: [
     TokenService,
     SessionService,
@@ -30,6 +34,8 @@ import { TokenCodec } from './portal-signup/token.codec';
     AuthAuditEmitter,
     PortalVerificationService,
     TokenCodec,
+    PortalSignupService,
+    SignupThrottleGuard,
     {
       provide: 'REFRESH_SESSION_REPOSITORY',
       useClass: RefreshSessionRepository,

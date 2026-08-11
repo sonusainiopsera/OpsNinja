@@ -11,6 +11,11 @@ import { ContactsController } from './contacts/contacts.controller';
 import { ContactsService } from './contacts/contacts.service';
 import { ContactsRepository } from './contacts/contacts.repository';
 import { ContactImportService } from './contacts/contact-import.service';
+import { CustomFieldDefsService } from './custom-fields/custom-field-defs.service';
+import { CustomFieldDefsRepository } from './custom-fields/custom-field-defs.repository';
+import { VerifiedDomainsService } from './verified-domains/verified-domains.service';
+import { VerifiedDomainsRepository } from './verified-domains/verified-domains.repository';
+import { DomainOwnershipVerifier } from './verified-domains/domain-ownership.verifier';
 
 @Module({
   imports: [AuthModule, AuditModule],
@@ -22,7 +27,12 @@ import { ContactImportService } from './contacts/contact-import.service';
     ContactsService,
     ContactsRepository,
     ContactImportService,
+    CustomFieldDefsService,
+    CustomFieldDefsRepository,
+    VerifiedDomainsService,
+    VerifiedDomainsRepository,
+    DomainOwnershipVerifier,
   ],
-  exports: [AgentScopesService, OrganizationsService, ContactsService],
+  exports: [AgentScopesService, OrganizationsService, ContactsService, VerifiedDomainsService],
 })
 export class OrganizationsModule {}
