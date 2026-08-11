@@ -12,6 +12,7 @@ import {
   text,
   timestamp,
   boolean,
+  integer,
   jsonb,
   index,
 } from 'drizzle-orm/pg-core';
@@ -95,6 +96,42 @@ export const tickets = pgTable(
     statusIdx: index('tickets_status_idx').on(t.tenantId, t.status),
   }),
 );
+
+// ---------------------------------------------------------------------------
+// Refresh sessions (auth audit table)
+//
+// Hot path: Redis is the authoritative store for live session data.
+// This table exists solely for audit retention (1-year policy) and
+// administrator-initiated revocation tooling.
+// ---------------------------------------------------------------------------
+
+export const refreshSessions = pgTable(
+  'refresh_sessions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
+    userId: uuid('user_id').notNull().references(() => users.id),
+    familyId: uuid('family_id').notNull(),
+    /** Last 8 hex chars of the token hash — for debugging only, not secret. */
+    tokenHashPreview: text('token_hash_preview'),
+    rotationCounter: integer('rotation_counter').notNull().default(0),
+    ipAddress: text('ip_address'),
+    userAgent: text('user_agent'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    lastRotatedAt: timestamp('last_rotated_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    revokeReason: text('revoke_reason'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (t) => ({
+    tenantIdx: index('refresh_sessions_tenant_id_idx').on(t.tenantId),
+    userIdx: index('refresh_sessions_user_id_idx').on(t.userId),
+    familyIdx: index('refresh_sessions_family_id_idx').on(t.familyId),
+  }),
+);
+
+export type RefreshSession = typeof refreshSessions.$inferSelect;
+export type NewRefreshSession = typeof refreshSessions.$inferInsert;
 
 // ---------------------------------------------------------------------------
 // Schema type exports

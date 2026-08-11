@@ -13,7 +13,9 @@ import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { TenantContextInterceptor } from './common/tenant/tenant-context.interceptor';
+import { RedisModule } from './common/redis/redis.module';
 import { HealthModule } from './health/health.module';
+import { IdentityModule } from './modules/identity/identity.module';
 
 @Module({
   imports: [
@@ -21,7 +23,9 @@ import { HealthModule } from './health/health.module';
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
     }),
+    RedisModule,
     HealthModule,
+    IdentityModule,
   ],
   providers: [
     // ---------------------------------------------------------------------------

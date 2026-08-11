@@ -9,6 +9,7 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
+import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 const PORT = parseInt(process.env['PORT'] ?? '8080', 10);
@@ -27,6 +28,9 @@ async function bootstrap(): Promise<void> {
       transform: true,
     }),
   );
+
+  // Cookie parser — required for httpOnly refresh token cookies.
+  app.use(cookieParser());
 
   // Versioned API prefix.
   app.setGlobalPrefix('api/v1');

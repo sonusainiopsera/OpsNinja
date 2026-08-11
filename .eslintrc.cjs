@@ -73,6 +73,8 @@ module.exports = {
       files: ['**/*.ts'],
       excludedFiles: [
         'apps/api/src/data/**/*.ts',
+        // Identity repositories access the DB directly (auth runs outside tenant context).
+        'apps/api/src/modules/identity/repositories/**/*.ts',
         'packages/db/src/**/*.ts',
         '**/*.spec.ts',
         '**/*.e2e-spec.ts',
