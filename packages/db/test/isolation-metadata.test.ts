@@ -56,6 +56,8 @@ const TENANT_SCOPED_TABLES: string[] = [
   // WO-073: Reporting tables
   'report_definitions',
   'export_jobs',
+  // WO-082: CSAT surveys
+  'csat_surveys',
 ];
 
 // Tables deliberately without per-row tenant_id (cross-tenant or system tables).

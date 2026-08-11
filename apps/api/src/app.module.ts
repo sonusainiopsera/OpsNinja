@@ -31,6 +31,7 @@ import { UsersModule } from './modules/users/users.module';
 import { ViewsModule } from './modules/views/views.module';
 import { SlaModule } from './modules/sla/sla.module';
 import { JiraModule } from './modules/jira/jira.module';
+import { CsatModule } from './modules/csat/csat.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { JiraModule } from './modules/jira/jira.module';
     ViewsModule,
     SlaModule,
     JiraModule,
+    CsatModule,
   ],
   providers: [
     // ── Global guard: AuthGuard ───────────────────────────────────────────────

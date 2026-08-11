@@ -456,6 +456,32 @@ export type {
 // export_jobs: async CSV/XLSX/PDF export job tracking.
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// CSAT module (WO-082)
+//
+// csat_surveys: single-use expiring survey records with hashed tokens.
+// Token bootstrap RLS policy allows CsatTokenGuard to resolve tenant from hash.
+// ---------------------------------------------------------------------------
+
+export { csatSurveys } from './schema/csat';
+
+export type {
+  CsatSurvey,
+  NewCsatSurvey,
+  CsatResponseSource,
+  CsatSummary,
+  CsatTokenBootstrap,
+  CsatResolvedToken,
+} from './schema/csat';
+
+// ---------------------------------------------------------------------------
+// Reporting module (WO-073)
+//
+// report_definitions: validated report definitions with filter ASTs,
+//   metric lists, group-by dimensions.
+// export_jobs: async CSV/XLSX/PDF export job tracking.
+// ---------------------------------------------------------------------------
+
 export { reportDefinitions } from './schema/report-definitions';
 
 export type {

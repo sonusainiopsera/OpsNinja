@@ -50,6 +50,10 @@ const REDACTED_KEYS = new Set([
   'client_secret',
   'apiToken',
   'api_token',
+  // CSAT Confidential-tier: free-text comment is respondent-identifying PII.
+  'comment',
+  'csatComment',
+  'csat_comment',
 ]);
 
 const REDACTED_EMAIL_PLACEHOLDER = '[REDACTED_EMAIL]';
