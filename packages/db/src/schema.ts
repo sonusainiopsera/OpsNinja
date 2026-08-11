@@ -405,6 +405,22 @@ export type {
 } from './schema/saved-views';
 
 // ---------------------------------------------------------------------------
+// Jira connections (WO-051)
+//
+// jira_connections: per-tenant Jira Cloud / Data Center connection aggregate.
+// Refresh tokens are never stored here; only an opaque secret_ref is held.
+// ---------------------------------------------------------------------------
+
+export { jiraConnections } from './schema/jira-connections';
+
+export type {
+  JiraConnection,
+  NewJiraConnection,
+  JiraConnectionState,
+  JiraAuthMethod,
+} from './schema/jira-connections';
+
+// ---------------------------------------------------------------------------
 // SLA module (WO-044)
 //
 // sla_policies, sla_policy_versions, sla_calendars,

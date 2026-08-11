@@ -30,6 +30,7 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
 import { UsersModule } from './modules/users/users.module';
 import { ViewsModule } from './modules/views/views.module';
 import { SlaModule } from './modules/sla/sla.module';
+import { JiraModule } from './modules/jira/jira.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { SlaModule } from './modules/sla/sla.module';
     UsersModule,
     ViewsModule,
     SlaModule,
+    JiraModule,
   ],
   providers: [
     // ── Global guard: AuthGuard ───────────────────────────────────────────────

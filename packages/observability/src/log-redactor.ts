@@ -37,6 +37,19 @@ const REDACTED_KEYS = new Set([
   'secret_ciphertext',
   'previousSecretCiphertext',
   'previous_secret_ciphertext',
+  // Jira OAuth credential fields — Restricted-tier (WO-051).
+  'token',
+  'accessToken',
+  'access_token',
+  'refreshToken',
+  'refresh_token',
+  'code',
+  'codeVerifier',
+  'code_verifier',
+  'clientSecret',
+  'client_secret',
+  'apiToken',
+  'api_token',
 ]);
 
 const REDACTED_EMAIL_PLACEHOLDER = '[REDACTED_EMAIL]';

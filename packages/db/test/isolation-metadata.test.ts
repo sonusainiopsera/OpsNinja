@@ -51,6 +51,8 @@ const TENANT_SCOPED_TABLES: string[] = [
   'sla_calendar_holidays',
   'sla_policies',
   'sla_policy_versions',
+  // WO-051: Jira connection table
+  'jira_connections',
 ];
 
 // Tables deliberately without per-row tenant_id (cross-tenant or system tables).

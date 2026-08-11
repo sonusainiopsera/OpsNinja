@@ -34,16 +34,15 @@ export const AUDIT_EXEMPTIONS: AuditExemption[] = [
     reason: 'OrganizationRepository does not exist yet — pending future WO for organizations module.',
   },
   {
-    key: 'JiraConnectionRepository.create',
-    reason: 'JiraConnectionRepository does not exist yet — pending Jira integration WO.',
-  },
-  {
-    key: 'JiraConnectionRepository.update',
-    reason: 'JiraConnectionRepository does not exist yet — pending Jira integration WO.',
-  },
-  {
     key: 'JiraFieldMappingRepository.upsert',
     reason: 'JiraFieldMappingRepository does not exist yet — pending Jira integration WO.',
+  },
+  // JiraConnectionsRepository.create/update/revoke — implemented in WO-051 with @Auditable
+  // updateState is exempt: it only updates token metadata (expiry, secretRef) during
+  // automatic token refresh — not a business-logic mutation, not user-initiated.
+  {
+    key: 'JiraConnectionsRepository.updateState',
+    reason: 'Token refresh metadata update (expiry, secretRef) — not a user-initiated mutation; audit via @Auditable on update() covers explicit admin changes.',
   },
   // SlaPoliciesRepository and SlaCalendarsRepository — implemented in WO-044 with @Auditable
   // ViewsRepository.create/update/softDelete — implemented in WO-039 with @Auditable

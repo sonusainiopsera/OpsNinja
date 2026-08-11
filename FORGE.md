@@ -154,3 +154,10 @@
 - **Files:** 20 (+2233/-8)
 - **Duration:** 785ss
 - **Approach:** Implemented the SLA configuration store end-to-end: (1) Drizzle schema for 5 tables with tenant_id-leading composite indexes; (2) expand-only migration 0007 with ENABLE/FORCE RLS, tenant_isolation_* policies, CHECK constraints for scope_type/priority/calendar_type/reminder thresholds/target minutes, unique partial index on active (tenant,scope,priority), and an append-only trigger on sla_policy_versions; (3) Zod strict DTOs with IANA timezone allow-list validation via Intl.supportedValuesOf, business_hours calendar zero-window rejection, duplicate holiday date rejection, and reminder-threshold superRefine; (4) TenantRepository subclasses with @Auditable on all write methods; (5) services with optimistic concurrency (ifMatchVersion → 409 on mismatch) and deactivate-idempotency guard (409 if already inactive), with version snapshot written atomically alongside each mutation; (6) RBAC-guarded controllers at /sla-policies and /sla-calendars under the global /api/v1 prefix; (7) idempotent P1–P4 provisional seed (targets_ratified=false); (8) unit DTO validation tests and DB characterisation tests covering RLS, constraints, append-only trigger, fail-closed, and cross-tenant isolation.
+
+## WO-051: User Story: WO-051 - Per-Tenant Jira Connection and Credential Vault
+- **Status:** completed
+- **Commit:** `d39151a`
+- **Files:** 23 (+1929/-8)
+- **Duration:** 1024ss
+- **Approach:** Implemented the full per-tenant Jira connection and credential vault as a NestJS module with four submodules: connections (CRUD + lifecycle), oauth (PKCE 3LO handshake), tokens (caching + single-flight refresh), and http (Jira API client). The Drizzle schema uses expand-only DDL with FORCE RLS, a global unique partial index on cloud_id to prevent cross-tenant binding, and @Auditable decorators on all write mutations. Credentials are never stored directly — the AwsSecretVaultAdapter envelope-encrypts with KMS and stores only the secret_ref in the DB. The JiraTokenProvider uses a Map<lockKey, Promise<string>> for single-flight refresh and Redis caching with 60s expiry skew.
