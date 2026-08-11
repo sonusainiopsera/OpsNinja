@@ -8,4 +8,26 @@
   },
   "include": ["src/**/*", "test/**/*"],
   "exclude": ["node_modules", "dist"]
+    "rootDir": ".",
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "@opsninja/shared": ["../../packages/shared/src/index.ts"],
+      "@opsninja/shared/*": ["../../packages/shared/src/*"]
+    }
+  },
+  "include": ["src/**/*", "test/**/*", "scripts/**/*"],
+  "exclude": ["node_modules", "dist"]
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "./",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "paths": {
+      "@opsninja/db": ["../../packages/db/src/index.ts"],
+      "@opsninja/db/*": ["../../packages/db/src/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test"]
 }

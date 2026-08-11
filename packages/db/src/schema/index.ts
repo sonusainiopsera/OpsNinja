@@ -19,3 +19,4 @@ export * from './ai-synthesis.js';
 export * from './idp-connections.js';
 export * from './tags.js';
 export * from './assignment-groups.js';
+export * from './tickets';

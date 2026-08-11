@@ -1,3 +1,40 @@
+.claude/
+CLAUDE.md
+
+# Node
+node_modules/
+dist/
+build/
+.pnpm-store/
+
+# Environment files (secrets never committed)
+.env
+.env.*
+!.env.example
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# TypeScript
+*.tsbuildinfo
+
+# Vitest
+.vitest/
 # Dependencies
 node_modules/
 .pnp
@@ -15,6 +52,19 @@ out/
 .env.*.local
 
 # Logs
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -58,3 +108,20 @@ playwright-report/
 
 # pnpm
 .pnpm-store/
+# Testing
+coverage/
+.nyc_output/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Turborepo
+.turbo/
