@@ -513,3 +513,27 @@ export type {
   ExportJobFormat,
   ExportJobStatus,
 } from './schema/export-jobs';
+
+// ---------------------------------------------------------------------------
+// Portal signup and verification (WO-087)
+//
+// portal_signup_requests: applicant records awaiting email verification
+// portal_verification_tokens: single-use HMAC-signed tokens (hash-only)
+// portal_users: activated portal contacts bound to tenant + org
+// ---------------------------------------------------------------------------
+
+export {
+  portalSignupRequests,
+  portalVerificationTokens,
+  portalUsers,
+} from './schema/portal-signup';
+
+export type {
+  PortalSignupRequest,
+  NewPortalSignupRequest,
+  PortalSignupStatus,
+  PortalVerificationToken,
+  NewPortalVerificationToken,
+  PortalUser,
+  NewPortalUser,
+} from './schema/portal-signup';

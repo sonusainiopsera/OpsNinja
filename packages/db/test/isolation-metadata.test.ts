@@ -60,6 +60,10 @@ const TENANT_SCOPED_TABLES: string[] = [
   'csat_surveys',
   // WO-084: Webhook delivery log (partitioned — parent table)
   'webhook_deliveries',
+  // WO-087: Portal signup and verification
+  'portal_signup_requests',
+  'portal_verification_tokens',
+  'portal_users',
 ];
 
 // Tables deliberately without per-row tenant_id (cross-tenant or system tables).

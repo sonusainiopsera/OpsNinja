@@ -33,6 +33,9 @@ const TEMPLATE_MANIFESTS: Record<string, TemplateManifest> = {
   'generic-notification': {
     allowedVariables: ['tenantName', 'ticketId', 'subject', 'portalUrl', 'year'],
   },
+  'portal_email_verification': {
+    allowedVariables: ['applicantName', 'organizationName', 'verificationLink', 'expiryHours'],
+  },
 };
 
 const PLATFORM_FALLBACK_TEMPLATE_KEY = 'generic-notification';

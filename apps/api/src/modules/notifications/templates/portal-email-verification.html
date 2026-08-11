@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verify your email — {{organizationName}}</title>
+</head>
+<body style="font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px;">
+  <table width="600" cellpadding="0" cellspacing="0" style="margin: 0 auto; background: #ffffff; border-radius: 8px; padding: 32px;">
+    <tr>
+      <td>
+        <h1 style="color: #1a1a1a; font-size: 20px; margin: 0 0 16px;">Verify your email address</h1>
+        <p style="color: #444; font-size: 15px; line-height: 1.6;">
+          Hi {{applicantName}},
+        </p>
+        <p style="color: #444; font-size: 15px; line-height: 1.6;">
+          You recently requested access to the <strong>{{organizationName}}</strong> support
+          portal. Click the button below to verify your email address and activate your account.
+        </p>
+        <p style="margin: 28px 0;">
+          <a href="{{verificationLink}}"
+             style="background: #2563eb; color: #ffffff; padding: 12px 24px; border-radius: 6px;
+                    text-decoration: none; font-size: 15px; font-weight: 600;">
+            Verify my email address
+          </a>
+        </p>
+        <p style="color: #666; font-size: 13px; line-height: 1.5;">
+          This link expires in <strong>{{expiryHours}} hours</strong>.
+          If you did not request portal access, you can safely ignore this email.
+        </p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 28px 0;" />
+        <p style="color: #999; font-size: 12px;">
+          For security, this link can only be used once. If you need a new link,
+          return to the sign-up page and click <em>Resend verification email</em>.
+        </p>
+        <p style="color: #999; font-size: 12px; margin-top: 24px;">
+          &copy; {{organizationName}}. Powered by OpsNinja.
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
