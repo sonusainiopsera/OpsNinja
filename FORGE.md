@@ -35,3 +35,10 @@
 - **Files:** 25 (+1662/-3)
 - **Duration:** 1269ss
 - **Approach:** Implemented portal visibility hardening via three interlocking layers: (1) AuthGuard audience enforcement (portal:* permissions require portal-audience token), (2) PortalVisibilityGuard validates principalKind=portal and orgScopeIds≥1 on every portal controller route, (3) repository-layer scoped-query predicates (portalTicketFilter applies org binding, portalCommentFilter applies visibility=public) with no bypass parameter. Portal responses are serialised only through explicit DTO mapper functions that structurally omit internal fields. AttachmentAccessService resolves the full attachment→comment→ticket chain and fails closed. TenantSettingsService gates AI summary exposure defaulting to disabled. Architecture tests scan source for entity spreads and portal DTO boundary violations.
+
+## WO-019: User Story: WO-019 - Deliver OpsNinja Domain Primitives and DataTable
+- **Status:** completed
+- **Commit:** `29a7b9e`
+- **Files:** 34 (+2620/-0)
+- **Duration:** 938ss
+- **Approach:** Created @opsninja/ui-kit from scratch as a React 19 + TypeScript strict package. Implemented the functional-core / imperative-shell pattern: computeRemaining is a pure clock-injected function with no side effects; SlaClockProvider owns the single shared 1s setInterval and aria-live region; all SlaCountdown instances subscribe via React context. Monotonic offset (performance.now captured on each server delta) corrects browser clock skew without trusting Date.now. SlaHint is a deliberately isolated file with no SlaCountdown import, enforced by a source-scan test. DataTable is a controlled headless grid with useGridKeyboardNavigation providing the full ARIA grid keyboard pattern as a separate hook.
