@@ -507,6 +507,18 @@ export type {
 } from './schema/portal-signup';
 
 // ---------------------------------------------------------------------------
+// jira_webhook_events: inbound Jira webhook envelopes (WO-054)
+// ---------------------------------------------------------------------------
+
+export { jiraWebhookEvents } from './schema/jira-webhook-events';
+
+export type {
+  JiraWebhookEvent,
+  NewJiraWebhookEvent,
+  WebhookProcessingState,
+} from './schema/jira-webhook-events';
+
+// ---------------------------------------------------------------------------
 // jira_project_mappings: project scoping and field/status mapping per connection
 // ---------------------------------------------------------------------------
 

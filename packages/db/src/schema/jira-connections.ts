@@ -6,7 +6,7 @@
  * only a Secrets Manager reference is held in secret_ref.
  */
 
-import { pgTable, uuid, text, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
 
 export const jiraConnections = pgTable(
   'jira_connections',
@@ -27,12 +27,23 @@ export const jiraConnections = pgTable(
     /** 'pending' | 'active' | 'degraded' | 'revoked' */
     state: text('state').notNull().default('pending'),
     lastTestedAt: timestamp('last_tested_at', { withTimezone: true }),
+    /**
+     * Secrets Manager reference for the HMAC-SHA-256 webhook signing secret.
+     * Generated at connection creation time. Null on old rows (pre-WO-054).
+     */
+    webhookSecretRef: text('webhook_secret_ref'),
+    /**
+     * When the webhook secret was last rotated. Used to enforce the 10-minute
+     * overlap window during which both current and previous secrets are accepted.
+     */
+    webhookSecretRotatedAt: timestamp('webhook_secret_rotated_at', { withTimezone: true }),
     createdBy: uuid('created_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     tenantIdx: index('jira_connections_tenant_id_idx').on(t.tenantId),
+    cloudIdIdx: uniqueIndex('jira_connections_cloud_id_uniq').on(t.cloudId),
   }),
 );
 

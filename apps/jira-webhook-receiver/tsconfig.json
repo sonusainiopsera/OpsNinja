@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "paths": {
+      "@opsninja/db": ["../../packages/db/src/index.ts"],
+      "@opsninja/db/*": ["../../packages/db/src/*"],
+      "@opsninja/crypto": ["../../packages/crypto/src/index.ts"],
+      "@opsninja/crypto/*": ["../../packages/crypto/src/*"],
+      "@opsninja/observability": ["../../packages/observability/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.spec.ts"]
+}

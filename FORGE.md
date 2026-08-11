@@ -273,3 +273,10 @@
 - **Files:** 9 (+1380/-0)
 - **Duration:** 637ss
 - **Approach:** N/A
+
+## WO-054: User Story: WO-054 - Signed Jira Webhook Receiver with Idempotent Ingest
+- **Status:** completed
+- **Commit:** `c4b9f3b`
+- **Files:** 16 (+1554/-1)
+- **Duration:** 719ss
+- **Approach:** N/A
