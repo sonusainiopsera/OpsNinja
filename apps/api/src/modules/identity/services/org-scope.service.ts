@@ -105,8 +105,9 @@ export class OrgScopeService {
 
     if (tokenScopeVersion < serverVersion) {
       throw new UnauthorizedException({
-        code: ErrorCode.SCOPE_VERSION_STALE,
+        code: ErrorCode.AUTH_REAUTHORIZE_REQUIRED,
         message: 'Organization scope has changed. Please refresh your session.',
+        details: [{ reason: 'scope_changed' }],
       });
     }
   }
@@ -193,6 +194,19 @@ export class OrgScopeService {
 
     // Bump version counter (outside transaction — best-effort)
     return this.bumpScopeVersion(tenantId, userId);
+  }
+
+  /**
+   * Reads the current scope_version counter from Redis.
+   * Returns 0 if the key is absent (cold start / evicted).
+   */
+  async readScopeVersion(tenantId: string, userId: string): Promise<number> {
+    try {
+      const raw = await this.redis.get(this.scopeVersionKey(tenantId, userId));
+      return raw !== null ? parseInt(raw, 10) : 0;
+    } catch {
+      return 0;
+    }
   }
 
   // ── Private helpers ────────────────────────────────────────────────────────

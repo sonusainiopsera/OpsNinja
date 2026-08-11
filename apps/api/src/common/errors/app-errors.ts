@@ -61,8 +61,25 @@ export const ErrorCode = {
    * Token's org_scope_version is behind the server-side counter.
    * Client should call POST /auth/refresh to obtain a token with the latest
    * scope version, then retry the original request.
+   * @deprecated Use AUTH_REAUTHORIZE_REQUIRED — this alias is kept for backwards compatibility.
    */
   SCOPE_VERSION_STALE: 'SCOPE_VERSION_STALE',
+
+  /**
+   * Token claims are structurally valid but reflect an outdated authorization
+   * state (e.g. org_scope_version is behind the server-side counter).
+   * Client must call POST /auth/refresh to obtain a token embedding the latest
+   * scope version, then retry the original request.
+   * Response body: { code: AUTH_REAUTHORIZE_REQUIRED, details: [{ reason: 'scope_changed' }] }
+   */
+  AUTH_REAUTHORIZE_REQUIRED: 'AUTH_REAUTHORIZE_REQUIRED',
+
+  /**
+   * A PUT /users/:userId/org-scope body contained an organization_id that does
+   * not belong to the caller's tenant. Cross-tenant scope assignments are rejected
+   * with 422.
+   */
+  ORG_SCOPE_INVALID_ORGANIZATION: 'ORG_SCOPE_INVALID_ORGANIZATION',
 
   /** Resource not found (also used for out-of-scope resources to mask existence). */
   RESOURCE_NOT_FOUND: 'RESOURCE_NOT_FOUND',

@@ -112,3 +112,10 @@
 - **Files:** 14 (+1647/-4)
 - **Duration:** 573ss
 - **Approach:** Built the isolation harness in four layers: (1) a deterministic two-tenant in-memory fixture factory (tenant-factory.ts) with deliberately colliding org names and hardcoded UUIDs derived from readable seeds; (2) a principal token helper (principals.ts) minting valid JWTs for all roles in both tenants using the shared test keypair from rbac.fixtures.ts; (3) two offline e2e suites (isolation-contract, portal-isolation) that run with fake Redis/DB using the existing mock pattern from rbac.e2e-spec.ts, asserting cross-tenant 404 masking, org-scope enforcement, portal audience mismatch, and sibling-org invisibility; (4) two DB-backed suites (isolation-metadata, negative-privileges) that skip automatically when no test DB is available and assert RLS policy completeness and runtime role privilege denial. A global setup helper, a dedicated jest config, package.json test:isolation scripts, and a runbook complete the CI wiring.
+
+## WO-013: User Story: WO-013 - Agent organization scope enforcement and scope-change reauthorization
+- **Status:** completed
+- **Commit:** `44389b7`
+- **Files:** 9 (+889/-2)
+- **Duration:** 855ss
+- **Approach:** Built on the WO-006 foundation (OrgScopeService, agentOrgScopes table, scope predicate). Added the WO-013 API contract: (1) AUTH_REAUTHORIZE_REQUIRED error code (details:[{reason:'scope_changed'}]) replacing SCOPE_VERSION_STALE in the staleness check; (2) agentOrgScopeFilter() helper in scoped-query.helper.ts as the single repository integration point; (3) GET/PUT /api/v1/users/:userId/org-scope endpoints in users.controller.ts returning tenantWide flag, added/removed diff, and scopeVersion; (4) architecture test scanning repository files for unguarded scoped-table access; (5) org-scope fixture matrix with two partially-overlapping agents across three orgs; (6) unit tests covering all new behaviors.

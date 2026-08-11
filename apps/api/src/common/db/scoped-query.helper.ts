@@ -16,6 +16,8 @@ import type { SQL } from 'drizzle-orm';
 import { eq, and } from '@opsninja/db';
 import { tickets, comments } from '@opsninja/db';
 import type { PortalPrincipal } from '../../modules/identity/portal/portal-principal';
+import { buildOrgScopePredicate } from '../../data/scope-predicate';
+import type { PrincipalContext } from '../../observability/request-context';
 
 /**
  * Restricts a ticket query to the portal principal's bound organisation.
@@ -46,4 +48,22 @@ export function portalCommentForTicketFilter(ticketId: string): SQL<unknown> {
     eq(comments.ticketId, ticketId),
     portalCommentFilter(),
   )!;
+}
+
+/**
+ * Returns the org-scope predicate for an agent principal, delegating to
+ * buildOrgScopePredicate in data/scope-predicate.ts.
+ *
+ * Returns undefined for tenant-wide principals (admin, manager, supervisor, …).
+ * Returns a parameterised IN list or EXISTS subquery for scoped agents.
+ * Returns sql`1 = 0` for agents with an empty scope set.
+ *
+ * This helper is the single integration point between the common/db layer and
+ * data/scope-predicate — repositories should call this rather than importing
+ * buildOrgScopePredicate directly.
+ */
+export function agentOrgScopeFilter(
+  principal: PrincipalContext,
+): SQL<unknown> | undefined {
+  return buildOrgScopePredicate(principal);
 }
