@@ -24,6 +24,7 @@ import { CommentsService } from './comments/comments.service';
 import { AuditWriter } from '../audit/audit-writer';
 import { AttachmentsController, AttachmentDownloadController } from './attachments/attachments.controller';
 import { AttachmentsService } from './attachments/attachments.service';
+import { PortalAttachmentsService } from './portal/portal-attachments.service';
 import { S3ObjectStore } from './attachments/storage/s3-object-store';
 import { OBJECT_STORE_PORT } from './attachments/storage/object-store.port';
 import { TicketSlaController } from '../sla/ticket-sla.controller';
@@ -63,6 +64,8 @@ import { TicketSlaController } from '../sla/ticket-sla.controller';
     AttachmentsService,
     { provide: OBJECT_STORE_PORT, useClass: S3ObjectStore },
     S3ObjectStore,
+    // Portal attachments — pre-ticket presign/confirm workflow (WO-089)
+    PortalAttachmentsService,
   ],
   exports: [
     TicketRepository,
@@ -74,6 +77,7 @@ import { TicketSlaController } from '../sla/ticket-sla.controller';
     TicketsService,
     CommentsService,
     AttachmentsService,
+    PortalAttachmentsService,
   ],
 })
 export class TicketsModule {}

@@ -18,21 +18,32 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   NotFoundException,
   Param,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
+import { Request } from 'express';
+import { randomUUID } from 'crypto';
 
 import { RequirePermission } from '../../../common/auth/require-permission.decorator';
 import { PortalRoute } from '../../../common/auth/portal-route.decorator';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { PortalVisibilityGuard } from './portal-visibility.guard';
 import { TicketRepository } from '../repositories/ticket.repository';
 import { CommentRepository } from '../repositories/comment.repository';
 import { AttachmentRepository } from '../repositories/attachment.repository';
 import { TenantSettingsRepository } from '../repositories/tenant-settings.repository';
+import { TicketsService } from '../tickets.service';
 import { getPrincipalContext } from '../../../observability/request-context';
 import { assertPortalPrincipal } from '../../identity/portal/portal-principal';
+import {
+  CreatePortalTicketSchema,
+  type CreatePortalTicketDto,
+} from './dto/create-portal-ticket.dto';
 import {
   mapTicketToPortalListItem,
   mapTicketToPortalDetail,
@@ -58,6 +69,7 @@ export class PortalTicketsController {
     private readonly commentRepository: CommentRepository,
     private readonly attachmentRepository: AttachmentRepository,
     private readonly tenantSettingsRepository: TenantSettingsRepository,
+    private readonly ticketsService: TicketsService,
   ) {}
 
   @Get()
@@ -126,5 +138,24 @@ export class PortalTicketsController {
     });
 
     return mapCommentToPortalDto(comment, []);
+  }
+
+  // ---------------------------------------------------------------------------
+  // POST /portal/tickets — create a support request (WO-089)
+  // ---------------------------------------------------------------------------
+
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @RequirePermission('ticket:create')
+  async createTicket(
+    @Body(new ZodValidationPipe(CreatePortalTicketSchema)) dto: CreatePortalTicketDto,
+    @Req() req: Request,
+  ) {
+    const principal = getPrincipalContext();
+    assertPortalPrincipal(principal);
+
+    const traceId = (req.headers['x-trace-id'] as string | undefined) ?? randomUUID();
+    const data = await this.ticketsService.createFromPortal(principal, dto);
+    return { data, traceId };
   }
 }

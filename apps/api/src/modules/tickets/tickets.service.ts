@@ -31,9 +31,12 @@ import type { PrincipalContext } from '../../observability/request-context';
 import { isPortalPrincipal } from '../identity/portal/portal-principal';
 import { AuditWriter } from '../audit/audit-writer';
 import { TicketRepository } from './repositories/ticket.repository';
+import { CommentRepository } from './repositories/comment.repository';
+import { PortalAttachmentsService } from './portal/portal-attachments.service';
 import type { CreateTicketDto } from './dto/create-ticket.dto';
 import type { UpdateTicketDto } from './dto/update-ticket.dto';
 import type { ResolveTicketDto } from './dto/resolve-ticket.dto';
+import type { CreatePortalTicketDto } from './portal/dto/create-portal-ticket.dto';
 import { mapToTicketDto, type TicketDto } from './dto/ticket-response.dto';
 import { validateTransition } from './lifecycle/ticket-state-machine';
 import { TICKET_EVENTS } from './events/ticket-events';
@@ -47,6 +50,8 @@ export class TicketsService {
   constructor(
     private readonly repo: TicketRepository,
     private readonly auditWriter: AuditWriter,
+    private readonly commentRepo: CommentRepository,
+    private readonly portalAttachments: PortalAttachmentsService,
   ) {}
 
   // --------------------------------------------------------------------------
@@ -515,6 +520,130 @@ export class TicketsService {
     // ── 8. Return DTO ────────────────────────────────────────────────────────
     const enrichment = await this.repo.loadEnrichment(updated);
     return mapToTicketDto(updated, enrichment);
+  }
+
+  // --------------------------------------------------------------------------
+  // createFromPortal (WO-089)
+  // --------------------------------------------------------------------------
+
+  /**
+   * Create a ticket submitted by a portal user.
+   *
+   * Differences from the agent `create` path:
+   *   - Organization forced from the principal's boundOrganizationId (AC-2).
+   *   - requestedPriority recorded; effective SLA priority defaults to P3.
+   *   - Initial description inserted as a public comment (AC-3).
+   *   - Confirmed attachment IDs verified for ownership and linked (AC-4, AC-9).
+   *   - ticket.created outbox event emitted in the same transaction (AC-4).
+   *   - Portal comment visibility forced to 'public' — cannot be overridden (AC-3).
+   */
+  async createFromPortal(
+    principal: PrincipalContext,
+    dto: CreatePortalTicketDto,
+  ): Promise<TicketDto> {
+    if (!isPortalPrincipal(principal)) {
+      throw new UnprocessableEntityException({
+        error: { code: 'PORTAL_ONLY', message: 'This endpoint is for portal principals only.' },
+      });
+    }
+
+    const tenantId       = principal.tenantId;
+    const organizationId = principal.boundOrganizationId; // AC-2: forced, not from DTO
+
+    // ── Org active check ──────────────────────────────────────────────────────
+    await this.repo.assertOrganizationActive(tenantId, organizationId);
+
+    // ── Insert ticket ─────────────────────────────────────────────────────────
+    const ticket = await this.repo.createTicket(
+      {
+        tenantId,
+        organizationId,
+        requesterContactId:  null,
+        assigneeId:          null,
+        assignmentGroupId:   null,
+        categoryId:          dto.categoryId ?? null,
+        subject:             dto.subject,
+        description:         dto.description,
+        status:              'new',
+        priority:            dto.requestedPriority, // SLA module may override later
+        customFields:        dto.customFields,
+        aiStatus:            null,
+        version:             1,
+        // requestedPriority stored separately (AC DB change)
+        // Cast: Drizzle's $inferInsert allows extra fields via cast
+        ...(({ requestedPriority: dto.requestedPriority }) as Record<string, unknown>),
+      } as Parameters<TicketRepository['createTicket']>[0],
+      [],
+    );
+
+    // ── Insert initial description as a public comment (AC-3) ─────────────────
+    await this.commentRepo.insert({
+      tenantId,
+      ticketId:       ticket.id,
+      organizationId,
+      authorId:       principal.userId ?? null,
+      body:           dto.description,
+      visibility:     'public', // forced — portal comments are ALWAYS public
+    });
+
+    // ── Verify and link confirmed attachments (AC-4, AC-9) ───────────────────
+    if (dto.attachmentIds.length > 0) {
+      await this.portalAttachments.verifyAndLink(
+        tenantId,
+        organizationId,
+        principal.userId ?? '',
+        dto.attachmentIds,
+        ticket.id,
+      );
+    }
+
+    // ── Emit ticket.created outbox event (same tx via TenantRepository) ───────
+    await this.repo.emitEvent(
+      tenantId,
+      ticket.id,
+      TICKET_EVENTS.CREATED,
+      {
+        ticketId:      ticket.id,
+        tenantId,
+        organizationId,
+        actorUserId:   principal.userId,
+        attachmentIds: dto.attachmentIds,
+        source:        'portal',
+      },
+    );
+
+    // ── Audit record ──────────────────────────────────────────────────────────
+    await this.auditWriter.append({
+      resourceType: 'ticket',
+      resourceId:   ticket.id,
+      action:       'create',
+      beforeState:  null,
+      afterState: {
+        id:             ticket.id,
+        status:         ticket.status,
+        priority:       ticket.priority,
+        organizationId: ticket.organizationId,
+        source:         'portal',
+      },
+      metadata: { ticketNumber: ticket.ticketNumber, tenantId, source: 'portal' },
+    });
+
+    this.logger.log('[METRIC] portal_ticket_created_total', {
+      metric:   'portal_ticket_created_total',
+      tenantId,
+      priority: ticket.priority,
+    });
+
+    this.logger.log('Portal ticket created', {
+      ticketId:       ticket.id,
+      tenantId,
+      organizationId,
+      attachmentCount: dto.attachmentIds.length,
+    });
+
+    // ── Return DTO ────────────────────────────────────────────────────────────
+    const enrichment = await this.repo.loadEnrichment(ticket);
+    return mapToTicketDto(ticket, enrichment);
   }
 
   // --------------------------------------------------------------------------

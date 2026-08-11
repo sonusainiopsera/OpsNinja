@@ -120,6 +120,14 @@ export const tickets = pgTable(
      * Used by the SLA module to measure time-to-first-response.
      * NULL means no public agent reply has been posted yet. (WO-034)
      */
+    /**
+     * Priority requested by the portal user at submission time.
+     * Recorded separately from the SLA-resolved effective priority so
+     * operators can see what the customer considered urgent.
+     * Null for agent-created tickets.
+     */
+    requestedPriority: text('requested_priority'),              // WO-089
+
     firstResponseAt: timestamp('first_response_at', { withTimezone: true }),
     resolvedAt: timestamp('resolved_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

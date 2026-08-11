@@ -31,7 +31,11 @@ export const ticketAttachments = pgTable(
     id: uuid('id').defaultRandom().primaryKey(),
     tenantId: uuid('tenant_id').notNull(),
 
-    ticketId: uuid('ticket_id').notNull(),
+    /**
+     * Nullable: set when a portal attachment is linked to a ticket.
+     * Null = presigned but not yet associated with any ticket (WO-089 portal flow).
+     */
+    ticketId: uuid('ticket_id'),
 
     /** Nullable — attachment may be ticket-level (no parent comment). */
     commentId: uuid('comment_id'),
