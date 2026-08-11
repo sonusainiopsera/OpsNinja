@@ -129,6 +129,44 @@ module.exports = {
     },
 
     // -----------------------------------------------------------------------
+    // Reporting module boundary: the reporting module may not import the
+    // primary DB pool/client. It owns a dedicated read-replica pool injected
+    // under REPORTING_DB. Cross-module reads go through service interfaces.
+    // The infrastructure sub-directory is exempt because reporting-db.client.ts
+    // legitimately creates a pg.Pool from the 'pg' package directly (not from
+    // @opsninja/db), and the ESLint rule already restricts @opsninja/db imports.
+    // -----------------------------------------------------------------------
+    {
+      files: ['apps/api/src/modules/reporting/**/*.ts'],
+      excludedFiles: [
+        'apps/api/src/modules/reporting/infrastructure/reporting-db.client.ts',
+        '**/*.spec.ts',
+        '**/*.e2e-spec.ts',
+      ],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            patterns: [
+              {
+                group: ['@opsninja/db'],
+                importNames: ['pool', 'createPool', 'createTransactionHandle', 'db'],
+                message:
+                  'Reporting module must not use the primary DB client. ' +
+                  'Use the REPORTING_DB injection token instead.',
+              },
+              {
+                group: ['@opsninja/filter-compiler/src/*'],
+                message:
+                  'Import from @opsninja/filter-compiler (public index) only, not internal paths.',
+              },
+            ],
+          },
+        ],
+      },
+    },
+
+    // -----------------------------------------------------------------------
     // Test files: relax some strict rules for test helpers and mocks.
     // -----------------------------------------------------------------------
     {

@@ -20,6 +20,7 @@ import { AuthModule } from './common/auth/auth.module';
 import { RedisModule } from './common/redis/redis.module';
 import { HealthModule } from './health/health.module';
 import { IdentityModule } from './modules/identity/identity.module';
+import { ReportingModule } from './modules/reporting/reporting.module';
 import { TicketsModule } from './modules/tickets/tickets.module';
 
 @Module({
@@ -33,6 +34,7 @@ import { TicketsModule } from './modules/tickets/tickets.module';
     AuthModule,
     HealthModule,
     TicketsModule,
+    ReportingModule,
   ],
   providers: [
     // ── Global guard: AuthGuard ───────────────────────────────────────────────
