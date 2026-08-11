@@ -431,6 +431,7 @@ export {
   slaCalendarWindows,
   slaCalendarHolidays,
   slaTimers,
+  slaTimerEvents,
 } from './schema/sla';
 
 export type {
@@ -446,6 +447,8 @@ export type {
   NewSlaCalendarHoliday,
   SlaTimer,
   NewSlaTimer,
+  SlaTimerEvent,
+  NewSlaTimerEvent,
 } from './schema/sla';
 
 // ---------------------------------------------------------------------------

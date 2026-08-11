@@ -209,3 +209,38 @@ export const slaTimers = pgTable(
 
 export type SlaTimer = typeof slaTimers.$inferSelect;
 export type NewSlaTimer = typeof slaTimers.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// sla_timer_events — append-only audit log for timer state transitions (WO-047)
+// ---------------------------------------------------------------------------
+
+export const slaTimerEvents = pgTable(
+  'sla_timer_events',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').notNull(),
+    timerId: uuid('timer_id').notNull(),
+    ticketId: uuid('ticket_id').notNull(),
+    /** State before this transition (e.g. 'running'). */
+    fromState: text('from_state').notNull(),
+    /** State after this transition (e.g. 'paused'). */
+    toState: text('to_state').notNull(),
+    /** Human-readable reason for the transition (e.g. 'status:pending_customer'). */
+    reason: text('reason'),
+    /** Actor who triggered the transition; null for system-driven events. */
+    actorId: uuid('actor_id'),
+    /** UTC instant of the transition — partition key. */
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+    /** Value of sla_timers.paused_ms at the time of this event. */
+    pausedMsAtEvent: bigint('paused_ms_at_event', { mode: 'number' }).notNull().default(0),
+    /** Working milliseconds elapsed when this event occurred. */
+    elapsedMsAtEvent: bigint('elapsed_ms_at_event', { mode: 'number' }).notNull().default(0),
+  },
+  (t) => ({
+    timerOccurredIdx: index('sla_timer_events_timer_occurred_idx').on(t.tenantId, t.timerId, t.occurredAt),
+    tenantTicketIdx: index('sla_timer_events_tenant_ticket_idx').on(t.tenantId, t.ticketId),
+  }),
+);
+
+export type SlaTimerEvent = typeof slaTimerEvents.$inferSelect;
+export type NewSlaTimerEvent = typeof slaTimerEvents.$inferInsert;
