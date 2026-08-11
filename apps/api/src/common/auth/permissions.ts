@@ -47,6 +47,10 @@ export const Permission = {
   // ── Security administration ──────────────────────────────────────────────
   /** Allows unlocking a throttle-locked email address via POST /admin/auth/unlock. */
   ADMIN_AUTH_UNLOCK: 'admin:auth:unlock',
+
+  // ── Saved views ──────────────────────────────────────────────────────────
+  /** Allows creating and editing shared (team-visible) saved views. */
+  VIEWS_SHARE: 'views:share',
 } as const;
 
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -76,6 +80,7 @@ export const ROLE_PERMISSION_MAP: Record<string, Permission[]> = {
     Permission.TENANT_SETTINGS,
     Permission.WEBHOOKS_MANAGE,
     Permission.ADMIN_AUTH_UNLOCK,
+    Permission.VIEWS_SHARE,
   ],
   // ── Manager / Supervisor (can manage agent scopes) ──────────────────────
   supervisor: [
@@ -89,6 +94,7 @@ export const ROLE_PERMISSION_MAP: Record<string, Permission[]> = {
     Permission.ORGS_READ,
     Permission.ORGS_WRITE,
     Permission.ORGS_MANAGE_SCOPES,
+    Permission.VIEWS_SHARE,
   ],
   manager: [
     Permission.TICKETS_READ,
@@ -101,6 +107,7 @@ export const ROLE_PERMISSION_MAP: Record<string, Permission[]> = {
     Permission.ORGS_READ,
     Permission.ORGS_WRITE,
     Permission.ORGS_MANAGE_SCOPES,
+    Permission.VIEWS_SHARE,
   ],
   // ── Agent (scoped to assigned organizations) ────────────────────────────
   agent: [

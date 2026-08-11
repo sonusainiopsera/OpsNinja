@@ -1,4 +1,5 @@
 export * from './tickets';
+export * from './saved-views';
 export * from './refresh-sessions';
 export * from './audit-logs';
 export * from './organizations';

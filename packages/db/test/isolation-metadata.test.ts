@@ -53,6 +53,9 @@ const TENANT_SCOPED_TABLES: string[] = [
   'contacts',
   'organization_verified_domains',
   'custom_field_defs',
+  // WO-039: Saved views and per-agent pin state
+  'saved_views',
+  'saved_view_pins',
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

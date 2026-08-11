@@ -28,6 +28,7 @@ import { ReportingModule } from './modules/reporting/reporting.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
+import { ViewsModule } from './modules/views/views.module';
 import { AuthGuard } from './common/guards/auth.guard';
 import { TenantContextInterceptor } from './common/tenant/tenant-context.interceptor';
 import { AuditInterceptor } from './common/audit/audit.interceptor';
@@ -50,6 +51,7 @@ import { UnitOfWork } from './data/unit-of-work';
     NotificationsModule,
     WebhooksModule,
     OrganizationsModule,
+    ViewsModule,
   ],
   providers: [
     // ── Global guard (runs first) ────────────────────────────────────────────

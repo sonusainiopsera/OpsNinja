@@ -140,3 +140,10 @@
 - **Files:** 11 (+1141/-10)
 - **Duration:** 607ss
 - **Approach:** Expanded the existing organizations table and created four new tenant-scoped registry tables in packages/db. Drizzle schema files define TypeScript types; the SQL migration (005) is handwritten for full control over RLS policy wording, index expressions, and enum idempotency. All five tables carry ENABLE + FORCE ROW LEVEL SECURITY with a FOR ALL policy using both USING and WITH CHECK, so both read and write paths enforce tenant isolation. Composite PKs (tenant_id, id) on new tables and a unique constraint (tenant_id, id) added to organizations allow composite FK references that make cross-tenant joins structurally invalid at the constraint level. citext extension used for email and domain fields. Expand-only column additions (ADD COLUMN IF NOT EXISTS) and DO$$-guarded enum creation make the migration re-runnable. Down migration reverses all changes child-first to respect FK order.
+
+## WO-039: User Story: WO-039 - System And Custom Saved Views API With Pinning
+- **Status:** completed
+- **Commit:** `25c2225`
+- **Files:** 14 (+1434/-2)
+- **Duration:** 734ss
+- **Approach:** Implemented the full views module: Drizzle schema + SQL migration 006 with RLS for saved_views and saved_view_pins tables; idempotent system-view seeder for four built-in views with placeholder tokens (CURRENT_USER, CURRENT_ORG_SCOPE); ViewsRepository extending TenantRepository with all CRUD + pin operations; ViewsService using RequestContextStore.getPrincipal() for principal access, write-time AST validation via SavedViewService, placeholder substitution at read time, ownership/RBAC enforcement, 409 name-conflict detection, audit records storing AST signatures; ViewsController with Zod inline parse pattern matching existing codebase conventions; VIEWS_SHARE permission added to permissions.ts and granted to admin/supervisor/manager roles.
