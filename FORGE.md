@@ -112,3 +112,10 @@
 - **Files:** 16 (+1426/-1)
 - **Duration:** 698ss
 - **Approach:** Built a deterministic two-tenant isolation test harness. Fixture factory uses fixed f0000000-... UUIDs so tests are reproducible across runs. RS256 JWT minting handles all 12 principal variants including stale-scope-version token. DB suite validates RLS metadata (enabled/forced policy) and negative privileges (app role cannot bypass RLS). API suite uses ROUTE_ANNOTATIONS map for exhaustive cross-tenant 404 enforcement. Meta-tests prove the harness has teeth by introducing deliberate violations and asserting they would be detected. All wired into turbo test:isolation.
+
+## WO-013: User Story: WO-013 - Agent organization scope enforcement and scope-change reauthorization
+- **Status:** completed
+- **Commit:** `a7cddbd`
+- **Files:** 11 (+850/-14)
+- **Duration:** 708ss
+- **Approach:** WO-013 builds on top of WO-006 infrastructure. Key changes: (1) Updated auth guard scope-version-mismatch error code from SCOPE_VERSION_STALE to AUTH_REAUTHORIZE_REQUIRED with details:[{reason:'scope_changed'}] per the WO-013 API contract. (2) Fixed validation error for cross-tenant org IDs: changed from 404 NotFoundException to 422 UnprocessableEntityException with code ORG_SCOPE_INVALID_ORGANIZATION. (3) Added new /api/v1/users/:userId/org-scope endpoint path (GET + PUT) with correct response shapes — GET returns {userId, tenantWide, organizationIds, scopeVersion}; PUT returns {scopeVersion, added, removed} diff. UsersController delegates to two new methods on AgentScopesService: getUserOrgScope and replaceUserOrgScope. (4) Architecture test scans repository files for missing org-scope predicate calls. (5) Three-org/two-agent fixture and comprehensive integration test suite covering all 10 ACs including the scope-narrowing reauthorization scenario.

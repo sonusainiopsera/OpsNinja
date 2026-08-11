@@ -27,6 +27,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { TicketsModule } from './modules/tickets/tickets.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
     WebhooksModule,
     AuditModule,
     OrganizationsModule,
+    UsersModule,
   ],
   providers: [
     // ── Global guard: AuthGuard ───────────────────────────────────────────────

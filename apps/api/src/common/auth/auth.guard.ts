@@ -147,20 +147,21 @@ export class AuthGuard implements CanActivate {
         );
       } catch (err) {
         // Never fail open on unexpected errors — treat as stale.
-        this.logger.error('OrgScopeService.getScopeVersion threw; denying with SCOPE_VERSION_STALE', {
+        this.logger.error('OrgScopeService.getScopeVersion threw; denying with AUTH_REAUTHORIZE_REQUIRED', {
           error: (err as Error).message,
           route,
           traceId,
         });
         throw new UnauthorizedException({
-          code: 'SCOPE_VERSION_STALE',
+          code: 'AUTH_REAUTHORIZE_REQUIRED',
           message: 'Scope version could not be verified; please refresh your token',
+          details: [{ reason: 'scope_changed' }],
           traceId,
         });
       }
 
       if (claims.org_scope_version < currentVersion) {
-        this.logger.warn('SCOPE_VERSION_STALE', {
+        this.logger.warn('AUTH_REAUTHORIZE_REQUIRED', {
           route,
           traceId,
           sub: claims.sub,
@@ -168,8 +169,9 @@ export class AuthGuard implements CanActivate {
           currentVersion,
         });
         throw new UnauthorizedException({
-          code: 'SCOPE_VERSION_STALE',
+          code: 'AUTH_REAUTHORIZE_REQUIRED',
           message: 'Your access scope has changed; please refresh your token',
+          details: [{ reason: 'scope_changed' }],
           traceId,
         });
       }

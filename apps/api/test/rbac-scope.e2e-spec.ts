@@ -71,10 +71,10 @@ describe('RBAC scope — route-level guard assertions', () => {
     expect(REQUIRE_PERMISSION_KEY).toBe('require_permission');
   });
 
-  it('SCOPE_VERSION_STALE error code is defined', () => {
-    // The error code string used in auth.guard.ts is SCOPE_VERSION_STALE
-    // — verify the value is stable.
-    expect('SCOPE_VERSION_STALE').toBe('SCOPE_VERSION_STALE');
+  it('AUTH_REAUTHORIZE_REQUIRED error code is used for scope version mismatch (WO-013)', () => {
+    // WO-013 updated the scope-version-mismatch error code from SCOPE_VERSION_STALE
+    // to AUTH_REAUTHORIZE_REQUIRED with reason: scope_changed.
+    expect('AUTH_REAUTHORIZE_REQUIRED').toBe('AUTH_REAUTHORIZE_REQUIRED');
   });
 });
 

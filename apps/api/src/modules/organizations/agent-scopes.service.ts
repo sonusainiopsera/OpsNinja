@@ -130,12 +130,14 @@ export class AgentScopesService extends TenantRepository {
         );
 
       const validOrgSet = new Set(validOrgs.map((o) => o.id));
-      const invalidOrg = orgIds.find((id) => !validOrgSet.has(id));
-      if (invalidOrg) {
-        // 404 — consistent with existence masking rule (never 403 for cross-tenant)
-        throw new NotFoundException({
-          code: 'RESOURCE_NOT_FOUND',
-          message: 'The requested organization does not exist',
+      const invalidOrgIds = orgIds.filter((id) => !validOrgSet.has(id));
+      if (invalidOrgIds.length > 0) {
+        // 422 — the caller sent invalid org IDs; this is a validation error, not a
+        // resource-not-found. The offending IDs are returned so the client can fix them.
+        throw new UnprocessableEntityException({
+          code: 'ORG_SCOPE_INVALID_ORGANIZATION',
+          message: 'One or more organization IDs do not belong to this tenant',
+          details: { invalidOrganizationIds: invalidOrgIds },
         });
       }
     }
@@ -187,5 +189,169 @@ export class AgentScopesService extends TenantRepository {
     });
 
     return { user_id: userId, scope_version: newVersion };
+  }
+
+  // ---------------------------------------------------------------------------
+  // WO-013 endpoint shapes: /api/v1/users/:userId/org-scope
+  // ---------------------------------------------------------------------------
+
+  /**
+   * GET /api/v1/users/:userId/org-scope
+   * Returns { userId, tenantWide, organizationIds, scopeVersion } per WO-013 contract.
+   * tenantWide = true when the user has no org scope rows (unrestricted within their role).
+   */
+  async getUserOrgScope(
+    tenantId: string,
+    userId: string,
+  ): Promise<{ userId: string; tenantWide: boolean; organizationIds: string[]; scopeVersion: number }> {
+    const userRows = await this.tx
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.id, userId), eq(users.tenantId, tenantId)))
+      .limit(1);
+
+    if (userRows.length === 0) {
+      throw new NotFoundException({
+        code: 'RESOURCE_NOT_FOUND',
+        message: 'The requested user does not exist',
+      });
+    }
+
+    const scopeRows = await this.tx
+      .select({
+        organizationId: agentOrgScopes.organizationId,
+        scopeVersion: agentOrgScopes.scopeVersion,
+      })
+      .from(agentOrgScopes)
+      .where(
+        and(
+          eq(agentOrgScopes.tenantId, tenantId),
+          eq(agentOrgScopes.userId, userId),
+        ),
+      );
+
+    const organizationIds = scopeRows.map((r) => r.organizationId);
+    const scopeVersion = scopeRows[0]?.scopeVersion ?? 0;
+    const tenantWide = organizationIds.length === 0;
+
+    return { userId, tenantWide, organizationIds, scopeVersion };
+  }
+
+  /**
+   * PUT /api/v1/users/:userId/org-scope
+   * Replaces org scope set. Returns { scopeVersion, added, removed } per WO-013 contract.
+   * When tenantWide=true, clears all scope rows (user is unrestricted by org scope).
+   */
+  async replaceUserOrgScope(
+    tenantId: string,
+    userId: string,
+    body: { tenantWide?: boolean; organizationIds: string[] },
+  ): Promise<{ scopeVersion: number; added: string[]; removed: string[] }> {
+    const orgIds = body.tenantWide ? [] : body.organizationIds;
+
+    // Detect duplicate org IDs in request
+    const uniqueOrgIds = new Set(orgIds);
+    if (uniqueOrgIds.size !== orgIds.length) {
+      throw new UnprocessableEntityException({
+        code: 'DUPLICATE_ORGANIZATION',
+        message: 'Duplicate organization IDs are not permitted',
+      });
+    }
+
+    // Verify user exists in tenant
+    const userRows = await this.tx
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.id, userId), eq(users.tenantId, tenantId)))
+      .limit(1);
+
+    if (userRows.length === 0) {
+      throw new NotFoundException({
+        code: 'RESOURCE_NOT_FOUND',
+        message: 'The requested user does not exist',
+      });
+    }
+
+    // Validate all organization IDs belong to this tenant
+    if (orgIds.length > 0) {
+      const validOrgs = await this.tx
+        .select({ id: organizations.id })
+        .from(organizations)
+        .where(
+          and(
+            eq(organizations.tenantId, tenantId),
+            inArray(organizations.id, orgIds),
+          ),
+        );
+
+      const validOrgSet = new Set(validOrgs.map((o) => o.id));
+      const invalidOrgIds = orgIds.filter((id) => !validOrgSet.has(id));
+      if (invalidOrgIds.length > 0) {
+        throw new UnprocessableEntityException({
+          code: 'ORG_SCOPE_INVALID_ORGANIZATION',
+          message: 'One or more organization IDs do not belong to this tenant',
+          details: { invalidOrganizationIds: invalidOrgIds },
+        });
+      }
+    }
+
+    // Capture before state for added/removed diff
+    const beforeRows = await this.tx
+      .select({ organizationId: agentOrgScopes.organizationId })
+      .from(agentOrgScopes)
+      .where(
+        and(
+          eq(agentOrgScopes.tenantId, tenantId),
+          eq(agentOrgScopes.userId, userId),
+        ),
+      );
+    const beforeOrgIds = beforeRows.map((r) => r.organizationId);
+    const beforeSet = new Set(beforeOrgIds);
+    const afterSet = new Set(orgIds);
+
+    const added = orgIds.filter((id) => !beforeSet.has(id));
+    const removed = beforeOrgIds.filter((id) => !afterSet.has(id));
+
+    // Bump scope version atomically
+    const newVersion = await this.orgScopeService.bumpScopeVersion(tenantId, userId);
+
+    // Replace scope rows
+    await this.tx
+      .delete(agentOrgScopes)
+      .where(
+        and(
+          eq(agentOrgScopes.tenantId, tenantId),
+          eq(agentOrgScopes.userId, userId),
+        ),
+      );
+
+    if (orgIds.length > 0) {
+      await this.tx.insert(agentOrgScopes).values(
+        orgIds.map((orgId) => ({
+          tenantId,
+          userId,
+          organizationId: orgId,
+          accessLevel: 'full',
+          scopeVersion: newVersion,
+        })),
+      );
+    }
+
+    // Write audit record (atomic with the mutation)
+    await this.auditWriter.append({
+      resourceType: 'agent_org_scopes',
+      resourceId: userId,
+      action: 'update',
+      beforeState: { organizationIds: beforeOrgIds, tenantWide: beforeOrgIds.length === 0 },
+      afterState: {
+        organizationIds: orgIds,
+        tenantWide: body.tenantWide ?? false,
+        scopeVersion: newVersion,
+        added,
+        removed,
+      },
+    });
+
+    return { scopeVersion: newVersion, added, removed };
   }
 }
