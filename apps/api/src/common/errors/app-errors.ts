@@ -34,6 +34,20 @@ export const ErrorCode = {
   AUTH_SESSION_STORE_UNAVAILABLE: 'AUTH_SESSION_STORE_UNAVAILABLE',
   /** Generic unauthenticated (missing Bearer token). */
   UNAUTHENTICATED: 'UNAUTHENTICATED',
+
+  // ── Token error codes ────────────────────────────────────────────────────
+  /** Bearer token is absent from the request. */
+  AUTH_TOKEN_MISSING: 'AUTH_TOKEN_MISSING',
+  /** Bearer token is syntactically valid but the exp claim is in the past. */
+  AUTH_TOKEN_EXPIRED: 'AUTH_TOKEN_EXPIRED',
+  /** Bearer token signature, issuer, or claims are invalid. */
+  AUTH_TOKEN_INVALID: 'AUTH_TOKEN_INVALID',
+
+  // ── Authorization error codes ────────────────────────────────────────────
+  /** Principal lacks the required permission for this route. */
+  AUTHZ_PERMISSION_DENIED: 'AUTHZ_PERMISSION_DENIED',
+  /** Token audience does not match the permission tier required by the route. */
+  AUTHZ_AUDIENCE_MISMATCH: 'AUTHZ_AUDIENCE_MISMATCH',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

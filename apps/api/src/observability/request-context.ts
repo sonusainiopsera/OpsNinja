@@ -39,6 +39,10 @@ export interface PrincipalContext {
   orgScopeIds: string[];
   /** Distributed trace identifier carried from the incoming request. */
   traceId: string;
+  /** Effective permission set resolved from the principal's roles by AuthGuard. */
+  permissions?: ReadonlySet<string>;
+  /** Monotonic version counter for org-scope membership (from JWT claim). */
+  orgScopeVersion?: number;
 }
 
 // ─── Context store ────────────────────────────────────────────────────────────

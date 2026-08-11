@@ -78,13 +78,19 @@ export class TokenService {
   /**
    * Verifies an access token against all known public keys (current + previous
    * rotated-out key).  Returns the decoded claims on success.
+   *
+   * @param opts.audiences  When provided, overrides the config JWT_AUDIENCE so
+   *   the guard can accept tokens from multiple audience tiers (staff, portal,
+   *   machine) in a single call.
    */
   verifyAccessToken(
     token: string,
-    opts?: { ignoreExpiration?: boolean },
+    opts?: { ignoreExpiration?: boolean; audiences?: string[] },
   ): AccessTokenClaims {
     const publicKeys = this.resolveVerificationKeys();
-    const aud = this.config.get<string>('JWT_AUDIENCE', 'opsninja');
+    const aud: string | string[] = opts?.audiences?.length
+      ? (opts.audiences.length === 1 ? opts.audiences[0] : opts.audiences)
+      : this.config.get<string>('JWT_AUDIENCE', 'opsninja');
 
     let lastError: Error | undefined;
     for (const { key } of publicKeys) {
@@ -116,6 +122,22 @@ export class TokenService {
         // Full JWK n/e parameters require DER parsing; exported in a dedicated WO.
       })),
     };
+  }
+
+  /**
+   * Returns true when the token's exp claim is in the past.
+   * Uses jwt.decode (no signature check) so it works on both valid and
+   * tampered tokens — the caller is expected to already have called
+   * verifyAccessToken and caught its error.
+   */
+  isTokenExpired(token: string): boolean {
+    try {
+      const decoded = jwt.decode(token) as { exp?: number } | null;
+      if (!decoded?.exp) return false;
+      return decoded.exp < Math.floor(this.now() / 1000);
+    } catch {
+      return false;
+    }
   }
 
   /** Overridable in tests to inject a fake clock. */
