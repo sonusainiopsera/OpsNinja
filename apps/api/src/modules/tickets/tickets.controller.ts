@@ -1,13 +1,15 @@
 /**
- * TicketsController — agent/staff ticket create and read-by-id endpoints.
+ * TicketsController — agent/staff ticket CRUD and lifecycle endpoints.
  *
  * Endpoint map (all under /api/v1/tickets):
- *   POST /           Create ticket  → 201 TicketDto  (ticket:create)
- *   GET  /:id        Read by id     → 200 TicketDto  (ticket:read)
+ *   POST /              Create ticket        → 201 TicketDto  (ticket:create)
+ *   GET  /:id           Read by id           → 200 TicketDto  (ticket:read)
+ *   PATCH /:id          Update ticket        → 200 TicketDto  (ticket:update)
+ *   POST /:id/resolve   Resolve ticket       → 200 TicketDto  (ticket:update)
  *
  * Coexists with QueueController (also @Controller('tickets')):
  *   - QueueController handles GET /api/v1/tickets (list/queue).
- *   - TicketsController handles POST + GET /:id.
+ *   - TicketsController handles POST, GET /:id, PATCH /:id, POST /:id/resolve.
  * NestJS resolves both via HTTP method + path combination with no conflict.
  *
  * Security:
@@ -16,12 +18,14 @@
  *   - All out-of-scope or unknown IDs return 404 — existence non-disclosure.
  *   - tenant_id is stamped server-side from principal; any attempt to supply
  *     it in the request body is rejected by the strict Zod schema with 400.
+ *   - Optimistic concurrency: stale version → 409 with current version in body.
  */
 
 import {
   Controller,
   Post,
   Get,
+  Patch,
   Body,
   Param,
   HttpCode,
@@ -37,6 +41,8 @@ import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { getPrincipalContext } from '../../observability/request-context';
 import { TicketsService } from './tickets.service';
 import { CreateTicketSchema, type CreateTicketDto } from './dto/create-ticket.dto';
+import { UpdateTicketSchema, type UpdateTicketDto } from './dto/update-ticket.dto';
+import { ResolveTicketSchema, type ResolveTicketDto } from './dto/resolve-ticket.dto';
 
 @Controller('tickets')
 export class TicketsController {
@@ -101,6 +107,63 @@ export class TicketsController {
         },
       });
     }
+
+    return { data: ticket, traceId };
+  }
+
+  // --------------------------------------------------------------------------
+  // PATCH /api/v1/tickets/:id
+  // --------------------------------------------------------------------------
+
+  /**
+   * Apply a partial update to a ticket.
+   *
+   * Requires the current `version` for optimistic concurrency.
+   * Returns 409 with details.current_version on a stale version.
+   * Returns 422 for illegal status transitions.
+   * Returns 403 when the principal lacks the required transition permission.
+   */
+  @Patch(':id')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('ticket:update')
+  async update(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(UpdateTicketSchema)) dto: UpdateTicketDto,
+    @Req() req: Request,
+  ) {
+    const principal = getPrincipalContext();
+    const traceId = (req.headers['x-trace-id'] as string | undefined) ?? randomUUID();
+
+    const ticket = await this.service.update(principal, id, dto, traceId);
+
+    return { data: ticket, traceId };
+  }
+
+  // --------------------------------------------------------------------------
+  // POST /api/v1/tickets/:id/resolve
+  // --------------------------------------------------------------------------
+
+  /**
+   * Resolve a ticket with a required resolution note.
+   *
+   * Idempotent: calling this on an already-resolved ticket returns 200 with
+   * the existing state rather than creating duplicate events or history rows.
+   *
+   * Already-closed tickets return 422 (cannot be resolved from closed).
+   * Returns 409 on version conflict.
+   */
+  @Post(':id/resolve')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('ticket:update')
+  async resolve(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(ResolveTicketSchema)) dto: ResolveTicketDto,
+    @Req() req: Request,
+  ) {
+    const principal = getPrincipalContext();
+    const traceId = (req.headers['x-trace-id'] as string | undefined) ?? randomUUID();
+
+    const ticket = await this.service.resolve(principal, id, dto, traceId);
 
     return { data: ticket, traceId };
   }

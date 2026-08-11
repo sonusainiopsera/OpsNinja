@@ -14,7 +14,7 @@
  */
 
 import { Injectable, UnprocessableEntityException } from '@nestjs/common';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import {
   tickets,
@@ -23,10 +23,14 @@ import {
   contacts,
   organizationsRegistry,
   users,
+  outboxEvents,
+  ticketStatusHistory,
   type Ticket,
   type NewTicket,
   type Tag,
+  type TicketStatus,
 } from '@opsninja/db';
+import type { TicketEventType } from '../events/ticket-events';
 import { TenantRepository } from '../../../data/tenant-repository';
 import { getPrincipalContext } from '../../../observability/request-context';
 import { isPortalPrincipal } from '../../identity/portal/portal-principal';
@@ -281,5 +285,138 @@ export class TicketRepository extends TenantRepository {
       )
       .limit(1);
     return rows.length > 0;
+  }
+
+  // --------------------------------------------------------------------------
+  // Optimistic-concurrency update (WO-033)
+  // --------------------------------------------------------------------------
+
+  /**
+   * Version-guarded UPDATE for general ticket mutations.
+   *
+   * Returns the updated Ticket on success, or 'VERSION_CONFLICT' when
+   * `currentVersion` no longer matches the DB row (concurrent edit).
+   * Callers must handle 'VERSION_CONFLICT' by returning 409.
+   *
+   * The call also updates ticket_tags atomically when `tagIds` is provided
+   * (full replacement, not additive).
+   */
+  async updateTicket(
+    tenantId: string,
+    ticketId: string,
+    currentVersion: number,
+    changes: Partial<Pick<
+      Ticket,
+      | 'subject'
+      | 'description'
+      | 'priority'
+      | 'status'
+      | 'categoryId'
+      | 'assigneeId'
+      | 'assignmentGroupId'
+      | 'customFields'
+      | 'resolvedAt'
+      | 'aiStatus'
+    >>,
+    tagIds?: string[],
+  ): Promise<Ticket | 'VERSION_CONFLICT'> {
+    const rows = await this.tx
+      .update(tickets)
+      .set({
+        ...changes,
+        version: sql`${tickets.version} + 1`,
+        updatedAt: sql`now()`,
+      })
+      .where(
+        and(
+          eq(tickets.tenantId, tenantId),
+          eq(tickets.id, ticketId),
+          eq(tickets.version, currentVersion),
+        ),
+      )
+      .returning();
+
+    if (rows.length === 0) return 'VERSION_CONFLICT';
+
+    const updated = rows[0]!;
+
+    // Replace tag links when caller explicitly provides a new set.
+    if (tagIds !== undefined) {
+      await this.tx
+        .delete(ticketTags)
+        .where(
+          and(
+            eq(ticketTags.tenantId, tenantId),
+            eq(ticketTags.ticketId, ticketId),
+          ),
+        );
+
+      if (tagIds.length > 0) {
+        await this.tx.insert(ticketTags).values(
+          tagIds.map((tagId) => ({ tenantId, ticketId, tagId })),
+        );
+      }
+    }
+
+    return updated;
+  }
+
+  /**
+   * Re-read a ticket's current version (used to populate 409 error bodies).
+   * Returns null when the ticket does not exist in this tenant.
+   */
+  async getCurrentVersion(tenantId: string, ticketId: string): Promise<number | null> {
+    const rows = await this.tx
+      .select({ version: tickets.version })
+      .from(tickets)
+      .where(and(eq(tickets.tenantId, tenantId), eq(tickets.id, ticketId)))
+      .limit(1);
+    return rows[0]?.version ?? null;
+  }
+
+  // --------------------------------------------------------------------------
+  // Status history + outbox helpers (WO-033)
+  // --------------------------------------------------------------------------
+
+  /**
+   * Append a status history record (append-only — no update/delete grant).
+   */
+  async appendStatusHistory(
+    tenantId: string,
+    ticketId: string,
+    fromStatus: TicketStatus | null,
+    toStatus: TicketStatus,
+    actorUserId: string | null,
+    reason: string | null,
+  ): Promise<void> {
+    await this.tx.insert(ticketStatusHistory).values({
+      tenantId,
+      ticketId,
+      fromStatus: fromStatus ?? null,
+      toStatus,
+      actorUserId: actorUserId ?? null,
+      reason: reason ?? null,
+    });
+  }
+
+  /**
+   * Insert a single outbox event inside the current transaction.
+   */
+  async emitEvent(
+    tenantId: string,
+    aggregateId: string,
+    eventType: TicketEventType,
+    payload: Record<string, unknown>,
+    traceId?: string,
+  ): Promise<void> {
+    await this.tx.insert(outboxEvents).values({
+      tenantId,
+      aggregateType: 'ticket',
+      aggregateId,
+      eventType,
+      payload,
+      traceId: traceId ?? null,
+      status: 'pending',
+    });
   }
 }

@@ -1,5 +1,5 @@
 /**
- * TicketsService — business logic for ticket create and read-by-id.
+ * TicketsService — business logic for ticket create, read, update and resolve.
  *
  * Invariants:
  *   - tenant_id is ALWAYS stamped from the authenticated principal; the DTO
@@ -9,9 +9,12 @@
  *   - Agent/staff principals are restricted to orgScopeIds; out-of-scope orgs
  *     return 404 (indistinguishable from unknown) to prevent existence disclosure.
  *   - Deactivated orgs return 422 ORGANIZATION_INACTIVE.
- *   - Audit record is written inside the same transaction as the ticket insert.
+ *   - Audit record is written inside the same transaction as the ticket insert/update.
  *   - description is redacted from structured logs by the observability pipeline
  *     (MASK_KEYS in packages/observability/src/privacy/redactor.ts).
+ *   - Status transitions are validated by the pure state machine before any DB write.
+ *   - Optimistic concurrency uses version column — stale version → 409.
+ *   - Status history and outbox events are written in the same transaction as the update.
  */
 
 import {
@@ -20,6 +23,8 @@ import {
   NotFoundException,
   UnprocessableEntityException,
   BadRequestException,
+  ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 
 import type { PrincipalContext } from '../../observability/request-context';
@@ -27,7 +32,13 @@ import { isPortalPrincipal } from '../identity/portal/portal-principal';
 import { AuditWriter } from '../audit/audit-writer';
 import { TicketRepository } from './repositories/ticket.repository';
 import type { CreateTicketDto } from './dto/create-ticket.dto';
+import type { UpdateTicketDto } from './dto/update-ticket.dto';
+import type { ResolveTicketDto } from './dto/resolve-ticket.dto';
 import { mapToTicketDto, type TicketDto } from './dto/ticket-response.dto';
+import { validateTransition } from './lifecycle/ticket-state-machine';
+import { TICKET_EVENTS } from './events/ticket-events';
+import type { Permission } from '../../common/auth/permission.catalog';
+import type { TicketStatus } from '@opsninja/db';
 
 @Injectable()
 export class TicketsService {
@@ -146,6 +157,364 @@ export class TicketsService {
 
     const enrichment = await this.repo.loadEnrichment(ticket);
     return mapToTicketDto(ticket, enrichment);
+  }
+
+  // --------------------------------------------------------------------------
+  // Update (PATCH /tickets/:id)
+  // --------------------------------------------------------------------------
+
+  /**
+   * Apply a partial update to an existing ticket.
+   *
+   * Steps:
+   *   1. Load current ticket with org-scope enforcement → 404 if missing/scoped out.
+   *   2. Collect principal permissions from the principal context.
+   *   3. If `status` changes, run state machine → 422 on illegal/forbidden transition.
+   *   4. Validate updated tag_ids exist in tenant (400 for unknowns).
+   *   5. Build changes payload — only include fields that differ from current.
+   *   6. If nothing changed, return current DTO without writes or events.
+   *   7. Version-guarded UPDATE → 409 on conflict.
+   *   8. Append status history row when status changed.
+   *   9. Emit outbox events atomically in same transaction.
+   *  10. Write audit diff record.
+   *  11. Return updated canonical TicketDto.
+   */
+  async update(
+    principal: PrincipalContext,
+    ticketId: string,
+    dto: UpdateTicketDto,
+    traceId?: string,
+  ): Promise<TicketDto> {
+    const tenantId = principal.tenantId;
+
+    // ── 1. Load ticket (scope-enforced) ─────────────────────────────────────
+    const current = await this.repo.findById(ticketId);
+    if (!current) {
+      throw new NotFoundException({
+        error: { code: 'TICKET_NOT_FOUND', message: 'Ticket not found.' },
+      });
+    }
+
+    // ── 2. Principal permissions ─────────────────────────────────────────────
+    const permissions = (principal.permissions ?? []) as Permission[];
+
+    // ── 3. Status transition validation ─────────────────────────────────────
+    let statusChanged = false;
+    let slaAction: 'pause' | 'resume' | null = null;
+    const eventsToEmit: string[] = [];
+
+    if (dto.status !== undefined && dto.status !== current.status) {
+      const decision = validateTransition({
+        currentStatus: current.status as TicketStatus,
+        requestedStatus: dto.status as TicketStatus,
+        principalPermissions: permissions,
+      });
+
+      if (!decision.allowed) {
+        if (decision.reason === 'PERMISSION_DENIED') {
+          throw new ForbiddenException({
+            error: {
+              code: 'TRANSITION_PERMISSION_DENIED',
+              message: decision.message,
+              details: [{ requiredPermission: decision.requiredPermission }],
+            },
+          });
+        }
+        throw new UnprocessableEntityException({
+          error: {
+            code: 'INVALID_TRANSITION',
+            message: decision.message,
+            details: [{ fromStatus: current.status, toStatus: dto.status }],
+          },
+        });
+      }
+
+      statusChanged = true;
+      if (decision.rule.slaPause) slaAction = 'pause';
+      if (decision.rule.slaResume) slaAction = 'resume';
+      decision.rule.events.forEach((e) => eventsToEmit.push(e));
+    }
+
+    // ── 4. Tag validation ───────────────────────────────────────────────────
+    let validTagIds: string[] | undefined;
+    if (dto.tag_ids !== undefined) {
+      validTagIds = await this.validateTagIds(tenantId, dto.tag_ids);
+    }
+
+    // ── 5. Build changes ────────────────────────────────────────────────────
+    const changes: Record<string, unknown> = {};
+    if (dto.subject !== undefined && dto.subject !== current.subject) {
+      changes['subject'] = dto.subject;
+    }
+    if (dto.description !== undefined && dto.description !== current.description) {
+      changes['description'] = dto.description;
+    }
+    if (dto.priority !== undefined && dto.priority !== current.priority) {
+      changes['priority'] = dto.priority;
+      eventsToEmit.push(TICKET_EVENTS.PRIORITY_CHANGED);
+    }
+    if (statusChanged) {
+      changes['status'] = dto.status;
+    }
+    if (dto.category_id !== undefined && dto.category_id !== current.categoryId) {
+      changes['categoryId'] = dto.category_id;
+    }
+    if (dto.assignee_user_id !== undefined && dto.assignee_user_id !== current.assigneeId) {
+      changes['assigneeId'] = dto.assignee_user_id;
+      eventsToEmit.push(TICKET_EVENTS.ASSIGNED);
+    }
+    if (dto.assignment_group_id !== undefined && dto.assignment_group_id !== current.assignmentGroupId) {
+      changes['assignmentGroupId'] = dto.assignment_group_id;
+    }
+    if (dto.custom_fields !== undefined) {
+      changes['customFields'] = { ...(current.customFields as object ?? {}), ...dto.custom_fields };
+    }
+
+    // ── 6. No-op short-circuit ───────────────────────────────────────────────
+    const hasFieldChanges = Object.keys(changes).length > 0;
+    const hasTagChanges = validTagIds !== undefined;
+    if (!hasFieldChanges && !hasTagChanges) {
+      const enrichment = await this.repo.loadEnrichment(current);
+      return mapToTicketDto(current, enrichment);
+    }
+
+    // Emit generic updated event when something changed
+    eventsToEmit.unshift(TICKET_EVENTS.UPDATED);
+
+    // ── 7. Version-guarded UPDATE ────────────────────────────────────────────
+    const result = await this.repo.updateTicket(
+      tenantId,
+      ticketId,
+      dto.version,
+      changes as Parameters<TicketRepository['updateTicket']>[3],
+      validTagIds,
+    );
+
+    if (result === 'VERSION_CONFLICT') {
+      const currentVersion = await this.repo.getCurrentVersion(tenantId, ticketId);
+      throw new ConflictException({
+        error: {
+          code: 'VERSION_CONFLICT',
+          message: 'The ticket has been modified by another request. Refresh and retry.',
+          details: [{ currentVersion }],
+        },
+      });
+    }
+
+    const updated = result;
+
+    // ── 8. Status history ───────────────────────────────────────────────────
+    if (statusChanged && dto.status) {
+      await this.repo.appendStatusHistory(
+        tenantId,
+        ticketId,
+        current.status as TicketStatus,
+        dto.status as TicketStatus,
+        principal.userId ?? null,
+        dto.transition_reason ?? null,
+      );
+
+      // SLA port notification (declared, not executed inline per SlaPort pattern)
+      if (slaAction) {
+        this.logger.log('SLA signal', {
+          ticketId,
+          tenantId,
+          slaAction,
+          fromStatus: current.status,
+          toStatus: dto.status,
+        });
+        // SlaPort.onStatusChanged would be called here when implemented (WO future)
+      }
+    }
+
+    // ── 9. Outbox events ────────────────────────────────────────────────────
+    for (const eventType of [...new Set(eventsToEmit)]) {
+      await this.repo.emitEvent(
+        tenantId,
+        ticketId,
+        eventType as Parameters<TicketRepository['emitEvent']>[2],
+        {
+          ticketId,
+          tenantId,
+          actorUserId: principal.userId,
+          fromStatus: statusChanged ? current.status : undefined,
+          toStatus: statusChanged ? dto.status : undefined,
+          priority: changes['priority'] ?? undefined,
+          assigneeId: changes['assigneeId'] ?? undefined,
+        },
+        traceId,
+      );
+    }
+
+    // ── 10. Audit ───────────────────────────────────────────────────────────
+    await this.auditWriter.append({
+      resourceType: 'ticket',
+      resourceId: ticketId,
+      action: 'update',
+      beforeState: {
+        status: current.status,
+        priority: current.priority,
+        assigneeId: current.assigneeId,
+        categoryId: current.categoryId,
+        version: current.version,
+      },
+      afterState: {
+        status: updated.status,
+        priority: updated.priority,
+        assigneeId: updated.assigneeId,
+        categoryId: updated.categoryId,
+        version: updated.version,
+      },
+      metadata: { tenantId, changedFields: Object.keys(changes) },
+    });
+
+    this.logger.log('Ticket updated', {
+      ticketId,
+      tenantId,
+      changedFields: Object.keys(changes),
+      newVersion: updated.version,
+    });
+
+    // ── 11. Return DTO ──────────────────────────────────────────────────────
+    const enrichment = await this.repo.loadEnrichment(updated);
+    return mapToTicketDto(updated, enrichment);
+  }
+
+  // --------------------------------------------------------------------------
+  // Resolve (POST /tickets/:id/resolve)
+  // --------------------------------------------------------------------------
+
+  /**
+   * Resolve a ticket with a required resolution note.
+   *
+   * Idempotent: if the ticket is already resolved, returns the current state
+   * without writing events or audit records.
+   *
+   * Already-closed tickets return 422 — resolution from closed is not allowed.
+   *
+   * Steps:
+   *   1. Load ticket (scope-enforced) → 404 if missing.
+   *   2. Idempotency: already resolved → return current DTO.
+   *   3. Validate transition (closed → 422, any non-resolvable state → 422).
+   *   4. Version-guarded UPDATE setting status=resolved, resolved_at, ai_status=pending.
+   *   5. Append status history row.
+   *   6. Emit ticket.resolved outbox event.
+   *   7. Write audit record.
+   *   8. Return updated TicketDto.
+   */
+  async resolve(
+    principal: PrincipalContext,
+    ticketId: string,
+    dto: ResolveTicketDto,
+    traceId?: string,
+  ): Promise<TicketDto> {
+    const tenantId = principal.tenantId;
+
+    // ── 1. Load ticket ───────────────────────────────────────────────────────
+    const current = await this.repo.findById(ticketId);
+    if (!current) {
+      throw new NotFoundException({
+        error: { code: 'TICKET_NOT_FOUND', message: 'Ticket not found.' },
+      });
+    }
+
+    // ── 2. Idempotency — already resolved ────────────────────────────────────
+    if (current.status === 'resolved') {
+      const enrichment = await this.repo.loadEnrichment(current);
+      return mapToTicketDto(current, enrichment);
+    }
+
+    // ── 3. Transition validation ─────────────────────────────────────────────
+    const permissions = (principal.permissions ?? []) as Permission[];
+    const decision = validateTransition({
+      currentStatus: current.status as TicketStatus,
+      requestedStatus: 'resolved',
+      principalPermissions: permissions,
+    });
+
+    if (!decision.allowed) {
+      if (decision.reason === 'PERMISSION_DENIED') {
+        throw new ForbiddenException({
+          error: {
+            code: 'TRANSITION_PERMISSION_DENIED',
+            message: decision.message,
+            details: [{ requiredPermission: decision.requiredPermission }],
+          },
+        });
+      }
+      throw new UnprocessableEntityException({
+        error: {
+          code: 'INVALID_TRANSITION',
+          message: decision.message,
+          details: [{ fromStatus: current.status, toStatus: 'resolved' }],
+        },
+      });
+    }
+
+    // ── 4. Version-guarded UPDATE ────────────────────────────────────────────
+    const changes = {
+      status: 'resolved' as TicketStatus,
+      resolvedAt: new Date(),
+      aiStatus: 'pending',
+      ...(dto.category_id !== undefined ? { categoryId: dto.category_id } : {}),
+    };
+
+    const result = await this.repo.updateTicket(tenantId, ticketId, dto.version, changes);
+
+    if (result === 'VERSION_CONFLICT') {
+      const currentVersion = await this.repo.getCurrentVersion(tenantId, ticketId);
+      throw new ConflictException({
+        error: {
+          code: 'VERSION_CONFLICT',
+          message: 'The ticket has been modified by another request. Refresh and retry.',
+          details: [{ currentVersion }],
+        },
+      });
+    }
+
+    const updated = result;
+
+    // ── 5. Status history ───────────────────────────────────────────────────
+    await this.repo.appendStatusHistory(
+      tenantId,
+      ticketId,
+      current.status as TicketStatus,
+      'resolved',
+      principal.userId ?? null,
+      dto.resolution_note,
+    );
+
+    // ── 6. Outbox event ─────────────────────────────────────────────────────
+    await this.repo.emitEvent(
+      tenantId,
+      ticketId,
+      TICKET_EVENTS.RESOLVED,
+      {
+        ticketId,
+        tenantId,
+        actorUserId: principal.userId,
+        fromStatus: current.status,
+        toStatus: 'resolved',
+        resolutionNote: '[redacted]', // PII — consumers re-read the ticket for detail
+      },
+      traceId,
+    );
+
+    // ── 7. Audit ─────────────────────────────────────────────────────────────
+    await this.auditWriter.append({
+      resourceType: 'ticket',
+      resourceId: ticketId,
+      action: 'resolve',
+      beforeState: { status: current.status, resolvedAt: null, version: current.version },
+      afterState: { status: 'resolved', resolvedAt: updated.resolvedAt, version: updated.version },
+      metadata: { tenantId },
+    });
+
+    this.logger.log('Ticket resolved', { ticketId, tenantId, newVersion: updated.version });
+
+    // ── 8. Return DTO ────────────────────────────────────────────────────────
+    const enrichment = await this.repo.loadEnrichment(updated);
+    return mapToTicketDto(updated, enrichment);
   }
 
   // --------------------------------------------------------------------------
