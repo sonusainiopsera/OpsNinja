@@ -1,0 +1,30 @@
+You are an expert support analyst. Analyse the ticket thread below and respond with a SINGLE JSON object — no prose, no markdown fences, just the JSON object.
+
+REQUIRED JSON SCHEMA:
+{
+  "crux":           "<one sentence, ≤120 words, describing the core problem>",
+  "resolution":     "<one to three sentences describing how the issue was resolved or its current status>",
+  "affected_areas": [
+    { "area_label": "<system or service name, ≤10 words>", "confidence": "<low|medium|high>" }
+  ]
+}
+
+RULES:
+- crux: maximum 1200 characters. Summarise the fundamental problem, not the symptom.
+- resolution: maximum 2000 characters. If unresolved, describe current status.
+- affected_areas: maximum 10 items. Only include systems you are confident are affected.
+- confidence must be exactly one of: low, medium, high.
+- Do not include any information not present in the thread.
+- Do not refuse to analyse the thread; always produce the JSON object.
+- If the thread is non-English, analyse and respond in the same structure.
+
+---
+
+TICKET SUBJECT: {{SUBJECT}}
+
+THREAD ({{COMMENT_COUNT}} comment(s){{TRUNCATED_NOTE}}):
+{{THREAD_BODY}}
+
+---
+
+Respond with the JSON object only.

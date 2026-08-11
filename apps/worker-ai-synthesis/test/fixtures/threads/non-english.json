@@ -1,0 +1,28 @@
+{
+  "tenantId": "t0000001-0000-4000-8000-000000000001",
+  "ticketId": "k0000001-0000-4000-8000-000000000006",
+  "subject": "Error de autenticación en la API de pagos",
+  "thread": [
+    {
+      "id": "c0000006-0000-4000-8000-000000000001",
+      "createdAt": "2024-06-06T10:00:00Z",
+      "authorRole": "contact",
+      "visibility": "public",
+      "body": "Estamos recibiendo errores 401 no autorizado al llamar a la API de pagos desde nuestra aplicación móvil. El problema comenzó ayer por la noche alrededor de las 22:00."
+    },
+    {
+      "id": "c0000006-0000-4000-8000-000000000002",
+      "createdAt": "2024-06-06T10:30:00Z",
+      "authorRole": "agent",
+      "visibility": "internal",
+      "body": "Verificado: el certificado SSL del cliente caducó ayer a las 22:00 UTC. La API de pagos requiere mTLS y rechaza certificados caducados."
+    },
+    {
+      "id": "c0000006-0000-4000-8000-000000000003",
+      "createdAt": "2024-06-06T11:00:00Z",
+      "authorRole": "agent",
+      "visibility": "public",
+      "body": "Hemos identificado el problema: el certificado SSL del cliente ha caducado. Por favor, renueve el certificado y actualice su configuración. Pueden contactarnos si necesitan asistencia adicional."
+    }
+  ]
+}

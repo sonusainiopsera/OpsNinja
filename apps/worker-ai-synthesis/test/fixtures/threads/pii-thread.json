@@ -1,0 +1,28 @@
+{
+  "tenantId": "t0000001-0000-4000-8000-000000000001",
+  "ticketId": "k0000001-0000-4000-8000-000000000005",
+  "subject": "Login failure for user account",
+  "thread": [
+    {
+      "id": "c0000005-0000-4000-8000-000000000001",
+      "createdAt": "2024-06-05T09:00:00Z",
+      "authorRole": "contact",
+      "visibility": "public",
+      "body": "My account john.doe@example.com cannot log in. I am calling from +1 (555) 123-4567. The server IP is 192.168.1.100."
+    },
+    {
+      "id": "c0000005-0000-4000-8000-000000000002",
+      "createdAt": "2024-06-05T09:05:00Z",
+      "authorRole": "agent",
+      "visibility": "internal",
+      "body": "User's token in our system: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzEyMyIsImV4cCI6MTcxOTk5OTk5OX0.signature. API key from config: AKIAIOSFODNN7EXAMPLE. Internal IP of auth server: 10.0.0.50"
+    },
+    {
+      "id": "c0000005-0000-4000-8000-000000000003",
+      "createdAt": "2024-06-05T09:20:00Z",
+      "authorRole": "agent",
+      "visibility": "public",
+      "body": "We have reset the authentication token for your account. You should be able to log in now. Please contact support@company.com if the issue persists."
+    }
+  ]
+}

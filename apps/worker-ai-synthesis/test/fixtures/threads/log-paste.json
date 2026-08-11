@@ -1,0 +1,28 @@
+{
+  "tenantId": "t0000001-0000-4000-8000-000000000001",
+  "ticketId": "k0000001-0000-4000-8000-000000000004",
+  "subject": "Kubernetes pod crash loop in production",
+  "thread": [
+    {
+      "id": "c0000004-0000-4000-8000-000000000001",
+      "createdAt": "2024-06-04T14:00:00Z",
+      "authorRole": "contact",
+      "visibility": "public",
+      "body": "Our pods keep crashing. Here is the log:\n\n[2024-06-04T14:00:01Z] ERROR: Failed to bind to port 8080\n[2024-06-04T14:00:01Z] FATAL: Address already in use\n[2024-06-04T14:00:02Z] Process exited with code 1\n[2024-06-04T14:00:05Z] Restarting container (attempt 1/5)\n[2024-06-04T14:00:08Z] ERROR: Failed to bind to port 8080\n[2024-06-04T14:00:08Z] FATAL: Address already in use"
+    },
+    {
+      "id": "c0000004-0000-4000-8000-000000000002",
+      "createdAt": "2024-06-04T14:15:00Z",
+      "authorRole": "agent",
+      "visibility": "internal",
+      "body": "Two pods are trying to bind to the same hostPort 8080. The DaemonSet was accidentally deployed alongside a Deployment that also uses hostPort. Need to remove hostPort from the Deployment spec."
+    },
+    {
+      "id": "c0000004-0000-4000-8000-000000000003",
+      "createdAt": "2024-06-04T14:30:00Z",
+      "authorRole": "agent",
+      "visibility": "public",
+      "body": "Root cause identified: a Deployment was using hostPort 8080 which conflicts with the existing DaemonSet. Removed the hostPort configuration from the Deployment. Pods are now stable."
+    }
+  ]
+}

@@ -1,0 +1,112 @@
+{
+  "tenantId": "t0000001-0000-4000-8000-000000000001",
+  "ticketId": "k0000001-0000-4000-8000-000000000002",
+  "subject": "Intermittent 502 errors on checkout endpoint",
+  "thread": [
+    {
+      "id": "c0000002-0000-4000-8000-000000000001",
+      "createdAt": "2024-06-02T09:00:00Z",
+      "authorRole": "contact",
+      "visibility": "public",
+      "body": "We are seeing intermittent 502 Bad Gateway errors on the /api/checkout endpoint. About 5-10% of requests fail. Started around 08:30 UTC."
+    },
+    {
+      "id": "c0000002-0000-4000-8000-000000000002",
+      "createdAt": "2024-06-02T09:05:00Z",
+      "authorRole": "agent",
+      "visibility": "internal",
+      "body": "Checking load balancer logs. Error rate confirmed at 7.3%. Backend pool has 4 instances; 1 instance (web-03) is returning 502s."
+    },
+    {
+      "id": "c0000002-0000-4000-8000-000000000003",
+      "createdAt": "2024-06-02T09:10:00Z",
+      "authorRole": "agent",
+      "visibility": "public",
+      "body": "We are investigating the issue. Our team has identified elevated error rates and is working on a fix."
+    },
+    {
+      "id": "c0000002-0000-4000-8000-000000000004",
+      "createdAt": "2024-06-02T09:20:00Z",
+      "authorRole": "contact",
+      "visibility": "public",
+      "body": "This is causing revenue loss. Can you give us an ETA?"
+    },
+    {
+      "id": "c0000002-0000-4000-8000-000000000005",
+      "createdAt": "2024-06-02T09:25:00Z",
+      "authorRole": "agent",
+      "visibility": "internal",
+      "body": "web-03 is running out of file descriptors. ulimit is set to 1024 but connections are not being closed properly. The new connection pooling change from yesterday's deploy is likely the culprit."
+    },
+    {
+      "id": "c0000002-0000-4000-8000-000000000006",
+      "createdAt": "2024-06-02T09:30:00Z",
+      "authorRole": "agent",
+      "visibility": "internal",
+      "body": "Rolled back web-03 to previous version. Error rate dropped to 0.1%. Monitoring for 15 minutes."
+    },
+    {
+      "id": "c0000002-0000-4000-8000-000000000007",
+      "createdAt": "2024-06-02T09:45:00Z",
+      "authorRole": "agent",
+      "visibility": "public",
+      "body": "We have mitigated the issue by rolling back a recent change on one of our backend instances. Error rate is now below 0.2%. We are continuing to monitor."
+    },
+    {
+      "id": "c0000002-0000-4000-8000-000000000008",
+      "createdAt": "2024-06-02T10:00:00Z",
+      "authorRole": "contact",
+      "visibility": "public",
+      "body": "Thank you. We are still seeing occasional errors. Is the rollback complete across all instances?"
+    },
+    {
+      "id": "c0000002-0000-4000-8000-000000000009",
+      "createdAt": "2024-06-02T10:05:00Z",
+      "authorRole": "agent",
+      "visibility": "internal",
+      "body": "Rollback complete on all 4 instances. The connection pooling bug in v2.4.1 of the checkout service sets keepAlive timeout to 0ms which causes immediate connection close before the load balancer health check completes."
+    },
+    {
+      "id": "c0000002-0000-4000-8000-000000000010",
+      "createdAt": "2024-06-02T10:10:00Z",
+      "authorRole": "agent",
+      "visibility": "public",
+      "body": "Rollback is complete across all instances. Error rate is now at 0%. We will be releasing a fix in v2.4.2 within the next 2 hours."
+    },
+    {
+      "id": "c0000002-0000-4000-8000-000000000011",
+      "createdAt": "2024-06-02T11:00:00Z",
+      "authorRole": "agent",
+      "visibility": "internal",
+      "body": "v2.4.2 deployed to staging, tests passing. HTTP keepAlive timeout set to 5000ms. Ready for production."
+    },
+    {
+      "id": "c0000002-0000-4000-8000-000000000012",
+      "createdAt": "2024-06-02T11:30:00Z",
+      "authorRole": "agent",
+      "visibility": "public",
+      "body": "Fix deployed to production (v2.4.2). The keepAlive timeout misconfiguration has been corrected. All instances healthy. Please confirm the issue is resolved from your side."
+    },
+    {
+      "id": "c0000002-0000-4000-8000-000000000013",
+      "createdAt": "2024-06-02T11:45:00Z",
+      "authorRole": "contact",
+      "visibility": "public",
+      "body": "Confirmed. No more errors. Thank you for the quick resolution."
+    },
+    {
+      "id": "c0000002-0000-4000-8000-000000000014",
+      "createdAt": "2024-06-02T11:50:00Z",
+      "authorRole": "agent",
+      "visibility": "internal",
+      "body": "Adding post-mortem: root cause was HTTP keepAlive timeout set to 0 in connection pool config. Fix: increase to 5000ms. Prevention: add integration test for keepAlive timeout configuration."
+    },
+    {
+      "id": "c0000002-0000-4000-8000-000000000015",
+      "createdAt": "2024-06-02T12:00:00Z",
+      "authorRole": "agent",
+      "visibility": "public",
+      "body": "Closing ticket. Issue resolved. Post-mortem will be shared separately."
+    }
+  ]
+}

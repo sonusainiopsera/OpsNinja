@@ -1,0 +1,28 @@
+{
+  "tenantId": "t0000001-0000-4000-8000-000000000001",
+  "ticketId": "k0000001-0000-4000-8000-000000000001",
+  "subject": "Cannot connect to database after deployment",
+  "thread": [
+    {
+      "id": "c0000001-0000-4000-8000-000000000001",
+      "createdAt": "2024-06-01T10:00:00Z",
+      "authorRole": "contact",
+      "visibility": "public",
+      "body": "Hi, since the deployment this morning we can no longer connect to the database. We get connection refused errors on port 5432."
+    },
+    {
+      "id": "c0000001-0000-4000-8000-000000000002",
+      "createdAt": "2024-06-01T10:15:00Z",
+      "authorRole": "agent",
+      "visibility": "internal",
+      "body": "Checked the security group rules. The new deployment changed the inbound rules and blocked port 5432 from the app servers."
+    },
+    {
+      "id": "c0000001-0000-4000-8000-000000000003",
+      "createdAt": "2024-06-01T10:30:00Z",
+      "authorRole": "agent",
+      "visibility": "public",
+      "body": "We have identified and fixed the issue. The security group was updated during deployment to block database traffic. It has been restored. Please verify connectivity."
+    }
+  ]
+}

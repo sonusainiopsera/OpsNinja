@@ -1,0 +1,28 @@
+{
+  "tenantId": "t0000001-0000-4000-8000-000000000001",
+  "ticketId": "k0000001-0000-4000-8000-000000000003",
+  "subject": "Investigate memory leak in payments service",
+  "thread": [
+    {
+      "id": "c0000003-0000-4000-8000-000000000001",
+      "createdAt": "2024-06-03T08:00:00Z",
+      "authorRole": "agent",
+      "visibility": "internal",
+      "body": "Memory leak detected in payments-svc. Heap growing from 512MB to 2GB over 6 hours. Probable cause: connection pool not being released after failed transactions."
+    },
+    {
+      "id": "c0000003-0000-4000-8000-000000000002",
+      "createdAt": "2024-06-03T09:30:00Z",
+      "authorRole": "agent",
+      "visibility": "internal",
+      "body": "Confirmed: pg-pool v3.6.1 has a known issue where connections held during transaction rollback are not returned. Upgrading to v3.7.0 should fix it."
+    },
+    {
+      "id": "c0000003-0000-4000-8000-000000000003",
+      "createdAt": "2024-06-03T11:00:00Z",
+      "authorRole": "system",
+      "visibility": "internal",
+      "body": "Automated health check: memory stabilised at 540MB after rolling restart. Monitoring alert cleared."
+    }
+  ]
+}

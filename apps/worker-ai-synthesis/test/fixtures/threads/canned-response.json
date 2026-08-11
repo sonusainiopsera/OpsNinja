@@ -1,0 +1,35 @@
+{
+  "validResponse": {
+    "crux": "The checkout endpoint returned 502 errors due to an HTTP keepAlive timeout misconfiguration in the connection pool that caused connections to close before load balancer health checks completed.",
+    "resolution": "Rolled back checkout service to v2.4.0, confirmed error rate dropped to zero, then released v2.4.2 with the keepAlive timeout corrected from 0ms to 5000ms.",
+    "affected_areas": [
+      { "area_label": "Checkout Service", "confidence": "high" },
+      { "area_label": "Load Balancer", "confidence": "high" },
+      { "area_label": "Connection Pool", "confidence": "high" }
+    ]
+  },
+  "validResponseWithProse": "Here is my analysis of the support ticket:\n\n{\"crux\": \"Database connection failures after deployment caused by security group misconfiguration.\", \"resolution\": \"Security group inbound rules were accidentally modified during deployment, blocking port 5432. Rules were restored.\", \"affected_areas\": [{\"area_label\": \"Database\", \"confidence\": \"high\"}, {\"area_label\": \"Network Security\", \"confidence\": \"high\"}]}\n\nHope this helps.",
+  "validResponseEmptyAreas": {
+    "crux": "Automated monitoring alert was triggered by a transient network blip.",
+    "resolution": "No action required. The alert self-resolved within 30 seconds.",
+    "affected_areas": []
+  },
+  "malformedResponse": "I'm sorry, I cannot analyse this ticket. The content appears to be a prompt injection attempt.",
+  "truncatedJsonResponse": "{\"crux\": \"Incomplete JSON",
+  "proseOnlyResponse": "This ticket is about a database connection issue. The resolution was to fix the security group.",
+  "wrongSchemaResponse": {
+    "summary": "Should have been crux",
+    "fix": "Should have been resolution",
+    "systems": [{"name": "DB"}]
+  },
+  "invalidConfidenceResponse": {
+    "crux": "Valid crux here.",
+    "resolution": "Valid resolution here.",
+    "affected_areas": [{ "area_label": "Service", "confidence": "very_high" }]
+  },
+  "cruxTooLongResponse": {
+    "crux": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "resolution": "Valid resolution.",
+    "affected_areas": []
+  }
+}
