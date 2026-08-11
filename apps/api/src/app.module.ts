@@ -22,6 +22,7 @@ import { HealthModule } from './health/health.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { TicketsModule } from './modules/tickets/tickets.module';
 
 @Module({
@@ -37,6 +38,7 @@ import { TicketsModule } from './modules/tickets/tickets.module';
     TicketsModule,
     ReportingModule,
     NotificationsModule,
+    WebhooksModule,
   ],
   providers: [
     // ── Global guard: AuthGuard ───────────────────────────────────────────────

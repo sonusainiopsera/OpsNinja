@@ -286,3 +286,15 @@ export type {
   NotificationSuppression,
   NewNotificationSuppression,
 } from './schema/notifications';
+
+// ---------------------------------------------------------------------------
+// Webhooks (webhook_endpoints)
+// ---------------------------------------------------------------------------
+
+export { webhookEndpoints } from './schema/webhooks';
+
+export type {
+  WebhookEndpoint,
+  NewWebhookEndpoint,
+  WebhookEndpointStatus,
+} from './schema/webhooks';

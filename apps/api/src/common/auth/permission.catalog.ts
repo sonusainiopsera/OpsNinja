@@ -43,6 +43,9 @@ export type Permission =
   // ── Tenant administration ─────────────────────────────────────────────────
   | 'admin:manage_tenant'
   | 'admin:revoke_sessions'
+  // ── Webhooks ──────────────────────────────────────────────────────────────
+  | 'webhook:read'
+  | 'webhook:manage'
   // ── Machine / worker ─────────────────────────────────────────────────────
   | 'machine:jira_sync'
   | 'machine:notification_send'
@@ -60,6 +63,7 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
   'report:read', 'report:export',
   'jira:read', 'jira:manage',
   'admin:manage_tenant', 'admin:revoke_sessions',
+  'webhook:read', 'webhook:manage',
   'machine:jira_sync', 'machine:notification_send', 'machine:export',
 ];
 
@@ -107,6 +111,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<string, readonly Permission[]>> =
     'org:read',
     'user:read',
     'jira:read', 'jira:manage',
+    'webhook:read', 'webhook:manage',
   ],
 
   portal_user: [

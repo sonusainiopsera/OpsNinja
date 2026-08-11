@@ -28,6 +28,15 @@ const REDACTED_KEYS = new Set([
   'body_template',
   'text_template',
   'textTemplate',
+  // Webhook Restricted-tier: signing secrets must never appear in logs.
+  'secret',
+  'plaintext',
+  'signingKey',
+  'signing_key',
+  'secretCiphertext',
+  'secret_ciphertext',
+  'previousSecretCiphertext',
+  'previous_secret_ciphertext',
 ]);
 
 const REDACTED_EMAIL_PLACEHOLDER = '[REDACTED_EMAIL]';

@@ -28,7 +28,9 @@
       "@opsninja/filter-compiler": ["./packages/filter-compiler/src/index.ts"],
       "@opsninja/filter-compiler/*": ["./packages/filter-compiler/src/*"],
       "@opsninja/observability": ["./packages/observability/src/index.ts"],
-      "@opsninja/observability/*": ["./packages/observability/src/*"]
+      "@opsninja/observability/*": ["./packages/observability/src/*"],
+      "@opsninja/crypto": ["./packages/crypto/src/index.ts"],
+      "@opsninja/crypto/*": ["./packages/crypto/src/*"]
     }
   }
 }
