@@ -39,7 +39,9 @@
       "@opsninja/test-seed": ["./packages/test-seed/src/index.ts"],
       "@opsninja/test-seed/*": ["./packages/test-seed/src/*"],
       "@opsninja/events": ["./packages/events/src/index.ts"],
-      "@opsninja/events/*": ["./packages/events/src/*"]
+      "@opsninja/events/*": ["./packages/events/src/*"],
+      "@opsninja/api-types": ["./packages/api-types/src/index.ts"],
+      "@opsninja/api-types/*": ["./packages/api-types/src/*"]
     }
   }
 }

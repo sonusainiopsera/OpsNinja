@@ -12,5 +12,7 @@ module.exports = {
   moduleNameMapper: {
     '^@opsninja/db$': '<rootDir>/../../../packages/db/src/index.ts',
     '^@opsninja/db/(.*)$': '<rootDir>/../../../packages/db/src/$1',
+    '^@opsninja/api-types$': '<rootDir>/../../../packages/api-types/src/index.ts',
+    '^@opsninja/api-types/(.*)$': '<rootDir>/../../../packages/api-types/src/$1',
   },
 };
