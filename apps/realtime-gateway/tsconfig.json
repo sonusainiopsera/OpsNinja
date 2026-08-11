@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "paths": {
+      "@opsninja/observability": ["../../packages/observability/src/index.ts"],
+      "@opsninja/observability/*": ["../../packages/observability/src/*"]
+    }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist", "node_modules", "**/*.spec.ts", "**/*.e2e-spec.ts", "test"]
+}

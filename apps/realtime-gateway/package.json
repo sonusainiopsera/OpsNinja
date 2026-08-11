@@ -1,0 +1,37 @@
+{
+  "name": "@opsninja/realtime-gateway",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "start": "node dist/main.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/main.ts",
+    "test": "jest --passWithNoTests",
+    "test:e2e": "jest --config jest.e2e.config.js --passWithNoTests",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@nestjs/common": "^10.4.0",
+    "@nestjs/core": "^10.4.0",
+    "@nestjs/platform-express": "^10.4.0",
+    "@nestjs/config": "^3.3.0",
+    "@opsninja/observability": "*",
+    "ioredis": "^5.4.1",
+    "jsonwebtoken": "^9.0.2",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "ws": "^8.18.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.5.13",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.0",
+    "ts-node": "^10.9.0",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.6.0"
+  }
+}
