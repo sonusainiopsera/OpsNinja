@@ -5,7 +5,8 @@ import { SesEventHandler } from './ses-event.handler';
 import { SqsConsumerService } from './sqs-consumer.service';
 import { RateLimiterService } from './rate-limiter.service';
 import { SesEmailSender } from './adapters/ses-email-sender';
-import { EMAIL_SENDER } from './ports/email-sender.port';
+import { EMAIL_SENDER, type EmailSenderPort } from './ports/email-sender.port';
+import { SlaReminderHandler } from './handlers/sla-reminder.handler';
 
 function createPool(): Pool {
   return new Pool({
@@ -49,6 +50,12 @@ function createSesEmailSender(): SesEmailSender {
       provide: SesEventHandler,
       useFactory: (pool: Pool) => new SesEventHandler(pool),
       inject: [Pool],
+    },
+    {
+      provide: SlaReminderHandler,
+      useFactory: (pool: Pool, emailSender: EmailSenderPort) =>
+        new SlaReminderHandler(pool, emailSender),
+      inject: [Pool, EMAIL_SENDER],
     },
     SqsConsumerService,
   ],

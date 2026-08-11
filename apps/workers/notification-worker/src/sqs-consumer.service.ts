@@ -4,10 +4,16 @@
  * Long-poll: batchSize=10, waitTimeSeconds=20.
  * Graceful drain on SIGTERM: stop polling, wait for in-flight handlers to finish.
  *
- * Message routing:
+ * Message routing (qNotify queue — SQS_QUEUE_URL):
  *  - type === 'notification' → NotificationHandler
  *  - type === 'ses_event'    → SesEventHandler (bounce/complaint)
  *  - unknown type            → logged and deleted
+ *
+ * SLA notifications queue (SLA_NOTIFICATIONS_SQS_URL):
+ *  - eventType === 'sla.reminder_due' | 'sla.breached'
+ *    routed to SlaReminderHandler after SNS envelope unwrapping.
+ *  - SlaReminderPermanentError → delete immediately (invalid payload)
+ *  - other errors              → exponential backoff via visibility change
  */
 
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
@@ -19,6 +25,7 @@ import {
 } from '@aws-sdk/client-sqs';
 import { NotificationHandler, RateLimitExceededError, SesTerminalError } from './notification.handler';
 import { SesEventHandler } from './ses-event.handler';
+import { SlaReminderHandler, SlaReminderPermanentError } from './handlers/sla-reminder.handler';
 
 const POLL_BATCH_SIZE = 10;
 const WAIT_TIME_SECONDS = 20;
@@ -40,13 +47,21 @@ export class SqsConsumerService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly notificationHandler: NotificationHandler,
     private readonly sesEventHandler: SesEventHandler,
+    private readonly slaReminderHandler: SlaReminderHandler,
   ) {
     this.sqs = new SQSClient({ region: process.env['AWS_REGION'] ?? 'us-east-1' });
   }
 
   onModuleInit(): void {
     this.running = true;
-    void this.pollLoop();
+    void this.pollLoop(process.env['SQS_QUEUE_URL'], 'qNotify');
+    // Start SLA notifications consumer only when the queue URL is configured.
+    const slaQueueUrl = process.env['SLA_NOTIFICATIONS_SQS_URL'];
+    if (slaQueueUrl) {
+      void this.pollLoop(slaQueueUrl, 'sla-notifications');
+    } else {
+      this.logger.warn('SLA_NOTIFICATIONS_SQS_URL not set — SLA reminder consumer will not start');
+    }
   }
 
   onModuleDestroy(): Promise<void> {
@@ -65,10 +80,9 @@ export class SqsConsumerService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async pollLoop(): Promise<void> {
-    const queueUrl = process.env['SQS_QUEUE_URL'];
+  private async pollLoop(queueUrl: string | undefined, label: string): Promise<void> {
     if (!queueUrl) {
-      this.logger.error('SQS_QUEUE_URL not set — consumer will not start');
+      this.logger.error(`${label}: queue URL not set — consumer will not start`);
       return;
     }
 
@@ -86,11 +100,11 @@ export class SqsConsumerService implements OnModuleInit, OnModuleDestroy {
         const messages = response.Messages ?? [];
         for (const msg of messages) {
           this.inFlightCount++;
-          void this.processMessage(queueUrl, msg).finally(() => this.decrementInFlight());
+          void this.processMessage(queueUrl, msg, label).finally(() => this.decrementInFlight());
         }
       } catch (err) {
         if (this.running) {
-          this.logger.error('SQS poll error — retrying in 5s', { message: (err as Error).message });
+          this.logger.error(`${label}: SQS poll error — retrying in 5s`, { message: (err as Error).message });
           await new Promise((r) => setTimeout(r, 5_000));
         }
       }
@@ -100,17 +114,33 @@ export class SqsConsumerService implements OnModuleInit, OnModuleDestroy {
   private async processMessage(
     queueUrl: string,
     msg: { Body?: string; ReceiptHandle?: string; Attributes?: Record<string, string> },
+    label: string,
   ): Promise<void> {
     const body = msg.Body ?? '';
     const receiptHandle = msg.ReceiptHandle ?? '';
     const receiveCount = parseInt(msg.Attributes?.['ApproximateReceiveCount'] ?? '1', 10);
 
+    if (label === 'sla-notifications') {
+      return this.processSlaMessage(queueUrl, body, receiptHandle, receiveCount);
+    }
+    return this.processNotificationMessage(queueUrl, body, receiptHandle, receiveCount);
+  }
+
+  // ---------------------------------------------------------------------------
+  // qNotify queue handler (existing routing)
+  // ---------------------------------------------------------------------------
+
+  private async processNotificationMessage(
+    queueUrl: string,
+    body: string,
+    receiptHandle: string,
+    receiveCount: number,
+  ): Promise<void> {
     let messageType: string | undefined;
     try {
       const parsed = JSON.parse(body) as { type?: string };
       messageType = parsed.type;
     } catch {
-      // Unparseable — delete immediately.
       this.logger.error('Unparseable SQS message body — deleting');
       await this.deleteMessage(queueUrl, receiptHandle);
       return;
@@ -120,7 +150,6 @@ export class SqsConsumerService implements OnModuleInit, OnModuleDestroy {
       if (messageType === 'notification') {
         await this.notificationHandler.handleMessage(body);
       } else if (messageType === 'ses_event') {
-        // SES event envelopes carry tenantId in their data field.
         const parsed = JSON.parse(body) as { data?: { tenantId?: string; snsBody?: string } };
         const tenantId = parsed.data?.tenantId;
         const snsBody = parsed.data?.snsBody;
@@ -135,19 +164,16 @@ export class SqsConsumerService implements OnModuleInit, OnModuleDestroy {
       await this.deleteMessage(queueUrl, receiptHandle);
     } catch (err) {
       if (err instanceof RateLimitExceededError) {
-        // Set short visibility to requeue quickly.
         await this.changeVisibility(queueUrl, receiptHandle, 5);
         this.logger.log('Rate limited — requeuing', { receiveCount });
         return;
       }
 
       if (err instanceof SesTerminalError) {
-        // Permanent failure — delete from queue (already marked failed in DB).
         await this.deleteMessage(queueUrl, receiptHandle);
         return;
       }
 
-      // Retryable error — adjust visibility for exponential backoff.
       const backoff = visibilityForAttempt(receiveCount);
       this.logger.warn('Retryable error — backing off', {
         error: (err as Error).message,
@@ -157,6 +183,46 @@ export class SqsConsumerService implements OnModuleInit, OnModuleDestroy {
       await this.changeVisibility(queueUrl, receiptHandle, backoff);
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // sla-notifications queue handler
+  // ---------------------------------------------------------------------------
+
+  private async processSlaMessage(
+    queueUrl: string,
+    body: string,
+    receiptHandle: string,
+    receiveCount: number,
+  ): Promise<void> {
+    try {
+      await this.slaReminderHandler.handleMessage(body);
+      await this.deleteMessage(queueUrl, receiptHandle);
+    } catch (err) {
+      if (err instanceof SlaReminderPermanentError) {
+        // Invalid payload — permanently discard; DLQ will not receive it.
+        this.logger.error('SLA reminder permanent error — deleting message', {
+          reason: err.reason,
+          message: err.message,
+        });
+        await this.deleteMessage(queueUrl, receiptHandle);
+        return;
+      }
+
+      // Retryable — exponential backoff. After the redrive max, SQS moves
+      // the message to sla-notifications-dlq automatically.
+      const backoff = visibilityForAttempt(receiveCount);
+      this.logger.warn('SLA reminder retryable error — backing off', {
+        error: (err as Error).message,
+        receiveCount,
+        backoff_seconds: backoff,
+      });
+      await this.changeVisibility(queueUrl, receiptHandle, backoff);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // SQS helpers
+  // ---------------------------------------------------------------------------
 
   private async deleteMessage(queueUrl: string, receiptHandle: string): Promise<void> {
     try {

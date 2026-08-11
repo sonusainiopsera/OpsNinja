@@ -15,6 +15,8 @@ env:
   AWS_REGION: us-east-1
   HEALTH_PORT: "3001"
   # SQS_QUEUE_URL and DATABASE_URL injected via Secrets Manager / environment.
+  # SLA_NOTIFICATIONS_SQS_URL: injected at deploy time for the sla-notifications queue.
+  # SLA_ESCALATION_EMAIL: tenant-level fallback recipient when no assignee/group found.
 
 resources:
   requests:
@@ -61,3 +63,57 @@ cloudwatchAlarms:
       - "arn:aws:sns:us-east-1:ACCOUNT_ID:opsninja-p2-alerts"
     dimensions:
       QueueName: "opsninja-notification-dlq"
+
+# ── SLA Notifications SQS queue + DLQ (WO-048) ───────────────────────────────
+# Separate queue subscribed to the opsninja-events SNS topic with a filter
+# policy on eventType IN ('sla.reminder_due', 'sla.breached').
+# Redrive policy: maxReceiveCount=5 → messages move to sla-notifications-dlq.
+sqsQueues:
+  slaNotifications:
+    queueName: "opsninja-sla-notifications"
+    visibilityTimeoutSeconds: 30
+    messageRetentionPeriodSeconds: 86400   # 24 h
+    maxReceiveCount: 5
+    deadLetterQueueName: "opsninja-sla-notifications-dlq"
+    snsFilterPolicy:
+      eventType:
+        - "sla.reminder_due"
+        - "sla.breached"
+
+  # ── SLA Notifications DLQ depth alert ────────────────────────────────────
+  slaNotificationsDlqAlarm:
+    enabled: true
+    alarmName: "sla-notifications-dlq-not-empty"
+    alarmDescription: >
+      One or more SLA reminder/breach notifications reached the DLQ after 5
+      delivery attempts. See runbook: runbooks/sla-notifications.md
+    metricName: ApproximateNumberOfMessagesVisible
+    namespace: AWS/SQS
+    statistic: Sum
+    period: 60
+    evaluationPeriods: 1
+    threshold: 1
+    comparisonOperator: GreaterThanOrEqualToThreshold
+    treatMissingData: notBreaching
+    alarmActions:
+      - "arn:aws:sns:us-east-1:ACCOUNT_ID:opsninja-p1-alerts"
+    dimensions:
+      QueueName: "opsninja-sla-notifications-dlq"
+
+  # ── SLA reminder delivery failure alert ──────────────────────────────────
+  slaReminderDeliveryFailureAlarm:
+    enabled: true
+    alarmName: "sla-reminder-delivery-failure"
+    alarmDescription: >
+      sla_reminder_delivery_failed_total exceeded threshold — one or more SLA
+      reminders failed to deliver. See runbook: runbooks/sla-notifications.md
+    metricName: sla_reminder_delivery_failed_total
+    namespace: OpsNinja/SLANotifications
+    statistic: Sum
+    period: 300
+    evaluationPeriods: 1
+    threshold: 3
+    comparisonOperator: GreaterThanOrEqualToThreshold
+    treatMissingData: notBreaching
+    alarmActions:
+      - "arn:aws:sns:us-east-1:ACCOUNT_ID:opsninja-p2-alerts"

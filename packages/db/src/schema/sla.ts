@@ -28,6 +28,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
+
 // ---------------------------------------------------------------------------
 // sla_calendars (defined first — sla_policies references it)
 // ---------------------------------------------------------------------------
@@ -244,3 +245,51 @@ export const slaTimerEvents = pgTable(
 
 export type SlaTimerEvent = typeof slaTimerEvents.$inferSelect;
 export type NewSlaTimerEvent = typeof slaTimerEvents.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// sla_reminder_emissions — idempotency log for SLA reminder dispatches (WO-048)
+// ---------------------------------------------------------------------------
+
+export const slaReminderEmissions = pgTable(
+  'sla_reminder_emissions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').notNull(),
+    timerId: uuid('timer_id').notNull(),
+    ticketId: uuid('ticket_id').notNull(),
+    /** 50 for first reminder, 75 for second, 100 for breach. */
+    thresholdPct: smallint('threshold_pct').notNull(),
+    /** 'email' | 'webhook' */
+    channel: text('channel').notNull(),
+    /** Opaque reference: email address for email channel, endpoint UUID for webhook. */
+    recipientRef: text('recipient_ref'),
+    /** 'pending' | 'sent' | 'suppressed' | 'unroutable' | 'failed' | 'blocked' */
+    deliveryStatus: text('delivery_status').notNull().default('pending'),
+    /** Incremented on each delivery attempt (bounded by SQS redrive policy). */
+    attemptCount: integer('attempt_count').notNull().default(0),
+    /** Human-readable reason when delivery_status is 'suppressed' or 'unroutable'. */
+    suppressedReason: text('suppressed_reason'),
+    /** UTC instant when the notification was successfully dispatched. */
+    emittedAt: timestamp('emitted_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    /** Unique idempotency key: one emission record per (timer, threshold, channel). */
+    idempotencyIdx: uniqueIndex('sla_reminder_emissions_idempotency_idx').on(
+      t.timerId,
+      t.thresholdPct,
+      t.channel,
+    ),
+    /** Operator query: find pending/failed emissions for a tenant sorted by created_at. */
+    tenantStatusIdx: index('sla_reminder_emissions_tenant_status_idx').on(
+      t.tenantId,
+      t.deliveryStatus,
+      t.createdAt,
+    ),
+    tenantTicketIdx: index('sla_reminder_emissions_tenant_ticket_idx').on(t.tenantId, t.ticketId),
+  }),
+);
+
+export type SlaReminderEmission = typeof slaReminderEmissions.$inferSelect;
+export type NewSlaReminderEmission = typeof slaReminderEmissions.$inferInsert;
