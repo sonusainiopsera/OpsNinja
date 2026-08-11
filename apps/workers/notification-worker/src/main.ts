@@ -9,12 +9,13 @@ import { NestFactory } from '@nestjs/core';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { WorkerModule } from './worker.module';
 import { Logger } from '@nestjs/common';
+import { createLogger } from '@opsninja/observability';
 
 const logger = new Logger('main');
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.createApplicationContext(WorkerModule, {
-    logger: ['log', 'warn', 'error'],
+    logger: createLogger({ context: 'NotificationWorker' }),
   });
 
   // Healthz probe server — lightweight HTTP server on a separate port.

@@ -6,10 +6,13 @@
   "types": "./src/index.ts",
   "scripts": {
     "build": "tsc --project tsconfig.json",
-    "typecheck": "tsc --project tsconfig.json --noEmit"
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {},
   "devDependencies": {
-    "typescript": "^5.6.0"
+    "@opsninja/db": "*",
+    "typescript": "^5.6.0",
+    "vitest": "^2.0.0"
   }
 }

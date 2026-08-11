@@ -196,3 +196,10 @@
 - **Files:** 12 (+1518/-1)
 - **Duration:** 660ss
 - **Approach:** Implemented the full verification token lifecycle as three decoupled layers: (1) TokenCodec — a pure stateless crypto module that generates CSPRNG entropy + HMAC-SHA256 tag, stores only the SHA-256 hash server-side, and supports dual-key rotation overlap via PORTAL_TOKEN_SIGNING_KEY_PREVIOUS; (2) PortalVerificationService — owns issue/redeem/resend with all business rules (conditional consumed_at IS NULL consuming UPDATE, 60s Redis idempotency cache, 3/hr + 5/24h resend throttle, 5-failure-per-hour lockout, bootstrap-mode RLS via SET LOCAL app.portal_signup_bootstrap='true'); (3) PortalVerificationController — @Public @NoTenantContext endpoints with Zod DTOs, generic resend 202 for email enumeration prevention, and httpOnly Secure SameSite=Strict portal refresh cookie on success. Email notification is inserted into the notifications table (outbox pattern) so SES latency/outage never fails the HTTP response.
+
+## WO-094: User Story: WO-094 - Data Classification Registry and PII Log Redaction
+- **Status:** completed
+- **Commit:** `983c36b`
+- **Files:** 16 (+2300/-111)
+- **Duration:** 1094ss
+- **Approach:** N/A

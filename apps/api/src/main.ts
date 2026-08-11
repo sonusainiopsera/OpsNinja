@@ -11,13 +11,14 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
+import { createLogger } from '@opsninja/observability';
 
 const PORT = parseInt(process.env['PORT'] ?? '8080', 10);
 const logger = new Logger('Bootstrap');
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log', 'verbose', 'debug'],
+    logger: createLogger({ context: 'Bootstrap' }),
   });
 
   // Global validation pipe — rejects unknown properties and validates DTOs.
