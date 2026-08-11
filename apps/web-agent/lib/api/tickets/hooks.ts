@@ -10,6 +10,7 @@
 
 import {
   useInfiniteQuery,
+  useQuery,
   useMutation,
   useQueryClient,
 } from '@tanstack/react-query';
@@ -20,6 +21,17 @@ import type {
   TicketListFilters,
   BulkActionPayload,
   BulkActionResponse,
+  TicketDetail,
+  TicketDetailResponse,
+  CommentListResponse,
+  CreateCommentPayload,
+  Comment,
+  PresignResponse,
+  FinalizeAttachmentPayload,
+  FinalizeAttachmentResponse,
+  UpdateTicketPayload,
+  ResolveTicketPayload,
+  ResolveTicketResponse,
 } from './types';
 
 // ---------------------------------------------------------------------------
@@ -60,6 +72,8 @@ export const ticketQueryKeys = {
       sortDir: filters.sortDir,
     }] as const;
   },
+  detail: (id: string) => [...ticketQueryKeys.all, 'detail', id] as const,
+  comments: (ticketId: string) => [...ticketQueryKeys.all, 'comments', ticketId] as const,
 };
 
 // ---------------------------------------------------------------------------
@@ -170,6 +184,116 @@ export function useBulkAction() {
     onSuccess: () => {
       // Invalidate ticket queue so rows refresh with updated state
       void qc.invalidateQueries({ queryKey: ticketQueryKeys.all });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Ticket detail hooks — WO-042
+// ---------------------------------------------------------------------------
+
+/** Fetch full ticket detail (includes SLA summary, Jira link, AI status). */
+export function useTicketDetail(id: string) {
+  return useQuery<TicketDetail>({
+    queryKey: ticketQueryKeys.detail(id),
+    queryFn: () =>
+      apiFetch<TicketDetailResponse>(`/api/v1/tickets/${id}`).then((r) => r.data),
+    staleTime: 15_000,
+    retry: (count, err) => {
+      const status = (err as { status?: number }).status;
+      // Don't retry 404 or 403
+      if (status === 404 || status === 403) return false;
+      return count < 2;
+    },
+  });
+}
+
+/** Infinite cursor-paginated comment thread for a ticket. */
+export function useTicketComments(ticketId: string) {
+  return useInfiniteQuery<CommentListResponse>({
+    queryKey: ticketQueryKeys.comments(ticketId),
+    queryFn: async ({ pageParam }) => {
+      const cursor = pageParam as string | undefined;
+      const params = new URLSearchParams({ limit: '30' });
+      if (cursor) params.set('cursor', cursor);
+      return apiFetch<CommentListResponse>(
+        `/api/v1/tickets/${ticketId}/comments?${params.toString()}`,
+      );
+    },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+    staleTime: 10_000,
+  });
+}
+
+/** Optimistic comment submission — appends immediately, rolls back on failure. */
+export function useAddComment(ticketId: string) {
+  const qc = useQueryClient();
+
+  return useMutation<Comment, Error, CreateCommentPayload>({
+    mutationFn: (payload) =>
+      apiFetch<{ data: Comment }>(`/api/v1/tickets/${ticketId}/comments`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }).then((r) => r.data),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ticketQueryKeys.comments(ticketId) });
+    },
+  });
+}
+
+/** Request a presigned upload URL for a new attachment. */
+export function usePresignAttachment(ticketId: string) {
+  return useMutation<PresignResponse, Error, { filename: string; contentType: string; sizeBytes: number }>({
+    mutationFn: (payload) =>
+      apiFetch<PresignResponse>(`/api/v1/tickets/${ticketId}/attachments/presign`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+  });
+}
+
+/** Finalize attachment after direct upload to storage is complete. */
+export function useFinalizeAttachment(ticketId: string) {
+  return useMutation<FinalizeAttachmentResponse, Error, FinalizeAttachmentPayload>({
+    mutationFn: (payload) =>
+      apiFetch<FinalizeAttachmentResponse>(
+        `/api/v1/tickets/${ticketId}/attachments/finalize`,
+        { method: 'POST', body: JSON.stringify(payload) },
+      ),
+  });
+}
+
+/** Update ticket properties (priority, assignee, tags, custom fields) with version. */
+export function useUpdateTicket(id: string) {
+  const qc = useQueryClient();
+
+  return useMutation<TicketDetail, unknown, UpdateTicketPayload>({
+    mutationFn: (payload) =>
+      apiFetch<TicketDetailResponse>(`/api/v1/tickets/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      }).then((r) => r.data),
+    onSuccess: (updated) => {
+      qc.setQueryData<TicketDetail>(ticketQueryKeys.detail(id), updated);
+      void qc.invalidateQueries({ queryKey: ticketQueryKeys.queue({}) });
+    },
+  });
+}
+
+/** Resolve a ticket with a resolution note. */
+export function useResolveTicket(id: string) {
+  const qc = useQueryClient();
+
+  return useMutation<TicketDetail, unknown, ResolveTicketPayload>({
+    mutationFn: (payload) =>
+      apiFetch<ResolveTicketResponse>(`/api/v1/tickets/${id}/resolve`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }).then((r) => r.data),
+    onSuccess: (updated) => {
+      qc.setQueryData<TicketDetail>(ticketQueryKeys.detail(id), updated);
+      void qc.invalidateQueries({ queryKey: ticketQueryKeys.queue({}) });
     },
   });
 }
