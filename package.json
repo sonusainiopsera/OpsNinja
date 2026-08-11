@@ -12,6 +12,7 @@
     "start": "turbo start",
     "test": "turbo test",
     "test:e2e": "turbo test:e2e",
+    "test:isolation": "turbo test:isolation",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck"
   },

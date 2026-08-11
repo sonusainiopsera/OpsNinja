@@ -8,6 +8,8 @@
     "dev": "ts-node-dev --respawn --transpile-only src/main.ts",
     "test": "jest --passWithNoTests",
     "test:e2e": "jest --config jest.e2e.config.js --passWithNoTests",
+    "test:isolation": "jest --config jest.isolation.config.js --passWithNoTests --forceExit",
+    "test:coverage": "jest --passWithNoTests --coverage --coverageThreshold='{\"global\":{\"lines\":70}}'",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },

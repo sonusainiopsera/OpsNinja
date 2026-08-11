@@ -6,14 +6,18 @@
   "types": "./src/index.ts",
   "scripts": {
     "build": "tsc --project tsconfig.json",
-    "typecheck": "tsc --project tsconfig.json --noEmit"
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "test:isolation": "jest --config jest.isolation.config.js --passWithNoTests --forceExit"
   },
   "dependencies": {
     "drizzle-orm": "^0.38.0",
     "pg": "^8.13.0"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.0",
     "@types/pg": "^8.11.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.0",
     "typescript": "^5.6.0"
   },
   "peerDependencies": {
