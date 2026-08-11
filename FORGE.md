@@ -259,3 +259,10 @@
 - **Files:** 10 (+1244/-6)
 - **Duration:** 718ss
 - **Approach:** N/A
+
+## WO-049: User Story: WO-049 - SLA policy and escalation settings admin console page
+- **Status:** completed
+- **Commit:** `dc85a9d`
+- **Files:** 23 (+2973/-1)
+- **Duration:** 810ss
+- **Approach:** N/A

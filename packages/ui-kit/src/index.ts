@@ -41,3 +41,15 @@ export { useGridKeyboardNavigation } from './domain/DataTable/useGridKeyboardNav
 export { Icon } from './Icon';
 export { slaStateMeta, SLA_CSS_VARS } from './slaStateMeta';
 export type { SlaState, SlaStateMeta } from './slaStateMeta';
+
+// Primitives (WO-049)
+export { Tabs, TabsList, TabsTrigger, TabsContent } from './primitives/Tabs';
+export type { TabsProps, TabsListProps, TabsTriggerProps, TabsContentProps } from './primitives/Tabs';
+export { Slider } from './primitives/Slider';
+export type { SliderProps } from './primitives/Slider';
+export { Toggle } from './primitives/Toggle';
+export type { ToggleProps } from './primitives/Toggle';
+
+// SlaTimeline (WO-049)
+export { SlaTimeline } from './domain/SlaTimeline/SlaTimeline';
+export type { SlaTimelineProps } from './domain/SlaTimeline/SlaTimeline';

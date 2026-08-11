@@ -61,7 +61,7 @@ export const NAV_CONFIG: NavGroup[] = [
       {
         id: 'sla-policies',
         label: 'SLA Policies',
-        href: '/sla-policies',
+        href: '/settings/sla',
         iconName: 'alert-triangle',
         requiredRoles: ['admin', 'manager'],
       },
