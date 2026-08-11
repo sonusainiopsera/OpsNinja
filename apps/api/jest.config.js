@@ -17,6 +17,8 @@ module.exports = {
   moduleNameMapper: {
     '^@opsninja/db$': '<rootDir>/../../packages/db/src/index.ts',
     '^@opsninja/db/(.*)$': '<rootDir>/../../packages/db/src/$1',
+    '^@opsninja/crypto$': '<rootDir>/../../packages/crypto/src/index.ts',
+    '^@opsninja/crypto/(.*)$': '<rootDir>/../../packages/crypto/src/$1',
   },
   collectCoverageFrom: [
     'src/**/*.ts',

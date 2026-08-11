@@ -34,6 +34,9 @@ export const Permission = {
   // ── Machine (worker / integration) ──────────────────────────────────────
   MACHINE_SYNC:    'machine:sync',
   MACHINE_WEBHOOK: 'machine:webhook',
+
+  // ── Integration administration ───────────────────────────────────────────
+  WEBHOOKS_MANAGE: 'integrations:webhooks:manage',
 } as const;
 
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -56,6 +59,7 @@ export const ROLE_PERMISSION_MAP: Record<string, Permission[]> = {
     Permission.ADMIN_WRITE,
     Permission.ROLES_WRITE,
     Permission.TENANT_SETTINGS,
+    Permission.WEBHOOKS_MANAGE,
   ],
   supervisor: [
     Permission.TICKETS_READ,
@@ -83,5 +87,8 @@ export const ROLE_PERMISSION_MAP: Record<string, Permission[]> = {
   worker: [
     Permission.MACHINE_SYNC,
     Permission.MACHINE_WEBHOOK,
+  ],
+  integration_admin: [
+    Permission.WEBHOOKS_MANAGE,
   ],
 };
