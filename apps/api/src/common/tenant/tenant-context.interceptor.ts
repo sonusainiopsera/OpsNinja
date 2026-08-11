@@ -108,7 +108,10 @@ export class TenantContextInterceptor implements NestInterceptor {
     // We create a Promise that rejects when the response is closed by the
     // client before the handler completes.  Racing it against the handler lets
     // us propagate the disconnect into the transaction and trigger rollback.
-    let disconnectReject: (err: Error) => void;
+    // The definite-assignment assertion (!) is safe: the Promise constructor
+    // callback runs synchronously, so disconnectReject is always set before
+    // onClose or the withTenantTransaction call can reference it.
+    let disconnectReject!: (err: Error) => void;
     const disconnectPromise = new Promise<never>((_, reject) => {
       disconnectReject = reject;
     });

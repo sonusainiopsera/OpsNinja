@@ -1,4 +1,4 @@
-import { NestFactory, Reflector } from '@nestjs/core';
+import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { TenantErrorFilter } from './common/filters/tenant-error.filter';
@@ -19,7 +19,6 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  const reflector = app.get(Reflector);
   app.useGlobalFilters(new TenantErrorFilter());
 
   const port = process.env['PORT'] ?? 3000;
