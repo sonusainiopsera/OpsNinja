@@ -1,0 +1,44 @@
+{
+  "name": "@opsninja/api",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "dev": "ts-node -r tsconfig-paths/register src/main.ts",
+    "start": "node dist/main.js",
+    "test": "vitest run",
+    "test:cov": "vitest run --coverage",
+    "test:watch": "vitest",
+    "generate-openapi": "ts-node -r tsconfig-paths/register scripts/generate-openapi.ts",
+    "check-openapi": "ts-node -r tsconfig-paths/register scripts/generate-openapi.ts --check"
+  },
+  "dependencies": {
+    "@nestjs/common": "^10.3.8",
+    "@nestjs/config": "^3.2.2",
+    "@nestjs/core": "^10.3.8",
+    "@nestjs/platform-express": "^10.3.8",
+    "@nestjs/swagger": "^7.3.1",
+    "@nestjs/terminus": "^10.2.3",
+    "@opsninja/shared": "workspace:*",
+    "nestjs-pino": "^4.1.0",
+    "pino": "^9.1.0",
+    "pino-http": "^10.1.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "^10.3.8",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.12.12",
+    "@types/supertest": "^6.0.2",
+    "@vitest/coverage-v8": "^1.6.0",
+    "pino-pretty": "^11.1.0",
+    "supertest": "^7.0.0",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}
