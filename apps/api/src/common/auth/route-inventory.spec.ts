@@ -30,6 +30,7 @@ import { OrganizationsController } from '../../modules/organizations/organizatio
 import { ContactsController } from '../../modules/organizations/contacts/contacts.controller';
 import { TicketsController } from '../../modules/tickets/tickets.controller';
 import { CommentsController } from '../../modules/tickets/comments/comments.controller';
+import { AttachmentsController, AttachmentDownloadController } from '../../modules/tickets/attachments/attachments.controller';
 import { AuditController } from '../../modules/audit/audit.controller';
 import { SubjectRequestsController } from '../../modules/privacy/subject-requests.controller';
 
@@ -58,6 +59,8 @@ const CONTROLLERS: Function[] = [
   ContactsController,
   TicketsController,
   CommentsController,
+  AttachmentsController,
+  AttachmentDownloadController,
   AuditController,
   SubjectRequestsController,
 ];

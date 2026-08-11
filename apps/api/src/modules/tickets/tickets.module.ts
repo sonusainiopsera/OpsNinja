@@ -21,6 +21,10 @@ import { TicketsService } from './tickets.service';
 import { CommentsController } from './comments/comments.controller';
 import { CommentsService } from './comments/comments.service';
 import { AuditWriter } from '../audit/audit-writer';
+import { AttachmentsController, AttachmentDownloadController } from './attachments/attachments.controller';
+import { AttachmentsService } from './attachments/attachments.service';
+import { S3ObjectStore } from './attachments/storage/s3-object-store';
+import { OBJECT_STORE_PORT } from './attachments/storage/object-store.port';
 
 @Module({
   imports: [AuthModule, AuditModule, OrganizationsModule, ViewsModule],
@@ -28,8 +32,10 @@ import { AuditWriter } from '../audit/audit-writer';
     PortalTicketsController,
     PortalAttachmentsController,
     QueueController,
-    TicketsController,      // WO-032: POST /tickets, GET /tickets/:id, PATCH /:id, POST /:id/resolve
-    CommentsController,     // WO-034: POST /tickets/:id/comments, GET /tickets/:id/comments
+    TicketsController,                 // WO-032: POST /tickets, GET /tickets/:id, PATCH /:id, POST /:id/resolve
+    CommentsController,                // WO-034: POST /tickets/:id/comments, GET /tickets/:id/comments
+    AttachmentsController,             // WO-035: POST /tickets/:id/attachments/presign, POST .../finalize
+    AttachmentDownloadController,      // WO-035: GET /attachments/:id/download
   ],
   providers: [
     TicketRepository,
@@ -50,6 +56,10 @@ import { AuditWriter } from '../audit/audit-writer';
     // Comments (WO-034)
     CommentsController,
     CommentsService,
+    // Attachments (WO-035)
+    AttachmentsService,
+    { provide: OBJECT_STORE_PORT, useClass: S3ObjectStore },
+    S3ObjectStore,
   ],
   exports: [
     TicketRepository,
@@ -60,6 +70,7 @@ import { AuditWriter } from '../audit/audit-writer';
     QueueService,
     TicketsService,
     CommentsService,
+    AttachmentsService,
   ],
 })
 export class TicketsModule {}

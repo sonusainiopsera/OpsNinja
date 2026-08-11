@@ -343,3 +343,10 @@
 - **Files:** 11 (+943/-5)
 - **Duration:** 500ss
 - **Approach:** N/A
+
+## WO-035: User Story: WO-035 - Attachment Upload Via Presigned S3 With MIME Verification
+- **Status:** completed
+- **Commit:** `64c6a54`
+- **Files:** 16 (+1593/-12)
+- **Duration:** 706ss
+- **Approach:** N/A
