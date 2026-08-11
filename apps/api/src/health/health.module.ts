@@ -9,5 +9,9 @@ import { RedisHealthIndicator } from './indicators/redis.health';
   controllers: [HealthController],
   providers: [PostgresHealthIndicator, RedisHealthIndicator],
   exports: [PostgresHealthIndicator, RedisHealthIndicator],
+import { HealthController } from './health.controller';
+
+@Module({
+  controllers: [HealthController],
 })
 export class HealthModule {}
