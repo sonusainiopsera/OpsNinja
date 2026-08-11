@@ -23,6 +23,7 @@ import { IdentityModule } from './modules/identity/identity.module';
 import { AuditModule } from './common/audit/audit.module';
 import { TicketsModule } from './modules/tickets/tickets.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AuthGuard } from './common/guards/auth.guard';
 import { TenantContextInterceptor } from './common/tenant/tenant-context.interceptor';
 import { UnitOfWork } from './data/unit-of-work';
@@ -40,6 +41,7 @@ import { UnitOfWork } from './data/unit-of-work';
     IdentityModule,
     TicketsModule,
     ReportingModule,
+    NotificationsModule,
   ],
   providers: [
     // ── Global guard (runs first) ────────────────────────────────────────────

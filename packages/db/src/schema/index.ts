@@ -5,3 +5,4 @@ export * from './organizations';
 export * from './comments';
 export * from './attachments';
 export * from './tenant-settings';
+export * from './notifications';

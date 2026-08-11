@@ -1,0 +1,89 @@
+# Helm values for the OpsNinja Notification Worker
+# Override per-environment in values-staging.yaml / values-prod.yaml
+
+replicaCount: 2
+
+image:
+  repository: opsninja/notification-worker
+  pullPolicy: IfNotPresent
+  tag: ""  # overridden by CI with the image SHA
+
+serviceAccount:
+  create: true
+  name: "notification-worker"
+  annotations:
+    # IRSA: bind the IAM role that grants SES SendEmail + SQS ReceiveMessage/DeleteMessage
+    eks.amazonaws.com/role-arn: "arn:aws:iam::ACCOUNT_ID:role/opsninja-notification-worker"
+
+env:
+  AWS_REGION: us-east-1
+  SQS_NOTIFY_QUEUE_URL: ""           # set per environment
+  SES_FROM_ADDRESS: ""               # set per environment (must be SES-verified)
+  SES_CONFIGURATION_SET: opsninja-notifications
+  HEALTHZ_PORT: "8080"
+  NOTIF_RATE_LIMIT_PER_SECOND: "20"
+  NOTIF_RATE_LIMIT_BURST: "40"
+
+# Secrets injected from AWS Secrets Manager via the Secrets Store CSI driver.
+# Never commit credential values.
+externalSecrets:
+  enabled: true
+  secretStoreName: aws-secrets-manager
+  refreshInterval: 1h
+  secrets:
+    - secretKey: DB_HOST
+      remoteRef: /opsninja/db/host
+    - secretKey: DB_PORT
+      remoteRef: /opsninja/db/port
+    - secretKey: DB_NAME
+      remoteRef: /opsninja/db/name
+    - secretKey: DB_USER
+      remoteRef: /opsninja/db/worker-user
+    - secretKey: DB_PASSWORD
+      remoteRef: /opsninja/db/worker-password
+    - secretKey: REDIS_HOST
+      remoteRef: /opsninja/redis/host
+    - secretKey: REDIS_PORT
+      remoteRef: /opsninja/redis/port
+    - secretKey: REDIS_PASSWORD
+      remoteRef: /opsninja/redis/password
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+# DLQ alarm: fires when DLQ depth > 0 for 5 consecutive minutes.
+# CloudWatch alarm configuration (deployed separately via Terraform/CDK).
+dlqAlarm:
+  queueNameSuffix: "-dlq"
+  threshold: 1
+  evaluationPeriods: 5
+  datapointsToAlarm: 5
+  periodSeconds: 60
+  comparisonOperator: GreaterThanOrEqualToThreshold
+  alarmActions: []  # set to SNS topic ARN for on-call paging
+
+# SQS consumer configuration
+sqs:
+  maxNumberOfMessages: 10
+  waitTimeSeconds: 20
+  maxReceiveCount: 5  # messages exceeding this are moved to the DLQ by the redrive policy
