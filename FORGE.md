@@ -588,3 +588,10 @@
 - **Files:** 11 (+1346/-2)
 - **Duration:** 677ss
 - **Approach:** N/A
+
+## WO-091: User Story: WO-091 - Administrator approval queue for pending portal signups
+- **Status:** completed
+- **Commit:** `36077a8`
+- **Files:** 8 (+1211/-1)
+- **Duration:** 452ss
+- **Approach:** N/A

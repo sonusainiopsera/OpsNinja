@@ -75,6 +75,8 @@ export type Permission =
   // ── AI summary (WO-065) ───────────────────────────────────────────────────
   | 'ai:read'
   | 'ai:manage'
+  // ── Portal signup approval queue (WO-091) ────────────────────────────────
+  | 'portal_signup:review'
   // ── Machine / worker ─────────────────────────────────────────────────────
   | 'machine:jira_sync'
   | 'machine:notification_send'
@@ -100,6 +102,7 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
   'privacy:manage',
   'dashboard:read',
   'ai:read', 'ai:manage',
+  'portal_signup:review',
   'machine:jira_sync', 'machine:notification_send', 'machine:export',
 ];
 
@@ -126,6 +129,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<string, readonly Permission[]>> =
     'admin:revoke_sessions',
     'view:read', 'view:create', 'view:update', 'view:delete', 'view:share',
     'dashboard:read',
+    'portal_signup:review',
   ],
 
   agent: [
