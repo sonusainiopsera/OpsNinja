@@ -101,4 +101,32 @@ export class JiraConnectionsRepository extends TenantRepository {
       .returning();
     return rows[0] ?? null;
   }
+
+  /** Update webhook secret reference and rotation timestamp (WO-058). */
+  async updateWebhookSecret(
+    tenantId: string,
+    id: string,
+    patch: { webhookSecretRef: string; webhookSecretRotatedAt: Date },
+  ): Promise<void> {
+    await this.tx
+      .update(jiraConnections)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(and(eq(jiraConnections.tenantId, tenantId), eq(jiraConnections.id, id)));
+  }
+
+  /**
+   * List all connections for a tenant (WO-058 health aggregation).
+   * Returns data array with optional nextCursor for pagination.
+   */
+  async list(
+    tenantId: string,
+    limit = 50,
+    cursor?: string,
+  ): Promise<{ data: JiraConnection[]; nextCursor: string | null }> {
+    const fetchLimit = Math.min(limit, 100);
+    const rows = await this.findPaginated(tenantId, fetchLimit + 1, cursor);
+    const hasMore = rows.length > fetchLimit;
+    const data = hasMore ? rows.slice(0, fetchLimit) : rows;
+    return { data, nextCursor: hasMore ? (data[data.length - 1]?.id ?? null) : null };
+  }
 }

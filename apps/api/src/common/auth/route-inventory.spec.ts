@@ -26,6 +26,8 @@ import { SlaPoliciesController } from '../../modules/sla/sla-policies.controller
 import { SlaCalendarsController } from '../../modules/sla/sla-calendars.controller';
 import { JiraConnectionsController } from '../../modules/jira/connections/jira-connections.controller';
 import { JiraOAuthController } from '../../modules/jira/oauth/jira-oauth.controller';
+import { JiraLinksController } from '../../modules/jira/links/jira-links.controller';
+import { JiraHealthController } from '../../modules/jira/health/jira-health.controller';
 import { OrganizationsController } from '../../modules/organizations/organizations.controller';
 import { ContactsController } from '../../modules/organizations/contacts/contacts.controller';
 import { TicketsController } from '../../modules/tickets/tickets.controller';
@@ -55,6 +57,8 @@ const CONTROLLERS: Function[] = [
   SlaCalendarsController,
   JiraConnectionsController,
   JiraOAuthController,
+  JiraLinksController,
+  JiraHealthController,
   OrganizationsController,
   ContactsController,
   TicketsController,

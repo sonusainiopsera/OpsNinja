@@ -18,10 +18,19 @@ import { JiraLinksRepository } from './links/jira-links.repository';
 import { JiraPayloadBuilder } from './links/jira-payload.builder';
 import { JiraMappingRepository } from './mapping/jira-mapping.repository';
 import { AuditWriter } from '../audit/audit-writer';
+// WO-058: health + webhook-secret rotation
+import { JiraHealthController } from './health/jira-health.controller';
+import { JiraHealthService, JiraEventsReadRepository } from './health/jira-health.service';
+import { RedisCacheService } from '../../infra/cache/redis-cache';
 
 @Module({
   imports: [AuditModule],
-  controllers: [JiraConnectionsController, JiraOAuthController, JiraLinksController],
+  controllers: [
+    JiraConnectionsController,
+    JiraOAuthController,
+    JiraLinksController,
+    JiraHealthController,
+  ],
   providers: [
     JiraConnectionsService,
     JiraConnectionsRepository,
@@ -47,6 +56,11 @@ import { AuditWriter } from '../audit/audit-writer';
     JiraMappingRepository,
     TicketDataRepository,
     AuditWriter,
+    // WO-058: health submodule
+    JiraHealthController,
+    JiraHealthService,
+    JiraEventsReadRepository,
+    RedisCacheService,
   ],
   exports: [JiraConnectionsService, JiraTokenProvider, JiraLinksService],
 })
