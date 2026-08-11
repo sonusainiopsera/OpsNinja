@@ -126,3 +126,10 @@
 - **Files:** 12 (+1002/-4)
 - **Duration:** 609ss
 - **Approach:** Created ThrottleService (Redis INCR+lockout pattern, SHA-256 subject keys, fail-closed on Redis failure), ThrottleGuard (NestJS CanActivate, Retry-After from actual TTL, uniform 429 AUTH_RATE_LIMITED envelope), PII redactor (hash email/phone/IP, redact free-text), AuthAuditEmitter (single funnel for all identity security events), and AdminAuthController (POST /api/v1/admin/auth/unlock with admin:unlock_auth permission). Added admin:unlock_auth to permission catalog and ALL_PERMISSIONS. SecurityModule exports ThrottleService and ThrottleGuard; IdentityModule imports SecurityModule. ThrottleGuard applied @UseGuards on the refresh endpoint.
+
+## WO-021: User Story: WO-021 - Build Typed API Client With Silent Token Refresh
+- **Status:** completed
+- **Commit:** `ccdf10a`
+- **Files:** 29 (+2085/-17)
+- **Duration:** 535ss
+- **Approach:** Created packages/api-client as a shared workspace package with dual browser/server entry points. Layered architecture: ApiError class with type guards → parseErrorEnvelope (handles malformed/empty/HTML bodies) → createRequestFn (fetch wrapper with credentials, timeout, AbortController) → retry logic (Retry-After + jitter, never-retry list, POST/PATCH never retried) → cursor pagination (limit clamped 1-100) → SessionManager (single-flight refresh via refreshPromise, loop guard via _isReplay flag, scope-changed 401 fails closed to reauthorization-required, unknown 401 codes also fail closed). TanStack Query factory with taxonomy-aligned retry predicates. Server entry point requires explicit cookieHeader. Both consumer apps wired with thin factory clients. MSW v2 handlers and JSON fixtures for all status codes. Vitest test suites including 5-concurrent-401 single-flight test and loop-guard test.

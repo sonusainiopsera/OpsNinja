@@ -1,0 +1,36 @@
+{
+  "name": "@opsninja/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "browser": "./src/index.browser.ts",
+      "default": "./src/index.server.ts"
+    },
+    "./browser": "./src/index.browser.ts",
+    "./server": "./src/index.server.ts"
+  },
+  "main": "./src/index.browser.ts",
+  "types": "./src/index.browser.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run --reporter=verbose",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": ">=5"
+  },
+  "peerDependenciesMeta": {
+    "@tanstack/react-query": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5.56.0",
+    "@vitest/coverage-v8": "^2.0.0",
+    "msw": "^2.4.0",
+    "vitest": "^2.0.0"
+  }
+}

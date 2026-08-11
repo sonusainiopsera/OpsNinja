@@ -23,6 +23,9 @@
     "noUnusedParameters": false,
     "noImplicitReturns": true,
     "paths": {
+      "@opsninja/api-client": ["./packages/api-client/src/index.browser.ts"],
+      "@opsninja/api-client/browser": ["./packages/api-client/src/index.browser.ts"],
+      "@opsninja/api-client/server": ["./packages/api-client/src/index.server.ts"],
       "@opsninja/db": ["./packages/db/src/index.ts"],
       "@opsninja/db/*": ["./packages/db/src/*"],
       "@opsninja/filter-compiler": ["./packages/filter-compiler/src/index.ts"],

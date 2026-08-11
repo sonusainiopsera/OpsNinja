@@ -1,10 +1,42 @@
 /**
- * Portal API client — portal-specific configuration.
+ * Portal API client — thin factory over @opsninja/api-client.
  *
- * This is a stub for the WOREF-021 shared api-client.
- * All 401 handling is delegated to the session layer here.
- * The portal never implements its own refresh or redirect logic.
+ * Configures:
+ *   - Base URL from NEXT_PUBLIC_API_BASE_URL (or default to same-origin /api/v1)
+ *   - 15-second request timeout
+ *   - Session events: unauthenticated → redirect to /portal/login
+ *                     reauthorization-required → redirect to /portal/login?reason=scope_changed
+ *
+ * 404 rule: isNotFound() must NEVER be rendered as a permission message.
+ * The API returns 404 for out-of-scope resources to avoid existence disclosure.
  */
+
+import { createOpsninjaClient, createOpsninjaQueryClient } from '@opsninja/api-client';
+
+const baseUrl =
+  (typeof process !== 'undefined' && process.env['NEXT_PUBLIC_API_BASE_URL']) ||
+  '/api/v1';
+
+export const apiClient = createOpsninjaClient({
+  baseUrl,
+  timeoutMs: 15_000,
+});
+
+// Wire session events once at module load.
+apiClient.session.on((event) => {
+  if (typeof window === 'undefined') return;
+  if (event === 'unauthenticated') {
+    window.location.href = '/portal/login';
+  } else if (event === 'reauthorization-required') {
+    window.location.href = '/portal/login?reason=scope_changed';
+  }
+});
+
+export const queryClient = createOpsninjaQueryClient();
+
+export const { request, session } = apiClient;
+
+// ── Legacy portal identity types (kept for backward compat with existing components) ──
 
 export interface PortalOrganization {
   id: string;
@@ -30,20 +62,15 @@ export interface PortalIdentityResponse {
   pendingSurvey: PendingSurvey | null;
 }
 
-/** Stub: returns mock portal identity. Replace with real fetch when WOREF-021 is ready. */
+/** Fetch portal identity via the shared api-client. */
 export async function fetchPortalIdentity(): Promise<PortalIdentityResponse> {
-  return {
-    principal: {
-      id: 'prt_stub',
-      name: 'Portal User',
-      email: 'user@acme.example.com',
-      organization: { id: 'org_stub', name: 'Acme Corp' },
-    },
-    pendingSurvey: null,
-  };
+  return request<PortalIdentityResponse>({ path: '/api/v1/portal/identity' });
 }
 
-/** Sign out: delegates to api-client session layer. */
-export function portalSignOut(): void {
-  window.location.href = '/api/v1/auth/logout';
+/** Sign out — POST to logout endpoint. */
+export async function portalSignOut(): Promise<void> {
+  await request({ method: 'POST', path: '/api/v1/auth/logout' }).catch(() => {
+    // Always redirect even if the logout request fails.
+  });
+  window.location.href = '/portal/login';
 }
