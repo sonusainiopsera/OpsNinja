@@ -16,10 +16,18 @@ import { QueueController } from './queue/queue.controller';
 import { QueueService } from './queue/queue.service';
 import { QueueRepository } from './queue/queue.repository';
 import { RedisCacheService } from '../../infra/cache/redis-cache';
+import { TicketsController } from './tickets.controller';
+import { TicketsService } from './tickets.service';
+import { AuditWriter } from '../audit/audit-writer';
 
 @Module({
   imports: [AuthModule, AuditModule, OrganizationsModule, ViewsModule],
-  controllers: [PortalTicketsController, PortalAttachmentsController, QueueController],
+  controllers: [
+    PortalTicketsController,
+    PortalAttachmentsController,
+    QueueController,
+    TicketsController,  // WO-032: POST /tickets, GET /tickets/:id
+  ],
   providers: [
     TicketRepository,
     CommentRepository,
@@ -32,6 +40,10 @@ import { RedisCacheService } from '../../infra/cache/redis-cache';
     QueueService,
     QueueRepository,
     RedisCacheService,
+    // Ticket CRUD (WO-032)
+    TicketsController,
+    TicketsService,
+    AuditWriter,
   ],
   exports: [
     TicketRepository,
@@ -40,6 +52,7 @@ import { RedisCacheService } from '../../infra/cache/redis-cache';
     TenantSettingsRepository,
     AttachmentAccessService,
     QueueService,
+    TicketsService,
   ],
 })
 export class TicketsModule {}
