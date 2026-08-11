@@ -31,6 +31,7 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
 import { ViewsModule } from './modules/views/views.module';
 import { SlaModule } from './modules/sla/sla.module';
 import { JiraModule } from './modules/jira/jira.module';
+import { CsatModule } from './modules/csat/csat.module';
 import { AuthGuard } from './common/guards/auth.guard';
 import { TenantContextInterceptor } from './common/tenant/tenant-context.interceptor';
 import { AuditInterceptor } from './common/audit/audit.interceptor';
@@ -56,6 +57,7 @@ import { UnitOfWork } from './data/unit-of-work';
     ViewsModule,
     SlaModule,
     JiraModule,
+    CsatModule,
   ],
   providers: [
     // ── Global guard (runs first) ────────────────────────────────────────────

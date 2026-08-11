@@ -92,6 +92,16 @@ export const ErrorCode = {
 
   /** Resource not found (also used for out-of-scope resources to mask existence). */
   RESOURCE_NOT_FOUND: 'RESOURCE_NOT_FOUND',
+
+  // ── CSAT error codes ─────────────────────────────────────────────────────
+  /** CSAT token is unknown — no survey row exists for this hash. */
+  CSAT_TOKEN_UNKNOWN: 'CSAT_TOKEN_UNKNOWN',
+  /** CSAT token is past its expires_at timestamp. */
+  CSAT_TOKEN_EXPIRED: 'CSAT_TOKEN_EXPIRED',
+  /** Survey has already been responded to; second submission rejected. */
+  CSAT_ALREADY_RESPONDED: 'CSAT_ALREADY_RESPONDED',
+  /** Request rate limit exceeded for this CSAT token or IP. */
+  CSAT_RATE_LIMITED: 'CSAT_RATE_LIMITED',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

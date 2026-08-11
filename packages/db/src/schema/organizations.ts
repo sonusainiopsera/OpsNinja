@@ -4,6 +4,7 @@ import {
   uuid,
   text,
   boolean,
+  integer,
   timestamp,
   index,
   uniqueIndex,
@@ -31,6 +32,10 @@ export const organizations = pgTable(
     domain: text('domain'),
     isActive: boolean('is_active').notNull().default(true),
     deactivatedAt: timestamp('deactivated_at', { withTimezone: true }),
+    // CSAT survey configuration (added in migration 010)
+    csatEnabled: boolean('csat_enabled').notNull().default(true),
+    csatFatigueHours: integer('csat_fatigue_hours').notNull().default(72),
+    csatExpiryDays: integer('csat_expiry_days').notNull().default(14),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

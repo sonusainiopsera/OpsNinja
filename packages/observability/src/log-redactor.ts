@@ -76,6 +76,14 @@ const REDACTED_FIELDS = new Set([
   'client_secret',
   'clientSecret',
   'state',
+  // CSAT capability tokens and hashes (Confidential-tier)
+  'csatToken',
+  'csat_token',
+  'rawToken',
+  'raw_token',
+  'csatRawToken',
+  'tokenHash',
+  'token_hash',
 ]);
 
 /**

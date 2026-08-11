@@ -67,6 +67,8 @@ const TENANT_SCOPED_TABLES: string[] = [
   // WO-073: Report definitions and export jobs
   'report_definitions',
   'export_jobs',
+  // WO-082: CSAT surveys
+  'csat_surveys',
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
