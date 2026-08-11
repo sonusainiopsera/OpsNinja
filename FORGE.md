@@ -84,3 +84,10 @@
 - **Files:** 26 (+2294/-0)
 - **Duration:** 849ss
 - **Approach:** Implemented the full WO-083 webhook management plane with three layers of SSRF protection: (1) URL structure validation (scheme, credentials, port), (2) DNS-resolved IP CIDR deny-list, (3) per-delivery re-validation in test-fire. Envelope encryption via a new @opsninja/crypto package (KmsEnvelopeCipher with tenant_id encryption context + InMemoryEnvelopeCipher test double). Signing secrets are CSPRNG-generated, encrypted at rest, returned as plaintext only in the 201-create and 200-rotate responses, and never present in any summary/list path. Rotation keeps the previous secret valid for a configurable grace period (24h default). Every mutation writes an immutable audit record within the same tenant-scoped transaction so no endpoint change can exist without an audit row. 404 (not 403) is returned for cross-tenant endpoint IDs to avoid existence disclosure. WEBHOOKS_MANAGE permission added to the catalogue and mapped to integration_admin and admin roles.
+
+## WO-093: User Story: WO-093 - Cross-Cutting Audit Capture for All Mutations
+- **Status:** completed
+- **Commit:** `06a65e7`
+- **Files:** 22 (+1552/-13)
+- **Duration:** 938ss
+- **Approach:** Implemented a cross-cutting audit capture layer using AsyncLocalStorage for context propagation. AuditContext seeds actor/tenant/trace metadata from HTTP interceptors (AuditInterceptor, registered as 2nd global APP_INTERCEPTOR inside TenantContextInterceptor) and from withAuditContext() wrappers for SQS workers. AuditWriter.append() uses the ambient transaction handle from RequestContextStore.getTx() ensuring audit records are transactionally coupled to mutations — failure re-throws, rolling back the mutation. Sensitive data is redacted through a DefaultRedactor injected as REDACTION_PORT. The @Auditable decorator registers method metadata in AuditCoverageRegistry at bootstrap; a CI guard test (audit-coverage.spec.ts) enumerates required methods and fails if any lack @Auditable decoration.

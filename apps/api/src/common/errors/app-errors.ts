@@ -9,6 +9,9 @@ export const ErrorCode = {
   /** Tenant could not be resolved before handler execution (programming defect). */
   TENANT_CONTEXT_MISSING: 'TENANT_CONTEXT_MISSING',
 
+  /** AuditContext was not set before a mutation attempted AuditWriter.append() (programming defect). */
+  AUDIT_CONTEXT_MISSING: 'AUDIT_CONTEXT_MISSING',
+
   /** RLS policy blocked the query – the principal lacks access to the requested row. */
   TENANT_POLICY_VIOLATION: 'TENANT_POLICY_VIOLATION',
 

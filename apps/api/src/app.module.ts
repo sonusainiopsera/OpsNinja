@@ -4,7 +4,8 @@
  * Global provider registration order is significant:
  *
  *   1. APP_GUARD  – AuthGuard  (validates JWT, attaches PrincipalContext to request.user)
- *   2. APP_INTERCEPTOR – TenantContextInterceptor  (opens tenant-bound transaction)
+ *   2. APP_INTERCEPTOR[0] – TenantContextInterceptor  (outer, opens tenant-bound transaction)
+ *   3. APP_INTERCEPTOR[1] – AuditInterceptor           (inner, populates AuditContext inside the tx)
  *
  * NestJS executes guards before interceptors, so the principal is always
  * resolved and attached before the interceptor tries to read it.  A unit test
@@ -27,6 +28,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { AuthGuard } from './common/guards/auth.guard';
 import { TenantContextInterceptor } from './common/tenant/tenant-context.interceptor';
+import { AuditInterceptor } from './common/audit/audit.interceptor';
 import { UnitOfWork } from './data/unit-of-work';
 
 @Module({
@@ -51,7 +53,7 @@ import { UnitOfWork } from './data/unit-of-work';
       provide: APP_GUARD,
       useClass: AuthGuard,
     },
-    // ── Global interceptor (runs after guard) ────────────────────────────────
+    // ── Global interceptors (run after guard, outermost first) ──────────────
     {
       provide: APP_INTERCEPTOR,
       inject: [Reflector, UnitOfWork, ConfigService],
@@ -60,6 +62,13 @@ import { UnitOfWork } from './data/unit-of-work';
         unitOfWork: UnitOfWork,
         config: ConfigService,
       ) => new TenantContextInterceptor(reflector, unitOfWork, config),
+    },
+    // AuditInterceptor is registered second → runs INSIDE TenantContextInterceptor
+    // so the DB transaction is already open when AuditContext is populated.
+    {
+      provide: APP_INTERCEPTOR,
+      inject: [Reflector, AuditInterceptor],
+      useFactory: (_reflector: Reflector, interceptor: AuditInterceptor) => interceptor,
     },
   ],
 })

@@ -3,9 +3,15 @@ import { eq, and, comments } from '@opsninja/db';
 import type { Comment, NewComment } from '@opsninja/db';
 import { TenantRepository } from '../../../data/tenant-repository';
 import { portalCommentForTicketFilter } from '../../../common/db/scoped-query.helper';
+import { Auditable } from '../../../common/audit/auditable.decorator';
+import { AuditWriter } from '../../../common/audit/audit-writer';
 
 @Injectable()
 export class CommentRepository extends TenantRepository {
+  constructor(private readonly auditWriter: AuditWriter) {
+    super();
+  }
+
   /** Returns all comments for a ticket (staff/internal use — no visibility filter). */
   async findAllForTicket(ticketId: string): Promise<Comment[]> {
     return this.db
@@ -34,10 +40,7 @@ export class CommentRepository extends TenantRepository {
     return rows[0];
   }
 
-  /**
-   * Inserts a comment with visibility forced to 'public'.
-   * Portal clients must use this method; visibility is not a caller parameter.
-   */
+  @Auditable({ resourceType: 'comment', action: 'comment.created' })
   async createPublicComment(
     input: Pick<NewComment, 'ticketId' | 'authorId' | 'body' | 'tenantId'>,
   ): Promise<Comment> {
@@ -45,7 +48,34 @@ export class CommentRepository extends TenantRepository {
       .insert(comments)
       .values({ ...input, visibility: 'public' })
       .returning();
-    return rows[0]!;
+    const comment = rows[0]!;
+    await this.auditWriter.append({
+      action: 'comment.created',
+      resourceType: 'comment',
+      resourceId: comment.id,
+      afterState: { ticketId: comment.ticketId, visibility: comment.visibility },
+      forceEmit: true,
+    });
+    return comment;
+  }
+
+  @Auditable({ resourceType: 'comment', action: 'comment.created' })
+  async createInternalComment(
+    input: Pick<NewComment, 'ticketId' | 'authorId' | 'body' | 'tenantId'>,
+  ): Promise<Comment> {
+    const rows = await this.db
+      .insert(comments)
+      .values({ ...input, visibility: 'internal' })
+      .returning();
+    const comment = rows[0]!;
+    await this.auditWriter.append({
+      action: 'comment.created',
+      resourceType: 'comment',
+      resourceId: comment.id,
+      afterState: { ticketId: comment.ticketId, visibility: comment.visibility },
+      forceEmit: true,
+    });
+    return comment;
   }
 
   /** Returns all comments for a ticket where visibility matches the given value (staff use). */

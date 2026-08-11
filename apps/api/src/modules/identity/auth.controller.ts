@@ -2,6 +2,7 @@ import {
   Controller,
   HttpCode,
   HttpStatus,
+  Inject,
   Logger,
   Post,
   Req,
@@ -9,10 +10,14 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { randomUUID } from 'crypto';
 import { NoTenantContext } from '../../common/tenant/no-tenant-context.decorator';
 import { ErrorCode } from '../../common/errors/app-errors';
 import { SessionService, REFRESH_COOKIE_NAME, REFRESH_TTL_S } from './session.service';
 import { TokenService } from './token.service';
+import { AuditWriter } from '../../common/audit/audit-writer';
+import { DB_TOKEN } from '../../data/db.module';
+import type { DB } from '@opsninja/db';
 
 const COOKIE_PATH = '/api/v1/auth';
 
@@ -29,6 +34,8 @@ export class AuthController {
   constructor(
     private readonly sessionService: SessionService,
     private readonly tokenService: TokenService,
+    private readonly auditWriter: AuditWriter,
+    @Inject(DB_TOKEN) private readonly db: DB,
   ) {}
 
   /**
@@ -73,6 +80,18 @@ export class AuthController {
     };
 
     this.setRefreshCookie(res, newToken);
+
+    // Emit auth audit event (outside transaction — auth routes have no tenant tx).
+    await this.auditWriter.appendAuthEvent(this.db, {
+      action: 'auth.token_refreshed',
+      actorType: 'user',
+      actorId: principal.userId,
+      tenantId,
+      outcome: 'success',
+      traceId: (req.headers['x-trace-id'] as string | undefined) ?? randomUUID(),
+      requestId: (req.headers['x-request-id'] as string | undefined) ?? randomUUID(),
+    });
+
     res.status(HttpStatus.OK).json({
       accessToken: minted.accessToken,
       expiresIn: minted.expiresIn,
@@ -91,13 +110,29 @@ export class AuthController {
   async logout(@Req() req: Request, @Res() res: Response): Promise<void> {
     const cookieValue = this.readRefreshCookie(req, /* throwing= */ false);
 
+    let logoutTenantId: string | undefined;
+    let logoutUserId: string | undefined;
+
     if (cookieValue) {
       const parsed = this.sessionService.parseRefreshCookie(cookieValue);
       if (parsed) {
+        logoutTenantId = parsed.tenantId;
         await this.sessionService
           .revokeSession(parsed.tenantId, parsed.sessionId)
           .catch((err) => this.logger.warn('Revocation error on logout', { err }));
       }
+    }
+
+    if (logoutTenantId) {
+      await this.auditWriter.appendAuthEvent(this.db, {
+        action: 'auth.logout',
+        actorType: 'user',
+        actorId: logoutUserId ?? null,
+        tenantId: logoutTenantId,
+        outcome: 'success',
+        traceId: (req.headers['x-trace-id'] as string | undefined) ?? randomUUID(),
+        requestId: (req.headers['x-request-id'] as string | undefined) ?? randomUUID(),
+      });
     }
 
     this.clearRefreshCookie(res);
