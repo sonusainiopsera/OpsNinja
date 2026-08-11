@@ -13,10 +13,11 @@ import { IdentityModule } from '../../modules/identity/identity.module';
 import { AuthGuard } from './auth.guard';
 import { PermissionResolverService } from './permission-resolver.service';
 import { AuditService } from './audit.service';
+import { OrgScopeService } from './org-scope.service';
 
 @Module({
   imports: [RedisModule, IdentityModule],
-  providers: [AuthGuard, PermissionResolverService, AuditService],
-  exports: [AuthGuard, PermissionResolverService, AuditService],
+  providers: [AuthGuard, PermissionResolverService, AuditService, OrgScopeService],
+  exports: [AuthGuard, PermissionResolverService, AuditService, OrgScopeService],
 })
 export class AuthModule {}

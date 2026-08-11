@@ -15,6 +15,7 @@ import {
   integer,
   jsonb,
   index,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
 // ---------------------------------------------------------------------------
@@ -289,6 +290,42 @@ export type NewUser = typeof users.$inferInsert;
 
 export type Ticket = typeof tickets.$inferSelect;
 export type NewTicket = typeof tickets.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Agent organization scopes
+//
+// Maps a staff user (agent/manager) to the set of customer organizations they
+// are permitted to access within a tenant. Scope mutations bump scope_version,
+// which is carried in access tokens and checked per-request to invalidate
+// stale cached scope sets.
+// ---------------------------------------------------------------------------
+
+export const agentOrgScopes = pgTable(
+  'agent_org_scopes',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
+    userId: uuid('user_id').notNull().references(() => users.id),
+    organizationId: uuid('organization_id').notNull().references(() => organizations.id),
+    /** Level of access granted — 'full' by default; future: 'read_only'. */
+    accessLevel: text('access_level').notNull().default('full'),
+    /** Monotonic counter bumped on every scope mutation. Mirrored in Redis. */
+    scopeVersion: integer('scope_version').notNull().default(1),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    tenantUserIdx: index('agent_org_scopes_tenant_user_idx').on(t.tenantId, t.userId),
+    tenantUserOrgUniq: uniqueIndex('agent_org_scopes_tenant_user_org_uniq').on(
+      t.tenantId,
+      t.userId,
+      t.organizationId,
+    ),
+  }),
+);
+
+export type AgentOrgScope = typeof agentOrgScopes.$inferSelect;
+export type NewAgentOrgScope = typeof agentOrgScopes.$inferInsert;
 
 // ---------------------------------------------------------------------------
 // Notifications (notification_templates, notifications, notification_suppressions)

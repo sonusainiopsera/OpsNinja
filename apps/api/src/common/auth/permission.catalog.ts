@@ -46,6 +46,8 @@ export type Permission =
   // ── Webhooks ──────────────────────────────────────────────────────────────
   | 'webhook:read'
   | 'webhook:manage'
+  // ── Organization scope management ────────────────────────────────────────
+  | 'org:manage_scopes'
   // ── Machine / worker ─────────────────────────────────────────────────────
   | 'machine:jira_sync'
   | 'machine:notification_send'
@@ -64,6 +66,7 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
   'jira:read', 'jira:manage',
   'admin:manage_tenant', 'admin:revoke_sessions',
   'webhook:read', 'webhook:manage',
+  'org:manage_scopes',
   'machine:jira_sync', 'machine:notification_send', 'machine:export',
 ];
 
@@ -81,6 +84,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<string, readonly Permission[]>> =
     'ticket:read', 'ticket:create', 'ticket:update', 'ticket:close',
     'ticket:reassign', 'ticket:view_internal_notes', 'ticket:add_internal_note',
     'org:read', 'org:create', 'org:update',
+    'org:manage_scopes',
     'user:read', 'user:create', 'user:update', 'user:set_org_scope',
     'sla:read', 'sla:manage',
     'report:read', 'report:export',

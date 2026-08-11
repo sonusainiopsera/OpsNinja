@@ -40,6 +40,7 @@ import { PermissionResolverService } from './permission-resolver.service';
 import { AuditService } from './audit.service';
 import { type Permission, MACHINE_PERMISSIONS } from './permission.catalog';
 import { PORTAL_ROUTE_KEY } from './portal-route.decorator';
+import { OrgScopeService } from './org-scope.service';
 
 // ---------------------------------------------------------------------------
 // Shape of request.user after the guard succeeds.
@@ -65,6 +66,9 @@ declare module 'express' {
   }
 }
 
+/** Roles that bypass org-scope version checks (tenant-wide access). */
+const TENANT_WIDE_ROLES = new Set(['admin', 'lead_analyst']);
+
 @Injectable()
 export class AuthGuard implements CanActivate {
   private readonly logger = new Logger(AuthGuard.name);
@@ -74,6 +78,7 @@ export class AuthGuard implements CanActivate {
     private readonly tokenService: TokenService,
     private readonly permissionResolver: PermissionResolverService,
     private readonly auditService: AuditService,
+    private readonly orgScopeService: OrgScopeService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -127,6 +132,47 @@ export class AuthGuard implements CanActivate {
       });
       this.logger.warn(code, { route, traceId });
       throw new UnauthorizedException({ code, message, traceId });
+    }
+
+    // ── 3b. Org-scope version staleness check ─────────────────────────────────
+    // Skip for portal, machine, and tenant-wide roles — they are not subject
+    // to per-agent org-scope versioning.
+    const isTenantWide = claims.roles.some((r) => TENANT_WIDE_ROLES.has(r));
+    if (claims.user_type === 'staff' && !isTenantWide) {
+      let currentVersion: number;
+      try {
+        currentVersion = await this.orgScopeService.getScopeVersion(
+          claims.tenant_id,
+          claims.sub,
+        );
+      } catch (err) {
+        // Never fail open on unexpected errors — treat as stale.
+        this.logger.error('OrgScopeService.getScopeVersion threw; denying with SCOPE_VERSION_STALE', {
+          error: (err as Error).message,
+          route,
+          traceId,
+        });
+        throw new UnauthorizedException({
+          code: 'SCOPE_VERSION_STALE',
+          message: 'Scope version could not be verified; please refresh your token',
+          traceId,
+        });
+      }
+
+      if (claims.org_scope_version < currentVersion) {
+        this.logger.warn('SCOPE_VERSION_STALE', {
+          route,
+          traceId,
+          sub: claims.sub,
+          tokenVersion: claims.org_scope_version,
+          currentVersion,
+        });
+        throw new UnauthorizedException({
+          code: 'SCOPE_VERSION_STALE',
+          message: 'Your access scope has changed; please refresh your token',
+          traceId,
+        });
+      }
     }
 
     // ── 4. Required permissions + portal route metadata ──────────────────────
@@ -235,12 +281,34 @@ export class AuthGuard implements CanActivate {
     }
 
     // ── 9. Attach principal to request.user for TenantContextInterceptor ───────
+    // Resolve org scope IDs for staff agents. Portal users use boundOrganizationId.
+    // Tenant-wide roles and machine principals receive empty list (no IN-list filter).
+    let orgScopeIds: string[] = [];
+    if (userType === 'portal' && claims.bound_org_id) {
+      orgScopeIds = [claims.bound_org_id];
+    } else if (userType === 'staff' && !isTenantWide) {
+      try {
+        orgScopeIds = await this.orgScopeService.getScopeIds(
+          claims.tenant_id,
+          claims.sub,
+          claims.org_scope_version,
+        );
+      } catch (err) {
+        this.logger.warn('Failed to load org scope ids; defaulting to empty (deny-all)', {
+          error: (err as Error).message,
+          sub: claims.sub,
+          traceId,
+        });
+        orgScopeIds = [];
+      }
+    }
+
     request.user = {
       sub: claims.sub,
       tenantId: claims.tenant_id,
       principalKind: userType as AuthenticatedPrincipal['principalKind'],
       roles: claims.roles,
-      orgScopeIds: claims.bound_org_id ? [claims.bound_org_id] : [],
+      orgScopeIds,
       boundOrganizationId: claims.bound_org_id,
     };
 

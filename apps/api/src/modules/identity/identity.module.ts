@@ -26,6 +26,6 @@ import { AuditService } from '../../common/auth/audit.service';
       useClass: RefreshSessionRepository,
     },
   ],
-  exports: [TokenService, SessionService],
+  exports: [TokenService, SessionService, AuditService],
 })
 export class IdentityModule {}
