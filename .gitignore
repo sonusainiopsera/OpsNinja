@@ -37,3 +37,8 @@ coverage/
 
 # TypeScript
 *.tsbuildinfo
+
+# Next.js build output
+.next/
+apps/*/.next/
+

@@ -11,9 +11,9 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { eq, and, gt } from 'drizzle-orm';
 
 import { notificationTemplates } from '@opsninja/db';
-import { getTxHandle } from '../../../data/tenant-repository';
-import { getPrincipalContext } from '../../../observability/request-context';
-import { RequirePermission } from '../../../common/auth/require-permission.decorator';
+import { getTxHandle } from '../../data/tenant-repository';
+import { getPrincipalContext } from '../../observability/request-context';
+import { RequirePermission } from '../../common/auth/require-permission.decorator';
 
 const PAGE_SIZE = 50;
 

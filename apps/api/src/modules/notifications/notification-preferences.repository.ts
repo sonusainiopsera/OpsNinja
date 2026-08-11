@@ -18,7 +18,7 @@ import type {
   NotificationScope,
   NotificationMode,
 } from '@opsninja/db';
-import { TenantRepository } from '../../../data/tenant-repository';
+import { TenantRepository } from '../../data/tenant-repository';
 
 export interface UpsertPreferenceParams {
   tenantId: string;

@@ -8,7 +8,7 @@
 
 import React from 'react';
 import type { UseFormReturn, FieldError } from 'react-hook-form';
-import type { SlaPolicyFormValues, SlaPriority } from '../../../../lib/api/sla/types';
+import type { SlaPolicyFormValues, SlaPriority } from '@/lib/api/sla/types';
 
 const PRIORITIES: SlaPriority[] = ['P1', 'P2', 'P3', 'P4'];
 

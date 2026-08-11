@@ -15,6 +15,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { computeSignature } from '@opsninja/filter-compiler';
+import { apiFetch } from '../fetch';
 import type {
   TicketRow,
   TicketListResponse,
@@ -33,28 +34,6 @@ import type {
   ResolveTicketPayload,
   ResolveTicketResponse,
 } from './types';
-
-// ---------------------------------------------------------------------------
-// Fetch helper
-// ---------------------------------------------------------------------------
-
-async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
-    ...init,
-  });
-  if (!res.ok) {
-    let body: unknown;
-    try { body = await res.json(); } catch { body = null; }
-    const envelope = body as { error?: { message?: string; code?: string; traceId?: string } } | null;
-    throw Object.assign(
-      new Error(envelope?.error?.message ?? `HTTP ${res.status}`),
-      { status: res.status, body, code: envelope?.error?.code, traceId: envelope?.error?.traceId },
-    );
-  }
-  return res.json() as Promise<T>;
-}
 
 // ---------------------------------------------------------------------------
 // Query keys

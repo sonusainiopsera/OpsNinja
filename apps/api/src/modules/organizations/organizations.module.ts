@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 
 import { AuthModule } from '../../common/auth/auth.module';
 import { AuditModule } from '../audit/audit.module';
@@ -18,7 +18,7 @@ import { VerifiedDomainsRepository } from './verified-domains/verified-domains.r
 import { DomainOwnershipVerifier } from './verified-domains/domain-ownership.verifier';
 
 @Module({
-  imports: [AuthModule, AuditModule],
+  imports: [forwardRef(() => AuthModule), AuditModule],
   controllers: [AgentScopesController, OrganizationsController, ContactsController],
   providers: [
     AgentScopesService,

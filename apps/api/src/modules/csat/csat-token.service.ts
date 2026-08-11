@@ -10,7 +10,7 @@
  *  - Expiry evaluated against configurable clock for test injection
  */
 
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { randomBytes, createHash, timingSafeEqual } from 'crypto';
 
 @Injectable()
@@ -18,7 +18,7 @@ export class CsatTokenService {
   /** Seeded for tests via the constructor; defaults to Date.now in production. */
   private readonly clock: () => number;
 
-  constructor(clock?: () => number) {
+  constructor(@Optional() @Inject('CSAT_CLOCK') clock?: () => number) {
     this.clock = clock ?? (() => Date.now());
   }
 

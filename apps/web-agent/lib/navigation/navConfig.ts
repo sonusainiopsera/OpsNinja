@@ -41,7 +41,7 @@ export const NAV_CONFIG: NavGroup[] = [
       {
         id: 'queues',
         label: 'Ticket Queues',
-        href: '/queues',
+        href: '/queue',
         iconName: 'clock',
         requiredRoles: [],
       },

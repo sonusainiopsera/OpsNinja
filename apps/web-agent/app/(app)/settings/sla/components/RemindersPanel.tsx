@@ -9,7 +9,7 @@
 
 import React from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
-import type { SlaPolicyFormValues } from '../../../../lib/api/sla/types';
+import type { SlaPolicyFormValues } from '@/lib/api/sla/types';
 import { Slider } from '@opsninja/ui-kit';
 import { Toggle } from '@opsninja/ui-kit';
 

@@ -35,7 +35,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { eq, and } from 'drizzle-orm';
 
 import { contacts, tickets, assignmentGroupMembers, assignmentGroups } from '@opsninja/db';
-import { getTxHandle } from '../../../data/tenant-repository';
+import { getTxHandle } from '../../data/tenant-repository';
 import { getCatalogueEntry } from './event-catalogue';
 import { applyProjection } from './payload-projection';
 import { NotificationPreferencesService } from './notification-preferences.service';

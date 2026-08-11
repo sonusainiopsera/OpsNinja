@@ -16,8 +16,8 @@
     "assert-bundle-isolation": "tsx scripts/assert-bundle-isolation.ts"
   },
   "dependencies": {
-    "@opsninja/api-client": "workspace:*",
-    "@opsninja/ui-kit": "workspace:*",
+    "@opsninja/api-client": "*",
+    "@opsninja/ui-kit": "*",
     "@tanstack/react-query": "^5.56.0",
     "next": "^15.0.0",
     "react": "^18.3.1",

@@ -8,9 +8,9 @@
 
 import React from 'react';
 import type { UseFormReturn } from 'react-hook-form';
-import type { SlaPolicyFormValues } from '../../../../lib/api/sla/types';
-import { useSlaCalendars } from '../../../../lib/api/sla/hooks';
-import { PAUSE_CONDITIONS } from '../../../../lib/api/sla/types';
+import type { SlaPolicyFormValues } from '@/lib/api/sla/types';
+import { useSlaCalendars } from '@/lib/api/sla/hooks';
+import { PAUSE_CONDITIONS } from '@/lib/api/sla/types';
 
 interface CalendarPanelProps {
   form: UseFormReturn<SlaPolicyFormValues>;

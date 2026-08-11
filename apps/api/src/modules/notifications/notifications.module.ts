@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 
 import { NotificationTemplateController } from './notification-template.controller';
 import { NotificationTemplateService } from './notification-template.service';
@@ -12,9 +12,12 @@ import {
   AdminNotificationDefaultsController,
 } from './notification-preferences.controller';
 import { AuditModule } from '../audit/audit.module';
+import { AuthModule } from '../../common/auth/auth.module';
+import { AuditService } from '../../common/auth/audit.service';
+import { PortalVisibilityGuard } from '../tickets/portal/portal-visibility.guard';
 
 @Module({
-  imports: [AuditModule],
+  imports: [AuditModule, forwardRef(() => AuthModule)],
   controllers: [
     NotificationTemplateController,
     PortalNotificationPreferencesController,
@@ -26,6 +29,8 @@ import { AuditModule } from '../audit/audit.module';
     NotificationPreferencesRepository,
     NotificationPreferencesService,
     NotificationRuleResolver,
+    AuditService,
+    PortalVisibilityGuard,
     {
       provide: MESSAGE_PUBLISHER,
       useClass: SqsMessagePublisher,

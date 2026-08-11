@@ -73,13 +73,13 @@ function makeMockPrefsService(overrides: Partial<{
 // ---------------------------------------------------------------------------
 
 // We mock the getTxHandle import to return our fixture data
-jest.mock('../../../data/tenant-repository', () => ({
+jest.mock('../../data/tenant-repository', () => ({
   getTxHandle: jest.fn(),
   TenantContextMissingError: class TenantContextMissingError extends Error {},
   TenantRepository: class TenantRepository {},
 }));
 
-import { getTxHandle } from '../../../data/tenant-repository';
+import { getTxHandle } from '../../data/tenant-repository';
 
 function mockTxForCustomerEvent(
   contacts: Array<{ id: string; email: string; organizationId: string; status: string; portalAccessEnabled: boolean }>,

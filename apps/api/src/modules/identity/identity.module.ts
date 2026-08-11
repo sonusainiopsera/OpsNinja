@@ -5,7 +5,7 @@
  * endpoints run outside the per-request tenant transaction.
  */
 
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
 import { AuthController } from './auth.controller';
@@ -25,7 +25,7 @@ import { PortalSignupService } from './portal-signup/portal-signup.service';
 import { SignupThrottleGuard } from './guards/signup-throttle.guard';
 
 @Module({
-  imports: [ConfigModule, SecurityModule, OrganizationsModule],
+  imports: [ConfigModule, SecurityModule, forwardRef(() => OrganizationsModule)],
   controllers: [AuthController, AdminAuthController, PortalVerificationController, PortalSignupController],
   providers: [
     TokenService,

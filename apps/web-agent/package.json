@@ -16,9 +16,9 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
-    "@opsninja/api-client": "workspace:*",
-    "@opsninja/filter-compiler": "workspace:*",
-    "@opsninja/ui-kit": "workspace:*",
+    "@opsninja/api-client": "*",
+    "@opsninja/filter-compiler": "*",
+    "@opsninja/ui-kit": "*",
     "@tanstack/react-query": "^5.56.0",
     "next": "^15.0.0",
     "react": "^18.3.1",
@@ -42,5 +42,10 @@
     "typescript": "^5.6.0",
     "vitest": "^2.1.0",
     "@vitest/coverage-v8": "^2.1.0"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
   }
 }

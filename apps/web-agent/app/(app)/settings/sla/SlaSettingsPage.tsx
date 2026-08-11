@@ -15,9 +15,9 @@
 
 import React, { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchCurrentPrincipal } from '../../../lib/api/identity';
-import { useSlaPolicies } from '../../../lib/api/sla/hooks';
-import type { SlaPolicy } from '../../../lib/api/sla/types';
+import { fetchCurrentPrincipal } from '@/lib/api/identity';
+import { useSlaPolicies } from '@/lib/api/sla/hooks';
+import type { SlaPolicy } from '@/lib/api/sla/types';
 import { PolicyList } from './components/PolicyList';
 import { PolicyEditor } from './components/PolicyEditor';
 import { SchedulerHealthPill } from './components/SchedulerHealthPill';

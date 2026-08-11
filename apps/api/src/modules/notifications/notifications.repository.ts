@@ -18,7 +18,7 @@ import {
   type NotificationStatus,
   type SuppressionReason,
 } from '@opsninja/db';
-import { TenantRepository } from '../../../data/tenant-repository';
+import { TenantRepository } from '../../data/tenant-repository';
 
 @Injectable()
 export class NotificationsRepository extends TenantRepository {

@@ -12,6 +12,7 @@ import {
   useQueryClient,
   type UseMutationResult,
 } from '@tanstack/react-query';
+import { apiFetch } from '../fetch';
 import type {
   SavedView,
   ViewListResponse,
@@ -19,28 +20,6 @@ import type {
   CreateViewPayload,
   UpdateViewPayload,
 } from './types';
-
-// ---------------------------------------------------------------------------
-// Fetch helper
-// ---------------------------------------------------------------------------
-
-async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
-    ...init,
-  });
-  if (!res.ok) {
-    let body: unknown;
-    try { body = await res.json(); } catch { body = null; }
-    const envelope = body as { error?: { message?: string; code?: string } } | null;
-    throw Object.assign(
-      new Error(envelope?.error?.message ?? `HTTP ${res.status}`),
-      { status: res.status, body, code: envelope?.error?.code },
-    );
-  }
-  return res.json() as Promise<T>;
-}
 
 // ---------------------------------------------------------------------------
 // Query keys

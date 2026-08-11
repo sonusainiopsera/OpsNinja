@@ -9,7 +9,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@opsninja/events": "workspace:*"
+    "@opsninja/events": "*"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

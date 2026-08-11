@@ -70,9 +70,12 @@ export function computeRemaining(input: ComputeRemainingInput): ComputeRemaining
   } else if (input.serverState === 'breached' || remainingMs <= 0) {
     // Client may detect breach before the next server delta.
     derivedState = 'breached';
-  } else {
+  } else if (input.serverState === 'warning' || input.serverState === 'running') {
     // Server state is authoritative for 'running' vs 'warning'.
     derivedState = input.serverState;
+  } else {
+    // Tolerate legacy/alias values such as 'ok' from mocks or older APIs.
+    derivedState = 'running';
   }
 
   return { remainingMs, derivedState, isOverdue: remainingMs < 0 };

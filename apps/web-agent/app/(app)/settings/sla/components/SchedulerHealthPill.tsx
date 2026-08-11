@@ -8,8 +8,8 @@
  */
 
 import React from 'react';
-import { useSchedulerHealth } from '../../../../lib/api/sla/hooks';
-import type { SchedulerHealthStatus } from '../../../../lib/api/sla/types';
+import { useSchedulerHealth } from '@/lib/api/sla/hooks';
+import type { SchedulerHealthStatus } from '@/lib/api/sla/types';
 
 const STATUS_CONFIG: Record<
   SchedulerHealthStatus,

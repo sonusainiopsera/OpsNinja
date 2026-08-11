@@ -88,7 +88,7 @@ export function SlaCountdown({
       prevStateRef.current = next;
       if (next === 'warning' || next === 'breached') {
         const meta = slaStateMeta[next as SlaState];
-        if (meta.announcement) announce(meta.announcement);
+        if (meta?.announcement) announce(meta.announcement);
       }
     }
   }, [result.derivedState, announce]);
@@ -107,9 +107,12 @@ export function SlaCountdown({
   }
 
   const effectiveState = result.derivedState as SlaState;
-  const meta = slaStateMeta[effectiveState];
+  const meta = slaStateMeta[effectiveState] ?? slaStateMeta.running;
   const displayTime = formatRemaining(result.remainingMs);
-  const ariaLabel = buildAriaLabel(effectiveState, result.remainingMs);
+  const ariaLabel = buildAriaLabel(
+    slaStateMeta[effectiveState] ? effectiveState : 'unknown',
+    result.remainingMs,
+  );
 
   const pillStyle: React.CSSProperties = {
     display: 'inline-flex',
@@ -128,7 +131,7 @@ export function SlaCountdown({
     <span
       className={className}
       aria-label={ariaLabel}
-      data-sla-state={effectiveState}
+      data-sla-state={slaStateMeta[effectiveState] ? effectiveState : 'unknown'}
       style={pillStyle}
     >
       <Icon name={meta.iconName} size={12} />

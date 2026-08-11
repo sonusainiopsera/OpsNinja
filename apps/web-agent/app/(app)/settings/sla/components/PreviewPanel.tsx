@@ -9,7 +9,7 @@
 
 import React from 'react';
 import type { UseFormReturn } from 'react-hook-form';
-import type { SlaPolicyFormValues, SlaPriority } from '../../../../lib/api/sla/types';
+import type { SlaPolicyFormValues, SlaPriority } from '@/lib/api/sla/types';
 import { SlaTimeline } from '@opsninja/ui-kit';
 
 const PRIORITIES: { priority: SlaPriority; label: string }[] = [

@@ -23,8 +23,8 @@ import { Reflector } from '@nestjs/core';
 import { Observable, from, lastValueFrom } from 'rxjs';
 import { createHash } from 'crypto';
 import { Request } from 'express';
-import { NO_TENANT_CONTEXT_KEY } from '../../../common/tenant/no-tenant-context.decorator';
-import { getRequestContext } from '../../../observability/request-context';
+import { NO_TENANT_CONTEXT_KEY } from '../../common/tenant/no-tenant-context.decorator';
+import { getRequestContext } from '../../observability/request-context';
 import { AuditContext, runWithAuditContext } from './audit-context';
 
 @Injectable()

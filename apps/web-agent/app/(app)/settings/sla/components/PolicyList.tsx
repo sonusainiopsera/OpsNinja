@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import type { SlaPolicy } from '../../../../lib/api/sla/types';
+import type { SlaPolicy } from '@/lib/api/sla/types';
 import { PolicyCard } from './PolicyCard';
 
 interface PolicyListProps {

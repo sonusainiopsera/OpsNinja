@@ -55,8 +55,17 @@ function ViewItem({
   onTogglePin,
 }: ViewItemProps) {
   return (
-    <li role="none">
+    <li
+      role="none"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 2,
+        paddingRight: canPin ? 4 : 0,
+      }}
+    >
       <button
+        type="button"
         role="menuitem"
         aria-current={active ? 'page' : undefined}
         data-view-id={id}
@@ -65,7 +74,8 @@ function ViewItem({
           display: 'flex',
           alignItems: 'center',
           gap: 8,
-          width: '100%',
+          flex: 1,
+          minWidth: 0,
           padding: '7px 12px',
           background: active ? 'var(--color-primary-soft, #eef2ff)' : 'transparent',
           border: 'none',
@@ -102,27 +112,27 @@ function ViewItem({
             {count > 999 ? '999+' : count}
           </span>
         )}
-        {canPin && (
-          <button
-            type="button"
-            aria-label={pinned ? `Unpin ${label}` : `Pin ${label}`}
-            onClick={(e) => { e.stopPropagation(); onTogglePin?.(); }}
-            title={pinned ? 'Unpin' : 'Pin to rail'}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '1px 3px',
-              borderRadius: 3,
-              fontSize: 12,
-              opacity: pinned ? 1 : 0.4,
-              flexShrink: 0,
-            }}
-          >
-            📌
-          </button>
-        )}
       </button>
+      {canPin && (
+        <button
+          type="button"
+          aria-label={pinned ? `Unpin ${label}` : `Pin ${label}`}
+          onClick={() => onTogglePin?.()}
+          title={pinned ? 'Unpin' : 'Pin to rail'}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '4px 6px',
+            borderRadius: 3,
+            fontSize: 12,
+            opacity: pinned ? 1 : 0.4,
+            flexShrink: 0,
+          }}
+        >
+          📌
+        </button>
+      )}
     </li>
   );
 }

@@ -18,7 +18,7 @@ import {
   type ReportDefinition,
   type NewReportDefinition,
 } from '@opsninja/db';
-import { TenantRepository } from '../data/tenant-repository';
+import { TenantRepository } from '../../data/tenant-repository';
 import { Auditable } from '../audit/auditable.decorator';
 
 @Injectable()

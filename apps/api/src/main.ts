@@ -9,9 +9,12 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
-import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { createLogger } from '@opsninja/observability';
+
+// CJS interop: cookie-parser is a CommonJS export; avoid `import * as` which breaks under transpile-only.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const cookieParser: typeof import('cookie-parser') = require('cookie-parser');
 
 const PORT = parseInt(process.env['PORT'] ?? '8080', 10);
 const logger = new Logger('Bootstrap');

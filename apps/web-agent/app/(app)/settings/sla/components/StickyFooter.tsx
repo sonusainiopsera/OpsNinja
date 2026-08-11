@@ -7,7 +7,7 @@
 
 import React from 'react';
 import type { UseFormReturn } from 'react-hook-form';
-import type { SlaPolicyFormValues } from '../../../../lib/api/sla/types';
+import type { SlaPolicyFormValues } from '@/lib/api/sla/types';
 
 interface StickyFooterProps {
   form: UseFormReturn<SlaPolicyFormValues>;

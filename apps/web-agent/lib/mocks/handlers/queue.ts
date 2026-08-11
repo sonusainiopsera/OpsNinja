@@ -44,7 +44,7 @@ function makeTicket(idx: number): TicketRow {
     sla: {
       targetAt: isBreached ? TARGET_BREACHED : TARGET_SOON,
       pausedMs: 0,
-      state: isBreached ? 'breached' : isPriority1 ? 'warning' : 'ok',
+      state: isBreached ? 'breached' : isPriority1 ? 'warning' : 'running',
       serverNow: NOW,
     },
     version: 1,
