@@ -20,6 +20,7 @@ import { ConnectionRegistry } from './gateway/connection-registry';
 import { WsJwtVerifier } from './auth/ws-jwt.verifier';
 import { OrgScopeResolver } from './auth/org-scope.resolver';
 import { PubSubSubscriber } from './redis/pubsub.subscriber';
+import { SlaPubSubSubscriber } from './redis/sla-pubsub.subscriber';
 import { HealthController } from './health/health.controller';
 
 @Module({
@@ -33,6 +34,8 @@ import { HealthController } from './health/health.controller';
     WsJwtVerifier,
     OrgScopeResolver,
     PubSubSubscriber,
+    // WO-050: SLA countdown delta frames
+    SlaPubSubSubscriber,
   ],
 })
 export class AppModule {}

@@ -26,6 +26,7 @@ import { AttachmentsController, AttachmentDownloadController } from './attachmen
 import { AttachmentsService } from './attachments/attachments.service';
 import { S3ObjectStore } from './attachments/storage/s3-object-store';
 import { OBJECT_STORE_PORT } from './attachments/storage/object-store.port';
+import { TicketSlaController } from '../sla/ticket-sla.controller';
 
 @Module({
   imports: [AuthModule, AuditModule, OrganizationsModule, ViewsModule, SlaModule],
@@ -37,6 +38,7 @@ import { OBJECT_STORE_PORT } from './attachments/storage/object-store.port';
     CommentsController,                // WO-034: POST /tickets/:id/comments, GET /tickets/:id/comments
     AttachmentsController,             // WO-035: POST /tickets/:id/attachments/presign, POST .../finalize
     AttachmentDownloadController,      // WO-035: GET /attachments/:id/download
+    TicketSlaController,               // WO-050: GET /tickets/:id/sla
   ],
   providers: [
     TicketRepository,
