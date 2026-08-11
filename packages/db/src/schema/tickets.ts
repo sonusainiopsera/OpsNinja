@@ -31,6 +31,7 @@ export const tickets = pgTable('tickets', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  aiSummary: text('ai_summary'),
 });
 
 export type Ticket = typeof tickets.$inferSelect;

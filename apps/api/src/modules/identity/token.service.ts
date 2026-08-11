@@ -9,6 +9,8 @@ export interface AccessTokenClaims {
   tenant_id: string;
   roles: string[];
   org_scope_version: number;
+  /** Organisation UUIDs bound to this principal; present on portal tokens. */
+  org_scope_ids?: string[];
   user_type: string;
   jti: string;
   iat: number;

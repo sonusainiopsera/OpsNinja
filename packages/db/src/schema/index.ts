@@ -1,3 +1,7 @@
 export * from './tickets';
 export * from './refresh-sessions';
 export * from './audit-logs';
+export * from './organizations';
+export * from './comments';
+export * from './attachments';
+export * from './tenant-settings';

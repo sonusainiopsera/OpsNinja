@@ -27,8 +27,9 @@ export const Permission = {
   TENANT_SETTINGS: 'tenant:settings',
 
   // ── Portal (customer-facing) ─────────────────────────────────────────────
-  PORTAL_TICKETS_READ:  'portal:tickets:read',
-  PORTAL_TICKETS_WRITE: 'portal:tickets:write',
+  PORTAL_TICKETS_READ:        'portal:tickets:read',
+  PORTAL_TICKETS_WRITE:       'portal:tickets:write',
+  PORTAL_ATTACHMENTS_DOWNLOAD: 'portal:attachments:download',
 
   // ── Machine (worker / integration) ──────────────────────────────────────
   MACHINE_SYNC:    'machine:sync',
@@ -77,6 +78,7 @@ export const ROLE_PERMISSION_MAP: Record<string, Permission[]> = {
   portal_user: [
     Permission.PORTAL_TICKETS_READ,
     Permission.PORTAL_TICKETS_WRITE,
+    Permission.PORTAL_ATTACHMENTS_DOWNLOAD,
   ],
   worker: [
     Permission.MACHINE_SYNC,

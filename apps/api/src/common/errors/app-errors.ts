@@ -48,6 +48,10 @@ export const ErrorCode = {
   AUTHZ_PERMISSION_DENIED: 'AUTHZ_PERMISSION_DENIED',
   /** Token audience does not match the permission tier required by the route. */
   AUTHZ_AUDIENCE_MISMATCH: 'AUTHZ_AUDIENCE_MISMATCH',
+
+  // ── Portal error codes ────────────────────────────────────────────────────
+  /** Portal client attempted to set a field reserved for internal/staff use. */
+  PORTAL_FIELD_NOT_ALLOWED: 'PORTAL_FIELD_NOT_ALLOWED',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

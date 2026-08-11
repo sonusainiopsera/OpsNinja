@@ -234,7 +234,7 @@ export class AuthGuard implements CanActivate {
       userId: actorId,
       principalKind: (claims.user_type as PrincipalKind) ?? 'staff',
       roles: claims.roles,
-      orgScopeIds: [],
+      orgScopeIds: claims.org_scope_ids ?? [],
       orgScopeVersion: claims.org_scope_version,
       permissions: effectivePermissions as ReadonlySet<string>,
       traceId,

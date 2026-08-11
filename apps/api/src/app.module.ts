@@ -21,6 +21,7 @@ import { HealthModule } from './health/health.module';
 import { RedisModule } from './common/redis/redis.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { AuditModule } from './common/audit/audit.module';
+import { TicketsModule } from './modules/tickets/tickets.module';
 import { AuthGuard } from './common/guards/auth.guard';
 import { TenantContextInterceptor } from './common/tenant/tenant-context.interceptor';
 import { UnitOfWork } from './data/unit-of-work';
@@ -36,6 +37,7 @@ import { UnitOfWork } from './data/unit-of-work';
     AuditModule,
     HealthModule,
     IdentityModule,
+    TicketsModule,
   ],
   providers: [
     // ── Global guard (runs first) ────────────────────────────────────────────
