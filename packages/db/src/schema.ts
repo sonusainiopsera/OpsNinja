@@ -533,3 +533,18 @@ export type {
   MappingSource,
   MappingTransform,
 } from './schema/jira-project-mappings';
+
+// ---------------------------------------------------------------------------
+// retention_job_runs + erasure_receipts (WO-085)
+// ---------------------------------------------------------------------------
+
+export { retentionJobRuns, erasureReceipts } from './schema/retention';
+
+export type {
+  RetentionJobRun,
+  NewRetentionJobRun,
+  RetentionJobOutcome,
+  ErasureReceipt,
+  NewErasureReceipt,
+  ErasureReceiptEntry,
+} from './schema/retention';
