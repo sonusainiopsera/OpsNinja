@@ -12,6 +12,7 @@
   "dependencies": {
     "@opsninja/db": "workspace:*",
     "@opsninja/shared": "workspace:*",
+    "jose": "^5.9.3",
     "postgres": "^3.4.5"
   },
   "devDependencies": {

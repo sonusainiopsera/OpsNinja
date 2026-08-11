@@ -32,9 +32,13 @@ export const refreshSessions = pgTable(
     tenantId:     uuid('tenant_id').notNull().references(() => tenants.id),
     id:           uuid('id').notNull().defaultRandom(),
     userId:       uuid('user_id').notNull(),
+    /** Groups all rotation children — reuse detection revokes the whole family. */
+    familyId:     uuid('family_id').notNull().defaultRandom(),
     tokenHash:    text('token_hash').notNull(),
     issuedAt:     timestamp('issued_at',   { withTimezone: true }).notNull().defaultNow(),
     expiresAt:    timestamp('expires_at',  { withTimezone: true }).notNull(),
+    /** Set when superseded by rotation; NULL = still active. */
+    rotatedAt:    timestamp('rotated_at',  { withTimezone: true }),
     revokedAt:    timestamp('revoked_at',  { withTimezone: true }),
     userAgentHash: text('user_agent_hash'),
     ipHash:       text('ip_hash'),
@@ -69,6 +73,7 @@ export const pendingUserApprovals = pgTable('pending_user_approvals', {
 
 export type RefreshSession = typeof refreshSessions.$inferSelect;
 export type NewRefreshSession = typeof refreshSessions.$inferInsert;
+export type RefreshSessionRow = RefreshSession;
 export type EmailVerificationToken = typeof emailVerificationTokens.$inferSelect;
 export type NewEmailVerificationToken = typeof emailVerificationTokens.$inferInsert;
 export type PendingUserApproval = typeof pendingUserApprovals.$inferSelect;
