@@ -76,6 +76,13 @@ export const organizationsRegistry = pgTable(
     /** Set when status transitions to 'inactive'. Null for active records. */
     deactivatedAt: timestamp('deactivated_at', { withTimezone: true }),
 
+    /**
+     * Optimistic-concurrency version counter. Incremented on every PATCH.
+     * PATCH requests must supply the current version; a mismatch returns 409.
+     * Added by WO-024 migration 0014.
+     */
+    version: integer('version').notNull().default(1),
+
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -257,3 +264,34 @@ export const customFieldDefs = pgTable(
 
 export type CustomFieldDef = typeof customFieldDefs.$inferSelect;
 export type NewCustomFieldDef = typeof customFieldDefs.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// outbox_events — transactional outbox for domain event publishing (WO-024)
+//
+// Each domain mutation (organization.created, organization.updated, …)
+// inserts a row inside the SAME Drizzle transaction as the write.
+// A drain worker reads pending rows and publishes them to the event bus.
+// ---------------------------------------------------------------------------
+
+export const outboxEvents = pgTable(
+  'outbox_events',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').notNull(),
+    aggregateType: text('aggregate_type').notNull(),
+    aggregateId: uuid('aggregate_id').notNull(),
+    eventType: text('event_type').notNull(),
+    payload: jsonb('payload').notNull().default({}),
+    traceId: text('trace_id'),
+    status: text('status').notNull().default('pending'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    publishedAt: timestamp('published_at', { withTimezone: true }),
+  },
+  (t) => ({
+    statusCreatedIdx: index('outbox_events_status_created_idx').on(t.status, t.createdAt),
+    tenantAggIdx: index('outbox_events_tenant_agg_idx').on(t.tenantId, t.aggregateType, t.aggregateId),
+  }),
+);
+
+export type OutboxEvent = typeof outboxEvents.$inferSelect;
+export type NewOutboxEvent = typeof outboxEvents.$inferInsert;

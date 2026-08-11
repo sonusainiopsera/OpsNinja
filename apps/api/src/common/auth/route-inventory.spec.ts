@@ -26,6 +26,7 @@ import { SlaPoliciesController } from '../../modules/sla/sla-policies.controller
 import { SlaCalendarsController } from '../../modules/sla/sla-calendars.controller';
 import { JiraConnectionsController } from '../../modules/jira/connections/jira-connections.controller';
 import { JiraOAuthController } from '../../modules/jira/oauth/jira-oauth.controller';
+import { OrganizationsController } from '../../modules/organizations/organizations.controller';
 
 // NestJS sets 'path' and 'method' metadata keys on route handler methods.
 const PATH_METADATA = 'path';

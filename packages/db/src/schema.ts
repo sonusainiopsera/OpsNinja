@@ -388,6 +388,7 @@ export {
   contacts,
   organizationVerifiedDomains,
   customFieldDefs,
+  outboxEvents,
 } from './schema/organizations-registry';
 
 export type {
@@ -401,6 +402,8 @@ export type {
   NewOrganizationVerifiedDomain,
   CustomFieldDef,
   NewCustomFieldDef,
+  OutboxEvent,
+  NewOutboxEvent,
 } from './schema/organizations-registry';
 
 // ---------------------------------------------------------------------------
