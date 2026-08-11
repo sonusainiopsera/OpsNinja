@@ -1,0 +1,20 @@
+{
+  "name": "@opsninja/docs",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "generate:catalogue": "ts-node -T scripts/generate-webhook-catalogue.ts",
+    "scan:redaction": "ts-node -T scripts/redaction-scan.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@opsninja/events": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0",
+    "ts-node": "^10.9.0",
+    "vitest": "^2.0.0"
+  }
+}

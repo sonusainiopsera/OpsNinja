@@ -10,14 +10,23 @@
  *  - failed_permanent (4xx except 408/429): fail immediately, no retry
  *  - dropped (endpoint inactive/deleted): no HTTP request, record and stop
  *  - blocked (SSRF): record and stop
+ *
+ * Constants are re-exported from @opsninja/events/delivery-config so that the
+ * developer portal documentation and this runtime implementation share a single
+ * source of truth — drift is structurally impossible.
  */
 
 import type { DispatchOutcome } from '@opsninja/webhooks';
+import {
+  MAX_WEBHOOK_DELIVERY_ATTEMPTS,
+  WEBHOOK_BACKOFF_DELAYS_SECONDS,
+} from '@opsninja/events';
 
-export const MAX_ATTEMPTS = 6;
+/** Re-exported for callers that import from this module directly. */
+export const MAX_ATTEMPTS = MAX_WEBHOOK_DELIVERY_ATTEMPTS;
 
-/** Backoff delay in seconds for each attempt index (0-based). */
-export const BACKOFF_DELAYS_SECONDS = [1, 2, 4, 8, 60, 900] as const;
+/** Backoff delay in seconds for each attempt index (0-based). Re-exported from @opsninja/events. */
+export const BACKOFF_DELAYS_SECONDS = WEBHOOK_BACKOFF_DELAYS_SECONDS as readonly number[] as readonly [number, number, number, number, number, number];
 
 export type RetryDecision =
   | { action: 'succeed' }

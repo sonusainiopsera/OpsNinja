@@ -5,6 +5,7 @@
   "workspaces": [
     "apps/*",
     "packages/*",
+    "docs",
     "test/e2e"
   ],
   "scripts": {

@@ -1,0 +1,13 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "module": "commonjs",
+    "paths": {
+      "@opsninja/events": ["../packages/events/src/index.ts"],
+      "@opsninja/events/*": ["../packages/events/src/*"]
+    }
+  },
+  "include": ["scripts/**/*", "test/**/*", "site/**/*.ts"]
+}

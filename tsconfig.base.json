@@ -37,7 +37,9 @@
       "@opsninja/crypto": ["./packages/crypto/src/index.ts"],
       "@opsninja/crypto/*": ["./packages/crypto/src/*"],
       "@opsninja/test-seed": ["./packages/test-seed/src/index.ts"],
-      "@opsninja/test-seed/*": ["./packages/test-seed/src/*"]
+      "@opsninja/test-seed/*": ["./packages/test-seed/src/*"],
+      "@opsninja/events": ["./packages/events/src/index.ts"],
+      "@opsninja/events/*": ["./packages/events/src/*"]
     }
   }
 }

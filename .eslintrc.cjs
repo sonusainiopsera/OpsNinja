@@ -30,6 +30,7 @@ module.exports = {
       './packages/observability/tsconfig.json',
       './packages/crypto/tsconfig.json',
       './packages/test-seed/tsconfig.json',
+      './packages/events/tsconfig.json',
       './apps/workers/notification-worker/tsconfig.json',
     ],
     tsconfigRootDir: __dirname,
