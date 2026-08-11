@@ -576,3 +576,20 @@ export type {
   SubjectRequestType,
   SubjectRequestStatus,
 } from './schema/subject-requests';
+export {
+  reportSchedules,
+  reportScheduleOccurrences,
+  externalRecipientAllowlist,
+} from './schema/report-schedules';
+export type {
+  ReportSchedule,
+  NewReportSchedule,
+  ReportScheduleCadence,
+  ReportScheduleFormat,
+  ScheduleRecipient,
+  ReportScheduleOccurrence,
+  NewReportScheduleOccurrence,
+  OccurrenceStatus,
+  ExternalRecipientAllowlistEntry,
+  NewExternalRecipientAllowlistEntry,
+} from './schema/report-schedules';

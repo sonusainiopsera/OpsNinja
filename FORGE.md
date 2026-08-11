@@ -378,3 +378,10 @@
 - **Files:** 13 (+2152/-1)
 - **Duration:** 696ss
 - **Approach:** N/A
+
+## WO-075: User Story: WO-075 - Scheduled Report Delivery With Idempotent Dispatch
+- **Status:** completed
+- **Commit:** `4c5ed3c`
+- **Files:** 9 (+1646/-0)
+- **Duration:** 613ss
+- **Approach:** N/A
