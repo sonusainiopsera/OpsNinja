@@ -155,6 +155,10 @@ export class ReconcilerService implements OnModuleInit, OnModuleDestroy {
       }
 
       // ── Overwrite Redis with authoritative values ─────────────────────────
+      const hasDrift = Object.entries(pgKpi).some(
+        ([counter, pgValue]) => (redisKpi[counter] ?? 0) !== pgValue,
+      );
+
       await this.store.overwriteKpi(tenantId, pgKpi);
 
       // Overwrite org_load hash
@@ -163,6 +167,17 @@ export class ReconcilerService implements OnModuleInit, OnModuleDestroy {
       for (const [orgId, count] of Object.entries(orgLoad)) {
         if (count > 0) pipeline.hset(Keys.orgLoad(tenantId), orgId, count);
       }
+
+      // WO-069: if reconciler corrected drift, flag the tenant so the next
+      // delta-publisher interval emits a full snapshot frame instead of a delta.
+      // Clients that applied the drifted values will re-sync from the snapshot.
+      if (hasDrift) {
+        pipeline.set(Keys.needsSnapshot(tenantId), '1');
+        this.logger.log('Drift corrected — snapshot frame will be emitted on next interval', {
+          tenantId,
+        });
+      }
+
       await pipeline.exec();
 
       this.logger.debug('Reconcile complete', { tenantId, openTotal, activeP1, runningSlas });

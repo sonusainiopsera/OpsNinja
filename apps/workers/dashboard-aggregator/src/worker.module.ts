@@ -8,6 +8,7 @@ import Redis from 'ioredis';
 import { AggregateStore } from './redis/aggregate.store';
 import { SqsConsumerService } from './sqs-consumer.service';
 import { ReconcilerService } from './reconcile/reconciler.service';
+import { DeltaPublisherService } from './publish/delta-publisher.service';
 
 const PG_POOL = 'PG_POOL';
 const REDIS_CLIENT = 'REDIS_CLIENT';
@@ -51,6 +52,14 @@ function createRedis(): Redis {
       useFactory: (pool: Pool, redis: Redis, store: AggregateStore) =>
         new ReconcilerService(pool, redis, store),
       inject: [PG_POOL, REDIS_CLIENT, AggregateStore],
+    },
+
+    // WO-069: 5-second delta publisher
+    {
+      provide: DeltaPublisherService,
+      useFactory: (redis: Redis, store: AggregateStore) =>
+        new DeltaPublisherService(redis, store),
+      inject: [REDIS_CLIENT, AggregateStore],
     },
   ],
 })

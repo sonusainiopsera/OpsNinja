@@ -43,6 +43,7 @@ export class ConnectionRegistry {
       lastDeliveredSeq: 0,
       lastPongAt: performance.now(),
       subscribed: false,
+      backfilling: false,
     };
 
     // Tenant bucket
