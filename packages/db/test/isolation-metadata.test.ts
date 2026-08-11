@@ -56,6 +56,12 @@ const TENANT_SCOPED_TABLES: string[] = [
   // WO-039: Saved views and per-agent pin state
   'saved_views',
   'saved_view_pins',
+  // WO-044: SLA policy and business calendar schema
+  'sla_calendars',
+  'sla_calendar_windows',
+  'sla_calendar_holidays',
+  'sla_policies',
+  'sla_policy_versions',
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

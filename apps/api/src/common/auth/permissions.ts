@@ -51,6 +51,12 @@ export const Permission = {
   // ── Saved views ──────────────────────────────────────────────────────────
   /** Allows creating and editing shared (team-visible) saved views. */
   VIEWS_SHARE: 'views:share',
+
+  // ── SLA management ───────────────────────────────────────────────────────
+  /** Allows reading SLA policies and calendars. */
+  SLA_POLICY_READ:  'sla_policy:read',
+  /** Allows creating, updating and deactivating SLA policies and calendars. */
+  SLA_POLICY_WRITE: 'sla_policy:write',
 } as const;
 
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -81,6 +87,8 @@ export const ROLE_PERMISSION_MAP: Record<string, Permission[]> = {
     Permission.WEBHOOKS_MANAGE,
     Permission.ADMIN_AUTH_UNLOCK,
     Permission.VIEWS_SHARE,
+    Permission.SLA_POLICY_READ,
+    Permission.SLA_POLICY_WRITE,
   ],
   // ── Manager / Supervisor (can manage agent scopes) ──────────────────────
   supervisor: [
@@ -95,6 +103,8 @@ export const ROLE_PERMISSION_MAP: Record<string, Permission[]> = {
     Permission.ORGS_WRITE,
     Permission.ORGS_MANAGE_SCOPES,
     Permission.VIEWS_SHARE,
+    Permission.SLA_POLICY_READ,
+    Permission.SLA_POLICY_WRITE,
   ],
   manager: [
     Permission.TICKETS_READ,
@@ -108,6 +118,8 @@ export const ROLE_PERMISSION_MAP: Record<string, Permission[]> = {
     Permission.ORGS_WRITE,
     Permission.ORGS_MANAGE_SCOPES,
     Permission.VIEWS_SHARE,
+    Permission.SLA_POLICY_READ,
+    Permission.SLA_POLICY_WRITE,
   ],
   // ── Agent (scoped to assigned organizations) ────────────────────────────
   agent: [
@@ -116,6 +128,7 @@ export const ROLE_PERMISSION_MAP: Record<string, Permission[]> = {
     Permission.TICKETS_ASSIGN,
     Permission.USERS_READ,
     Permission.ORGS_READ,
+    Permission.SLA_POLICY_READ,
   ],
   // ── Lead / Analyst (tenant-wide read + some writes) ─────────────────────
   lead: [

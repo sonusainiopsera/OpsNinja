@@ -147,3 +147,10 @@
 - **Files:** 14 (+1434/-2)
 - **Duration:** 734ss
 - **Approach:** Implemented the full views module: Drizzle schema + SQL migration 006 with RLS for saved_views and saved_view_pins tables; idempotent system-view seeder for four built-in views with placeholder tokens (CURRENT_USER, CURRENT_ORG_SCOPE); ViewsRepository extending TenantRepository with all CRUD + pin operations; ViewsService using RequestContextStore.getPrincipal() for principal access, write-time AST validation via SavedViewService, placeholder substitution at read time, ownership/RBAC enforcement, 409 name-conflict detection, audit records storing AST signatures; ViewsController with Zod inline parse pattern matching existing codebase conventions; VIEWS_SHARE permission added to permissions.ts and granted to admin/supervisor/manager roles.
+
+## WO-044: User Story: WO-044 - SLA policy and business calendar schema with tenant-scoped CRUD API
+- **Status:** completed
+- **Commit:** `ac55cf1`
+- **Files:** 18 (+2008/-0)
+- **Duration:** 509ss
+- **Approach:** Implemented the SLA module as a new NestJS module following existing codebase patterns. Created Drizzle schema for all 5 tables (sla_calendars, sla_calendar_windows, sla_calendar_holidays, sla_policies, sla_policy_versions) with expand-only migration 007 containing ENABLE/FORCE RLS and per-tenant USING+WITH CHECK policies. Used pgEnum for sla_priority, sla_calendar_type, sla_scope_type. Unique partial index on (tenant_id, scope_type, COALESCE(scope_id, nil_uuid), priority) WHERE is_active plus check constraints enforce business rules at the DB level. Append-only trigger on sla_policy_versions prevents UPDATE/DELETE. Zod strict-mode DTOs validate timezone (Intl.supportedValuesOf), reminder ordering, target minute bounds, and business_hours calendar must have windows. Services use RequestContextStore.getPrincipal() pattern, write version snapshots and audit records in the same tenant transaction. Controllers use inline parseBody() pattern matching existing codebase conventions. Added SLA_POLICY_READ/WRITE permissions to admin/supervisor/manager; agent role gets read-only.
