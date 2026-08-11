@@ -42,9 +42,11 @@ import { REQUIRE_PERMISSION_KEY, IS_PUBLIC_KEY } from '../auth/require-permissio
 import { ErrorCode } from '../errors/app-errors';
 import { TokenService } from '../../modules/identity/token.service';
 import { PermissionResolverService } from '../../modules/identity/services/permission-resolver.service';
+import { OrgScopeService } from '../../modules/identity/services/org-scope.service';
 import { AuditService } from '../audit/audit.service';
 import { PrincipalContext, PrincipalKind } from '../../observability/request-context';
 import { REDIS_CLIENT } from '../redis/redis.provider';
+import { TENANT_WIDE_ROLES } from '../auth/permissions';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -55,6 +57,7 @@ export class AuthGuard implements CanActivate {
     private readonly config: ConfigService,
     private readonly tokenService: TokenService,
     private readonly permissionResolver: PermissionResolverService,
+    private readonly orgScopeService: OrgScopeService,
     private readonly auditService: AuditService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
@@ -228,14 +231,28 @@ export class AuthGuard implements CanActivate {
       }
     }
 
+    // ── Scope-version staleness check (staff agents only) ───────────────────
+    const principalKind: PrincipalKind = (claims.user_type as PrincipalKind) ?? 'staff';
+    const tokenScopeVersion: number = claims.org_scope_version ?? 0;
+    const isAgentRole = claims.roles.some((r: string) => !TENANT_WIDE_ROLES.has(r));
+
+    if (principalKind === 'staff' && isAgentRole && tenantId && actorId) {
+      try {
+        await this.orgScopeService.assertScopeVersionFresh(tenantId, actorId, tokenScopeVersion);
+      } catch (err) {
+        // Re-throw UnauthorizedException (SCOPE_VERSION_STALE) from the service
+        throw err;
+      }
+    }
+
     // ── Allow — build and attach PrincipalContext ────────────────────────────
     const principal: PrincipalContext = {
       tenantId,
       userId: actorId,
-      principalKind: (claims.user_type as PrincipalKind) ?? 'staff',
+      principalKind,
       roles: claims.roles,
       orgScopeIds: claims.org_scope_ids ?? [],
-      orgScopeVersion: claims.org_scope_version,
+      orgScopeVersion: tokenScopeVersion,
       permissions: effectivePermissions as ReadonlySet<string>,
       traceId,
     };

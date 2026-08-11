@@ -12,14 +12,20 @@
 
 export const Permission = {
   // ── Ticket operations (staff) ───────────────────────────────────────────
-  TICKETS_READ:   'tickets:read',
-  TICKETS_WRITE:  'tickets:write',
-  TICKETS_DELETE: 'tickets:delete',
-  TICKETS_ASSIGN: 'tickets:assign',
+  TICKETS_READ:     'tickets:read',
+  TICKETS_WRITE:    'tickets:write',
+  TICKETS_DELETE:   'tickets:delete',
+  TICKETS_ASSIGN:   'tickets:assign',
+  TICKET_REASSIGN:  'tickets:reassign',
 
   // ── User management (staff) ─────────────────────────────────────────────
   USERS_READ:  'users:read',
   USERS_WRITE: 'users:write',
+
+  // ── Organization management (staff) ─────────────────────────────────────
+  ORGS_READ:           'organizations:read',
+  ORGS_WRITE:          'organizations:write',
+  ORGS_MANAGE_SCOPES:  'organizations:manage_scopes',
 
   // ── Admin / tenant operations (staff) ───────────────────────────────────
   ADMIN_WRITE:     'admin:write',
@@ -27,8 +33,8 @@ export const Permission = {
   TENANT_SETTINGS: 'tenant:settings',
 
   // ── Portal (customer-facing) ─────────────────────────────────────────────
-  PORTAL_TICKETS_READ:        'portal:tickets:read',
-  PORTAL_TICKETS_WRITE:       'portal:tickets:write',
+  PORTAL_TICKETS_READ:         'portal:tickets:read',
+  PORTAL_TICKETS_WRITE:        'portal:tickets:write',
   PORTAL_ATTACHMENTS_DOWNLOAD: 'portal:attachments:download',
 
   // ── Machine (worker / integration) ──────────────────────────────────────
@@ -49,46 +55,105 @@ export type Permission = (typeof Permission)[keyof typeof Permission];
  * fallback when the DB returns an empty result.
  */
 export const ROLE_PERMISSION_MAP: Record<string, Permission[]> = {
+  // ── Administrator (tenant-wide) ─────────────────────────────────────────
   admin: [
     Permission.TICKETS_READ,
     Permission.TICKETS_WRITE,
     Permission.TICKETS_DELETE,
     Permission.TICKETS_ASSIGN,
+    Permission.TICKET_REASSIGN,
     Permission.USERS_READ,
     Permission.USERS_WRITE,
+    Permission.ORGS_READ,
+    Permission.ORGS_WRITE,
+    Permission.ORGS_MANAGE_SCOPES,
     Permission.ADMIN_WRITE,
     Permission.ROLES_WRITE,
     Permission.TENANT_SETTINGS,
     Permission.WEBHOOKS_MANAGE,
   ],
+  // ── Manager / Supervisor (can manage agent scopes) ──────────────────────
   supervisor: [
     Permission.TICKETS_READ,
     Permission.TICKETS_WRITE,
     Permission.TICKETS_DELETE,
     Permission.TICKETS_ASSIGN,
+    Permission.TICKET_REASSIGN,
     Permission.USERS_READ,
     Permission.USERS_WRITE,
+    Permission.ORGS_READ,
+    Permission.ORGS_WRITE,
+    Permission.ORGS_MANAGE_SCOPES,
   ],
+  manager: [
+    Permission.TICKETS_READ,
+    Permission.TICKETS_WRITE,
+    Permission.TICKETS_DELETE,
+    Permission.TICKETS_ASSIGN,
+    Permission.TICKET_REASSIGN,
+    Permission.USERS_READ,
+    Permission.USERS_WRITE,
+    Permission.ORGS_READ,
+    Permission.ORGS_WRITE,
+    Permission.ORGS_MANAGE_SCOPES,
+  ],
+  // ── Agent (scoped to assigned organizations) ────────────────────────────
   agent: [
     Permission.TICKETS_READ,
     Permission.TICKETS_WRITE,
     Permission.TICKETS_ASSIGN,
     Permission.USERS_READ,
+    Permission.ORGS_READ,
+  ],
+  // ── Lead / Analyst (tenant-wide read + some writes) ─────────────────────
+  lead: [
+    Permission.TICKETS_READ,
+    Permission.TICKETS_WRITE,
+    Permission.TICKETS_ASSIGN,
+    Permission.TICKET_REASSIGN,
+    Permission.USERS_READ,
+    Permission.ORGS_READ,
+  ],
+  analyst: [
+    Permission.TICKETS_READ,
+    Permission.USERS_READ,
+    Permission.ORGS_READ,
   ],
   readonly: [
     Permission.TICKETS_READ,
     Permission.USERS_READ,
+    Permission.ORGS_READ,
   ],
+  // ── Portal user (customer-facing, scoped to own organization) ───────────
   portal_user: [
     Permission.PORTAL_TICKETS_READ,
     Permission.PORTAL_TICKETS_WRITE,
     Permission.PORTAL_ATTACHMENTS_DOWNLOAD,
   ],
+  // ── Machine principals ───────────────────────────────────────────────────
   worker: [
     Permission.MACHINE_SYNC,
     Permission.MACHINE_WEBHOOK,
   ],
+  // ── Integration administrator ────────────────────────────────────────────
   integration_admin: [
     Permission.WEBHOOKS_MANAGE,
+    Permission.ORGS_READ,
   ],
 };
+
+/**
+ * Roles that have tenant-wide scope (no org restriction predicate applied).
+ * Agents NOT in this set are scoped to their assigned organizations via
+ * OrgScopeService.
+ */
+export const TENANT_WIDE_ROLES = new Set<string>([
+  'admin',
+  'supervisor',
+  'manager',
+  'lead',
+  'analyst',
+  'readonly',
+  'worker',
+  'integration_admin',
+]);

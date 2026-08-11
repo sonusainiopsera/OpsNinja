@@ -55,6 +55,17 @@ export const ErrorCode = {
   // ── Portal error codes ────────────────────────────────────────────────────
   /** Portal client attempted to set a field reserved for internal/staff use. */
   PORTAL_FIELD_NOT_ALLOWED: 'PORTAL_FIELD_NOT_ALLOWED',
+
+  // ── Org-scope error codes ─────────────────────────────────────────────────
+  /**
+   * Token's org_scope_version is behind the server-side counter.
+   * Client should call POST /auth/refresh to obtain a token with the latest
+   * scope version, then retry the original request.
+   */
+  SCOPE_VERSION_STALE: 'SCOPE_VERSION_STALE',
+
+  /** Resource not found (also used for out-of-scope resources to mask existence). */
+  RESOURCE_NOT_FOUND: 'RESOURCE_NOT_FOUND',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
