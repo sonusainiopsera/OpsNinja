@@ -203,16 +203,37 @@ export const organizationVerifiedDomains = pgTable(
     /** Domain (stored lowercase). e.g. 'acmecorp.com'. */
     domain: text('domain').notNull(),
 
-    /** Verification method used to prove domain ownership. */
+    /** Verification method used to prove domain ownership: 'dns_txt' | 'admin_override'. */
     verifiedVia: text('verified_via').notNull().default('dns_txt'),
 
     verifiedAt: timestamp('verified_at', { withTimezone: true }),
+
+    // ── WO-028: lifecycle state machine ──────────────────────────────────────
+
+    /** 'pending' | 'verified' | 'revoked'. Default 'pending'. */
+    status: text('status').notNull().default('pending'),
+
+    /** When true, any subdomain of this domain also resolves to this org. */
+    includeSubdomains: boolean('include_subdomains').notNull().default(false),
+
+    /**
+     * SHA-256 hex hash of the 32-byte DNS TXT challenge token.
+     * The raw token is NEVER stored. Null once verified or revoked.
+     */
+    challengeTokenHash: text('challenge_token_hash'),
+
+    /** UUID of the staff user who triggered verification (DNS or override). */
+    verifiedBy: uuid('verified_by'),
+
+    /** Timestamp of soft-revocation. Null for active/pending domains. */
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
 
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     tenantIdx: index('org_verified_domains_tenant_id_idx').on(t.tenantId),
     tenantOrgIdx: index('org_verified_domains_tenant_org_idx').on(t.tenantId, t.organizationId),
+    tenantStatusIdx: index('org_verified_domains_tenant_status_idx').on(t.tenantId, t.status),
     // Unique (tenant_id, lower(domain)) enforced via SQL migration partial unique index.
   }),
 );

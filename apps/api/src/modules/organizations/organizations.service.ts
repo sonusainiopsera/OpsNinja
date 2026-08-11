@@ -32,6 +32,8 @@ import type { DeactivateOrganizationDto } from './dto/deactivate-organization.dt
 import type { ReactivateOrganizationDto } from './dto/reactivate-organization.dto';
 import type { PutCustomFieldValuesDto } from './custom-fields/dto/custom-field-def.dto';
 import { CustomFieldDefsService } from './custom-fields/custom-field-defs.service';
+import { VerifiedDomainsService } from './verified-domains/verified-domains.service';
+import { extractEmailDomain } from './verified-domains/domain-normalizer';
 
 @Injectable()
 export class OrganizationsService {
@@ -40,6 +42,7 @@ export class OrganizationsService {
   constructor(
     private readonly repo: OrganizationsRepository,
     private readonly customFieldDefsService: CustomFieldDefsService,
+    private readonly verifiedDomainsService: VerifiedDomainsService,
   ) {}
 
   // --------------------------------------------------------------------------
@@ -370,6 +373,36 @@ export class OrganizationsService {
 
     this.logger.log('Organization reactivated', { tenantId, orgId: id, actorId, operation: 'organization.reactivate' });
     return result;
+  }
+
+  // --------------------------------------------------------------------------
+  // --------------------------------------------------------------------------
+  // Domain resolution (WO-028) — public interface for sign-up module
+  // --------------------------------------------------------------------------
+
+  /**
+   * Resolve an email address to the organization it belongs to in this tenant.
+   *
+   * Module boundary rule: the sign-up module MUST call this method rather
+   * than querying organization_verified_domains directly.
+   *
+   * Returns { organizationId } when exactly one verified domain matches,
+   * or null for unmatched/ambiguous (fall-through to pending-approval state).
+   */
+  async resolveOrganizationByEmailDomain(
+    tenantId: string,
+    email: string,
+  ): Promise<{ organizationId: string } | null> {
+    // Extract domain from email address
+    const domainResult = extractEmailDomain(email);
+    if (!domainResult.ok) {
+      this.logger.warn('Cannot resolve org for malformed email', { tenantId, reason: domainResult.reason });
+      return null;
+    }
+    return this.verifiedDomainsService.resolveOrganizationByEmailDomain(
+      tenantId,
+      domainResult.domain,
+    );
   }
 
   // --------------------------------------------------------------------------

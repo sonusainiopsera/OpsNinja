@@ -28,6 +28,8 @@ export type Permission =
   // org:deactivate covers both deactivate and reactivate lifecycle transitions
   | 'org:manage_fields'
   // org:manage_fields: create/update/archive custom field definitions
+  | 'org:domain_manage'
+  // org:domain_manage: register/verify/revoke organization email domains
   // ── Users & scope management ─────────────────────────────────────────────
   | 'user:read'
   | 'user:create'
@@ -69,7 +71,7 @@ export type Permission =
 export const ALL_PERMISSIONS: readonly Permission[] = [
   'ticket:read', 'ticket:create', 'ticket:update', 'ticket:close',
   'ticket:reassign', 'ticket:delete', 'ticket:view_internal_notes', 'ticket:add_internal_note',
-  'org:read', 'org:create', 'org:update', 'org:deactivate', 'org:manage_fields',
+  'org:read', 'org:create', 'org:update', 'org:deactivate', 'org:manage_fields', 'org:domain_manage',
   'user:read', 'user:create', 'user:update', 'user:deactivate', 'user:set_org_scope',
   'sla:read', 'sla:manage',
   'report:read', 'report:export',
@@ -94,7 +96,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<string, readonly Permission[]>> =
   manager: [
     'ticket:read', 'ticket:create', 'ticket:update', 'ticket:close',
     'ticket:reassign', 'ticket:view_internal_notes', 'ticket:add_internal_note',
-    'org:read', 'org:create', 'org:update', 'org:deactivate', 'org:manage_fields',
+    'org:read', 'org:create', 'org:update', 'org:deactivate', 'org:manage_fields', 'org:domain_manage',
     'org:manage_scopes',
     'user:read', 'user:create', 'user:update', 'user:set_org_scope',
     'sla:read', 'sla:manage',
