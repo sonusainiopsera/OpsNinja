@@ -600,3 +600,22 @@ export type {
 
 export { jiraSyncDlq } from './schema/jira-sync-dlq';
 export type { JiraSyncDlqItem, NewJiraSyncDlqItem } from './schema/jira-sync-dlq';
+
+// ---------------------------------------------------------------------------
+// AI synthesis tables (WO-062)
+// ---------------------------------------------------------------------------
+
+export {
+  ticketAiSummaries,
+  ticketAffectedAreas,
+  aiSynthesisIdempotency,
+} from './schema/ai-synthesis';
+
+export type {
+  TicketAiSummary,
+  NewTicketAiSummary,
+  TicketAffectedArea,
+  NewTicketAffectedArea,
+  AiSynthesisIdempotency,
+  NewAiSynthesisIdempotency,
+} from './schema/ai-synthesis';
