@@ -741,6 +741,37 @@ export class TicketsService {
     return requestedContactId;
   }
 
+  // ---------------------------------------------------------------------------
+  // reopenFromPortal (WO-090, AC6)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Reopen a closed ticket when the tenant policy permits portal-triggered reopens.
+   * Transitions closed → open, appends status history, emits outbox event.
+   * Called only after the caller verifies portalReopenOnReply setting is true.
+   */
+  async reopenFromPortal(
+    principal: import('../../observability/request-context').PrincipalContext,
+    ticketId: string,
+    traceId: string,
+  ): Promise<void> {
+    const tenantId = principal.tenantId;
+    const ticket = await this.repo.findById(ticketId);
+    if (!ticket || ticket.status !== 'closed') return; // nothing to reopen
+
+    const updated = await this.repo.updateTicket(tenantId, ticketId, ticket.version, {
+      status: 'open',
+    });
+    if (updated === 'VERSION_CONFLICT') return; // concurrent update — ignore, comment still proceeds
+
+    await this.repo.appendStatusHistory(tenantId, ticketId, 'closed', 'open', null, 'portal_reopen');
+    await this.repo.emitEvent(tenantId, ticketId, 'ticket.status_changed', {
+      from: 'closed',
+      to: 'open',
+      reason: 'portal_reopen',
+    }, traceId);
+  }
+
   /**
    * Validate all tag IDs exist in this tenant.
    * Throws 400 listing any unknown IDs.
