@@ -140,3 +140,10 @@
 - **Files:** 7 (+989/-0)
 - **Duration:** 585ss
 - **Approach:** Expand/contract migration adds 7 columns to the existing organizations table (slug, sla_tier, region, status, custom_field_values, primary_contact_id, deactivated_at) plus a composite UNIQUE (tenant_id, id) constraint needed as the FK target for new tables. Four new tables — customer_accounts, contacts, organization_verified_domains, custom_field_defs — each carry a composite FK referencing (tenant_id, id) on organizations so cross-tenant references are impossible at the DB constraint level. The citext extension enables case-insensitive email storage in contacts. ENABLE FORCE ROW LEVEL SECURITY plus tenant_isolation_* policies (USING/WITH CHECK on tenant_id = current_setting('app.current_tenant')::uuid) are installed on all five tables. The ::uuid cast on an empty string throws rather than returning all rows, giving fail-closed behavior when app.current_tenant is unset.
+
+## WO-039: User Story: WO-039 - System And Custom Saved Views API With Pinning
+- **Status:** completed
+- **Commit:** `f127c1a`
+- **Files:** 17 (+1728/-21)
+- **Duration:** 740ss
+- **Approach:** Implemented the saved-views API end-to-end: (1) Drizzle schema for `saved_views` and `saved_view_pins` with ENABLE/FORCE RLS and tenant_isolation policies; (2) idempotent system-views seeder using ON CONFLICT DO NOTHING keyed on (tenant_id, slug) with CURRENT_USER / LAST_7_DAYS placeholder tokens; (3) ViewsRepository extending TenantRepository with @Auditable on all write methods; (4) ViewsService with deep-walk placeholder substitution at read time, write-time AST + column allow-list validation, system-view immutability guard (403), cross-user private-view 404 fence, and full pin/reorder logic; (5) ViewsController with 10 endpoints ordered so PUT /pins/order is declared before PUT /:id/pin to avoid NestJS route shadowing; (6) five new permissions (view:read/create/update/delete/share) added to the permission catalog and assigned to appropriate roles.

@@ -21,6 +21,7 @@ import { PortalTicketsController } from '../../modules/tickets/portal/portal-tic
 import { PortalAttachmentsController } from '../../modules/tickets/portal/portal-attachments.controller';
 import { AgentScopesController } from '../../modules/organizations/agent-scopes.controller';
 import { UsersController } from '../../modules/users/users.controller';
+import { ViewsController } from '../../modules/views/views.controller';
 
 // NestJS sets 'path' and 'method' metadata keys on route handler methods.
 const PATH_METADATA = 'path';
@@ -38,6 +39,7 @@ const CONTROLLERS: Function[] = [
   PortalAttachmentsController,
   AgentScopesController,
   UsersController,
+  ViewsController,
 ];
 
 // ---------------------------------------------------------------------------

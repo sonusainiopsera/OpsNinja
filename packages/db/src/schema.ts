@@ -387,3 +387,19 @@ export type {
   CustomFieldDef,
   NewCustomFieldDef,
 } from './schema/organizations-registry';
+
+// ---------------------------------------------------------------------------
+// Saved views (WO-039)
+//
+// saved_views: compiler-validated filter ASTs with scope classification.
+// saved_view_pins: per-agent pin state and display order.
+// ---------------------------------------------------------------------------
+
+export { savedViews, savedViewPins } from './schema/saved-views';
+
+export type {
+  SavedView,
+  NewSavedView,
+  SavedViewPin,
+  NewSavedViewPin,
+} from './schema/saved-views';

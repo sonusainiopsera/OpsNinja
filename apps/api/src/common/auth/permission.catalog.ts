@@ -49,6 +49,12 @@ export type Permission =
   | 'webhook:manage'
   // ── Organization scope management ────────────────────────────────────────
   | 'org:manage_scopes'
+  // ── Saved views ──────────────────────────────────────────────────────────
+  | 'view:read'
+  | 'view:create'
+  | 'view:update'
+  | 'view:delete'
+  | 'view:share'
   // ── Machine / worker ─────────────────────────────────────────────────────
   | 'machine:jira_sync'
   | 'machine:notification_send'
@@ -68,6 +74,7 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
   'admin:manage_tenant', 'admin:revoke_sessions', 'admin:unlock_auth',
   'webhook:read', 'webhook:manage',
   'org:manage_scopes',
+  'view:read', 'view:create', 'view:update', 'view:delete', 'view:share',
   'machine:jira_sync', 'machine:notification_send', 'machine:export',
 ];
 
@@ -91,6 +98,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<string, readonly Permission[]>> =
     'report:read', 'report:export',
     'jira:read',
     'admin:revoke_sessions',
+    'view:read', 'view:create', 'view:update', 'view:delete', 'view:share',
   ],
 
   agent: [
@@ -101,6 +109,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<string, readonly Permission[]>> =
     'sla:read',
     'report:read',
     'jira:read',
+    'view:read', 'view:create', 'view:update', 'view:delete',
   ],
 
   lead_analyst: [
@@ -109,6 +118,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<string, readonly Permission[]>> =
     'sla:read',
     'report:read', 'report:export',
     'jira:read',
+    'view:read',
   ],
 
   integration_admin: [

@@ -42,6 +42,9 @@ const TENANT_SCOPED_TABLES: string[] = [
   'contacts',
   'organization_verified_domains',
   'custom_field_defs',
+  // WO-039: saved views tables
+  'saved_views',
+  'saved_view_pins',
 ];
 
 // Tables deliberately without per-row tenant_id (cross-tenant or system tables).

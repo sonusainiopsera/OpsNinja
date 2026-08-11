@@ -53,18 +53,7 @@ export const AUDIT_EXEMPTIONS: AuditExemption[] = [
     key: 'SlaConfigRepository.update',
     reason: 'SlaConfigRepository does not exist yet — pending SLA module WO.',
   },
-  {
-    key: 'SavedViewRepository.create',
-    reason: 'SavedViewRepository write methods pending WO for saved views module.',
-  },
-  {
-    key: 'SavedViewRepository.update',
-    reason: 'SavedViewRepository write methods pending WO for saved views module.',
-  },
-  {
-    key: 'SavedViewRepository.delete',
-    reason: 'SavedViewRepository write methods pending WO for saved views module.',
-  },
+  // ViewsRepository.create/update/softDelete — implemented in WO-039 with @Auditable
   // ---------------------------------------------------------------------------
   // AuditService (auth events) — writes directly to audit_logs, not auditable itself
   // ---------------------------------------------------------------------------

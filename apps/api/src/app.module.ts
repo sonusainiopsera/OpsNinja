@@ -28,6 +28,7 @@ import { TicketsModule } from './modules/tickets/tickets.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { UsersModule } from './modules/users/users.module';
+import { ViewsModule } from './modules/views/views.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { UsersModule } from './modules/users/users.module';
     AuditModule,
     OrganizationsModule,
     UsersModule,
+    ViewsModule,
   ],
   providers: [
     // ── Global guard: AuthGuard ───────────────────────────────────────────────
