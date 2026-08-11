@@ -64,6 +64,13 @@ const TENANT_SCOPED_TABLES: string[] = [
   'portal_signup_requests',
   'portal_verification_tokens',
   'portal_users',
+  // WO-031: Ticketing core schema
+  'tags',
+  'ticket_tags',
+  'assignment_groups',
+  'assignment_group_members',
+  'ticket_status_history',
+  'tenant_sequences',
 ];
 
 // Tables deliberately without per-row tenant_id (cross-tenant or system tables).

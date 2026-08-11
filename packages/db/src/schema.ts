@@ -74,92 +74,60 @@ export const users = pgTable(
 );
 
 // ---------------------------------------------------------------------------
-// Tickets
+// Tickets module (WO-031)
+//
+// Full schema definitions moved to schema/tickets.ts, schema/ticket-comments.ts,
+// schema/ticket-attachments.ts, schema/tags.ts, schema/assignment-groups.ts,
+// schema/ticket-status-history.ts. Re-exported here so @opsninja/db consumers
+// get the extended column set with a single import.
 // ---------------------------------------------------------------------------
 
-export const tickets = pgTable(
-  'tickets',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
-    organizationId: uuid('organization_id').notNull().references(() => organizations.id),
-    subject: text('subject').notNull(),
-    status: text('status').notNull().default('open'),
-    priority: text('priority').notNull().default('P3'),
-    assigneeId: uuid('assignee_id').references(() => users.id),
-    /** AI-generated summary; null until processed. Gated by per-tenant portalAiSummaryEnabled. */
-    aiSummary: text('ai_summary'),
-    /** Structured tags from AI affected-area analysis; agent-only metadata. */
-    affectedAreaTags: jsonb('affected_area_tags'),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
-  },
-  (t) => ({
-    tenantIdx: index('tickets_tenant_id_idx').on(t.tenantId),
-    orgIdx: index('tickets_organization_id_idx').on(t.organizationId),
-    statusIdx: index('tickets_status_idx').on(t.tenantId, t.status),
-  }),
-);
+export {
+  tickets,
+  type Ticket,
+  type NewTicket,
+  type TicketStatus,
+  type TicketPriority,
+} from './schema/tickets';
 
-// ---------------------------------------------------------------------------
-// Ticket comments
-// ---------------------------------------------------------------------------
+export {
+  ticketComments,
+  type TicketComment,
+  type NewTicketComment,
+} from './schema/ticket-comments';
 
-export const ticketComments = pgTable(
-  'ticket_comments',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
-    ticketId: uuid('ticket_id').notNull().references(() => tickets.id),
-    /** Denormalised from the parent ticket for efficient portal visibility predicates. */
-    organizationId: uuid('organization_id').notNull().references(() => organizations.id),
-    authorId: uuid('author_id').references(() => users.id),
-    body: text('body').notNull(),
-    /** 'public' — visible to portal users; 'internal' — agents/staff only. */
-    visibility: text('visibility').notNull().default('public'),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => ({
-    tenantIdx: index('ticket_comments_tenant_id_idx').on(t.tenantId),
-    ticketIdx: index('ticket_comments_ticket_id_idx').on(t.ticketId),
-    visibilityIdx: index('ticket_comments_visibility_idx').on(t.ticketId, t.visibility),
-  }),
-);
+export {
+  ticketAttachments,
+  type TicketAttachment,
+  type NewTicketAttachment,
+} from './schema/ticket-attachments';
 
-export type TicketComment = typeof ticketComments.$inferSelect;
-export type NewTicketComment = typeof ticketComments.$inferInsert;
+export {
+  tags,
+  type Tag,
+  type NewTag,
+  ticketTags,
+  type TicketTag,
+  type NewTicketTag,
+} from './schema/tags';
 
-// ---------------------------------------------------------------------------
-// Ticket attachments
-// ---------------------------------------------------------------------------
+export {
+  assignmentGroups,
+  type AssignmentGroup,
+  type NewAssignmentGroup,
+  assignmentGroupMembers,
+  type AssignmentGroupMember,
+  type NewAssignmentGroupMember,
+} from './schema/assignment-groups';
 
-export const ticketAttachments = pgTable(
-  'ticket_attachments',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
-    ticketId: uuid('ticket_id').notNull().references(() => tickets.id),
-    /** Nullable — an attachment may belong to a standalone comment or be ticket-level. */
-    commentId: uuid('comment_id').references(() => ticketComments.id),
-    /** Denormalised for portal visibility check without a join. */
-    organizationId: uuid('organization_id').notNull().references(() => organizations.id),
-    filename: text('filename').notNull(),
-    mimeType: text('mime_type').notNull(),
-    /** S3 object key; never exposed directly in responses. */
-    s3Key: text('s3_key').notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => ({
-    tenantIdx: index('ticket_attachments_tenant_id_idx').on(t.tenantId),
-    ticketIdx: index('ticket_attachments_ticket_id_idx').on(t.ticketId),
-    commentIdx: index('ticket_attachments_comment_id_idx').on(t.commentId),
-  }),
-);
-
-export type TicketAttachment = typeof ticketAttachments.$inferSelect;
-export type NewTicketAttachment = typeof ticketAttachments.$inferInsert;
+export {
+  ticketStatusHistory,
+  type TicketStatusHistory,
+  type NewTicketStatusHistory,
+  tenantSequences,
+  type TenantSequence,
+  type NewTenantSequence,
+} from './schema/ticket-status-history';
 
 // ---------------------------------------------------------------------------
 // Tenant settings
@@ -287,9 +255,6 @@ export type NewOrganization = typeof organizations.$inferInsert;
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
-
-export type Ticket = typeof tickets.$inferSelect;
-export type NewTicket = typeof tickets.$inferInsert;
 
 // ---------------------------------------------------------------------------
 // Agent organization scopes

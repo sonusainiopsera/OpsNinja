@@ -245,3 +245,10 @@
 - **Files:** 10 (+1289/-3)
 - **Duration:** 500ss
 - **Approach:** N/A
+
+## WO-031: User Story: WO-031 - Ticketing Core Schema With Tenant RLS Policies
+- **Status:** completed
+- **Commit:** `85dd467`
+- **Files:** 13 (+1560/-82)
+- **Duration:** 687ss
+- **Approach:** N/A
