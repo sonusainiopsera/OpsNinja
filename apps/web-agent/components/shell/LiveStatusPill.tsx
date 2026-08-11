@@ -34,6 +34,18 @@ const STATUS_CONFIG: Record<RealtimeStatus, StatusConfig> = {
     colorVar: '--rt-reconnecting-fg',
     bgVar: '--rt-reconnecting-bg',
   },
+  polling: {
+    label: 'Polling',
+    iconName: 'refresh-cw',
+    colorVar: '--rt-polling-fg',
+    bgVar: '--rt-polling-bg',
+  },
+  stale: {
+    label: 'Delayed',
+    iconName: 'x-circle',
+    colorVar: '--rt-stale-fg',
+    bgVar: '--rt-stale-bg',
+  },
   offline: {
     label: 'Offline',
     iconName: 'x-circle',
@@ -45,6 +57,8 @@ const STATUS_CONFIG: Record<RealtimeStatus, StatusConfig> = {
 export const REALTIME_STATUS_CSS_VARS = `
   --rt-connected-fg: #14532d; --rt-connected-bg: #f0fdf4;
   --rt-reconnecting-fg: #78350f; --rt-reconnecting-bg: #fff7ed;
+  --rt-polling-fg: #1d4ed8; --rt-polling-bg: #eff6ff;
+  --rt-stale-fg: #92400e; --rt-stale-bg: #fffbeb;
   --rt-offline-fg: #991b1b; --rt-offline-bg: #fef2f2;
 `;
 

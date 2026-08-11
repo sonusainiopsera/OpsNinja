@@ -9,6 +9,8 @@ import { ALL_STATUSES } from '../fixtures/realtimeStatus.fixtures';
 const EXPECTED_LABELS: Record<RealtimeStatus, string> = {
   connected: 'Live',
   reconnecting: 'Reconnecting',
+  polling: 'Polling',
+  stale: 'Delayed',
   offline: 'Offline',
 };
 
