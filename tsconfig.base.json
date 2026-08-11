@@ -28,6 +28,8 @@
       "@opsninja/api-client/server": ["./packages/api-client/src/index.server.ts"],
       "@opsninja/db": ["./packages/db/src/index.ts"],
       "@opsninja/db/*": ["./packages/db/src/*"],
+      "@opsninja/webhooks": ["./packages/webhooks/src/index.ts"],
+      "@opsninja/webhooks/*": ["./packages/webhooks/src/*"],
       "@opsninja/filter-compiler": ["./packages/filter-compiler/src/index.ts"],
       "@opsninja/filter-compiler/*": ["./packages/filter-compiler/src/*"],
       "@opsninja/observability": ["./packages/observability/src/index.ts"],

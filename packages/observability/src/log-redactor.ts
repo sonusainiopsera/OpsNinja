@@ -54,6 +54,14 @@ const REDACTED_KEYS = new Set([
   'comment',
   'csatComment',
   'csat_comment',
+  // Webhook Restricted-tier: signature values and response bodies must not appear in logs.
+  'signatureHeader',
+  'signature_header',
+  'x-opsninja-signature',
+  'responseSnippet',
+  'response_snippet',
+  'canonicalPayload',
+  'canonical_payload',
 ]);
 
 const REDACTED_EMAIL_PLACEHOLDER = '[REDACTED_EMAIL]';

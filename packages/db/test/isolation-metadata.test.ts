@@ -58,6 +58,8 @@ const TENANT_SCOPED_TABLES: string[] = [
   'export_jobs',
   // WO-082: CSAT surveys
   'csat_surveys',
+  // WO-084: Webhook delivery log (partitioned — parent table)
+  'webhook_deliveries',
 ];
 
 // Tables deliberately without per-row tenant_id (cross-tenant or system tables).

@@ -354,6 +354,21 @@ export type {
 
 export { webhookEndpoints } from './schema/webhooks';
 
+// ---------------------------------------------------------------------------
+// Webhook deliveries (WO-084)
+//
+// webhook_deliveries: partitioned delivery attempt log for auditable history
+// and replay support. Monthly range partitioning on created_at.
+// ---------------------------------------------------------------------------
+
+export { webhookDeliveries } from './schema/webhook-deliveries';
+
+export type {
+  WebhookDelivery,
+  NewWebhookDelivery,
+  WebhookDeliveryStatus,
+} from './schema/webhook-deliveries';
+
 export type {
   WebhookEndpoint,
   NewWebhookEndpoint,
