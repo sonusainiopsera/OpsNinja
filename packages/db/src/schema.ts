@@ -593,3 +593,10 @@ export type {
   ExternalRecipientAllowlistEntry,
   NewExternalRecipientAllowlistEntry,
 } from './schema/report-schedules';
+
+// ---------------------------------------------------------------------------
+// jira_sync_dlq: dead-letter projection for exhausted outbound sync (WO-056)
+// ---------------------------------------------------------------------------
+
+export { jiraSyncDlq } from './schema/jira-sync-dlq';
+export type { JiraSyncDlqItem, NewJiraSyncDlqItem } from './schema/jira-sync-dlq';

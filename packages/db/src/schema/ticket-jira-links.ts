@@ -14,6 +14,7 @@ import {
   uuid,
   text,
   boolean,
+  integer,
   timestamp,
   index,
   uniqueIndex,
@@ -61,6 +62,13 @@ export const ticketJiraLinks = pgTable(
      * worker skips further processing for orphaned links.
      */
     orphaned: boolean('orphaned').notNull().default(false),
+
+    /** How many outbound sync attempts have been made for this link. */
+    attempts: integer('attempts').notNull().default(0),
+    /** Stable error code from the last failed outbound attempt. */
+    lastErrorCode: text('last_error_code'),
+    /** When the last outbound attempt was made. */
+    lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }),
 
     createdBy: uuid('created_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
