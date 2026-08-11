@@ -16,3 +16,4 @@ export * from './sla';
 export * from './jira-connections';
 export * from './report-definitions';
 export * from './csat';
+export * from './webhook-deliveries';

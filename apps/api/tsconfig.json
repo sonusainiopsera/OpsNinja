@@ -8,7 +8,11 @@
       "@opsninja/db": ["../../packages/db/src/index.ts"],
       "@opsninja/db/*": ["../../packages/db/src/*"],
       "@opsninja/filter-compiler": ["../../packages/filter-compiler/src/index.ts"],
-      "@opsninja/filter-compiler/*": ["../../packages/filter-compiler/src/*"]
+      "@opsninja/filter-compiler/*": ["../../packages/filter-compiler/src/*"],
+      "@opsninja/crypto": ["../../packages/crypto/src/index.ts"],
+      "@opsninja/crypto/*": ["../../packages/crypto/src/*"],
+      "@opsninja/webhooks": ["../../packages/webhooks/src/index.ts"],
+      "@opsninja/webhooks/*": ["../../packages/webhooks/src/*"]
     }
   },
   "include": ["src/**/*"],

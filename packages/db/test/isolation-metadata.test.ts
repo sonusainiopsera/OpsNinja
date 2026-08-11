@@ -69,6 +69,8 @@ const TENANT_SCOPED_TABLES: string[] = [
   'export_jobs',
   // WO-082: CSAT surveys
   'csat_surveys',
+  // WO-084: Webhook delivery log (partitioned; parent table carries RLS)
+  'webhook_deliveries',
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

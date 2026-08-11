@@ -1,0 +1,17 @@
+{
+  "id": "bbbbbbbb-0000-0000-0000-000000000003",
+  "tenantId": "aaaaaaaa-0000-0000-0000-000000000001",
+  "url": "https://hooks.example.com/opsninja-gone",
+  "description": "Auto-disabled endpoint fixture (20 consecutive failures)",
+  "eventTypes": ["ticket.created"],
+  "status": "auto_disabled",
+  "secretKeyVersion": 1,
+  "previousSecretCiphertext": null,
+  "previousSecretExpiresAt": null,
+  "consecutiveFailures": 20,
+  "lastSuccessAt": "2025-05-01T10:00:00.000Z",
+  "createdBy": "user-001",
+  "createdAt": "2025-04-01T12:00:00.000Z",
+  "updatedAt": "2025-06-01T09:00:00.000Z",
+  "deletedAt": null
+}

@@ -84,6 +84,26 @@ const REDACTED_FIELDS = new Set([
   'csatRawToken',
   'tokenHash',
   'token_hash',
+  // Webhook signing secrets (never logged)
+  'secret',
+  'secretCiphertext',
+  'secret_ciphertext',
+  'previousSecret',
+  'previous_secret',
+  'previousSecretCiphertext',
+  'previous_secret_ciphertext',
+  'signingSecret',
+  'signing_secret',
+  // Webhook response bodies (may contain PII or sensitive receiver data)
+  'responseBody',
+  'response_body',
+  'responseSnippet',
+  'response_snippet',
+  // Webhook signature header values
+  'webhookSignature',
+  'webhook_signature',
+  'x-opsninja-signature',
+  'xOpsNinjaSignature',
 ]);
 
 /**

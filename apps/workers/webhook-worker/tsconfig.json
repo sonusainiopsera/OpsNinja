@@ -1,0 +1,19 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "./",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "paths": {
+      "@opsninja/db": ["../../../packages/db/src/index.ts"],
+      "@opsninja/db/*": ["../../../packages/db/src/*"],
+      "@opsninja/crypto": ["../../../packages/crypto/src/index.ts"],
+      "@opsninja/crypto/*": ["../../../packages/crypto/src/*"],
+      "@opsninja/observability": ["../../../packages/observability/src/index.ts"],
+      "@opsninja/webhooks": ["../../../packages/webhooks/src/index.ts"],
+      "@opsninja/webhooks/*": ["../../../packages/webhooks/src/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
