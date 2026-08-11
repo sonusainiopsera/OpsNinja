@@ -210,3 +210,10 @@
 - **Files:** 27 (+2570/-0)
 - **Duration:** 831ss
 - **Approach:** N/A
+
+## WO-014: User Story: WO-014 - Portal self-service signup with business email verification
+- **Status:** completed
+- **Commit:** `410a540`
+- **Files:** 7 (+737/-1)
+- **Duration:** 526ss
+- **Approach:** N/A
