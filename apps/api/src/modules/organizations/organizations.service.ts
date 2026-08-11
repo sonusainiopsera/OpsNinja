@@ -34,6 +34,7 @@ import type { PutCustomFieldValuesDto } from './custom-fields/dto/custom-field-d
 import { CustomFieldDefsService } from './custom-fields/custom-field-defs.service';
 import { VerifiedDomainsService } from './verified-domains/verified-domains.service';
 import { extractEmailDomain } from './verified-domains/domain-normalizer';
+import { AuditWriter } from '../audit/audit-writer';
 
 @Injectable()
 export class OrganizationsService {
@@ -43,6 +44,7 @@ export class OrganizationsService {
     private readonly repo: OrganizationsRepository,
     private readonly customFieldDefsService: CustomFieldDefsService,
     private readonly verifiedDomainsService: VerifiedDomainsService,
+    private readonly auditWriter: AuditWriter,
   ) {}
 
   // --------------------------------------------------------------------------
@@ -139,6 +141,23 @@ export class OrganizationsService {
       },
       traceId,
     );
+
+    // Audit: record creation inside the same transaction (fail-closed).
+    await this.auditWriter.append({
+      resourceType: 'organization',
+      resourceId:   created.id,
+      action:       'create',
+      beforeState:  null,
+      afterState: {
+        id:               created.id,
+        name:             created.name,
+        slug:             (created as Record<string, unknown>)['slug'] ?? null,
+        slaTier:          (created as Record<string, unknown>)['slaTier'] ?? null,
+        region:           (created as Record<string, unknown>)['region'] ?? null,
+        status:           (created as Record<string, unknown>)['status'] ?? 'active',
+        version:          (created as Record<string, unknown>)['version'] ?? 1,
+      },
+    });
 
     this.logger.log('Organization created', {
       tenantId,
@@ -243,6 +262,27 @@ export class OrganizationsService {
       });
     }
 
+    // Audit: record update inside the same transaction (fail-closed).
+    await this.auditWriter.append({
+      resourceType: 'organization',
+      resourceId:   id,
+      action:       'update',
+      beforeState: {
+        name:             current.name,
+        slaTier:          (current as Record<string, unknown>)['slaTier'] ?? null,
+        region:           (current as Record<string, unknown>)['region'] ?? null,
+        customFieldValues: (current as Record<string, unknown>)['customFieldValues'] ?? {},
+        version:          current.version,
+      },
+      afterState: {
+        name:             result.name,
+        slaTier:          (result as Record<string, unknown>)['slaTier'] ?? null,
+        region:           (result as Record<string, unknown>)['region'] ?? null,
+        customFieldValues: (result as Record<string, unknown>)['customFieldValues'] ?? {},
+        version:          result.version,
+      },
+    });
+
     this.logger.log('Organization updated', {
       tenantId,
       orgId: id,
@@ -325,6 +365,15 @@ export class OrganizationsService {
       return org;
     }
 
+    // Audit: record deactivation inside the same transaction (fail-closed).
+    await this.auditWriter.append({
+      resourceType: 'organization',
+      resourceId:   id,
+      action:       'deactivate',
+      beforeState:  { status: 'active',   version: org.version },
+      afterState:   { status: 'inactive', version: result.version },
+    });
+
     this.logger.log('Organization deactivated', { tenantId, orgId: id, actorId, operation: 'organization.deactivate' });
     return result;
   }
@@ -370,6 +419,15 @@ export class OrganizationsService {
     if (result === 'NOT_FOUND' || result === 'ALREADY_ACTIVE') {
       return org; // idempotent
     }
+
+    // Audit: record reactivation inside the same transaction (fail-closed).
+    await this.auditWriter.append({
+      resourceType: 'organization',
+      resourceId:   id,
+      action:       'reactivate',
+      beforeState:  { status: 'inactive', version: org.version },
+      afterState:   { status: 'active',   version: result.version },
+    });
 
     this.logger.log('Organization reactivated', { tenantId, orgId: id, actorId, operation: 'organization.reactivate' });
     return result;

@@ -30,15 +30,18 @@ import type {
   UpdateContactDto,
   ListContactsQuery,
 } from './dto/contact.dto';
+import { AuditWriter } from '../../audit/audit-writer';
+import { maskOrgPiiSnapshot } from '../audit/org-audit-diff';
 
 @Injectable()
 export class ContactsService {
   private readonly logger = new Logger(ContactsService.name);
 
   constructor(
-    private readonly repo:          ContactsRepository,
-    private readonly orgRepo:       OrganizationsRepository,
+    private readonly repo:            ContactsRepository,
+    private readonly orgRepo:         OrganizationsRepository,
     private readonly orgScopeService: OrgScopeService,
+    private readonly auditWriter:     AuditWriter,
   ) {}
 
   // --------------------------------------------------------------------------
@@ -79,6 +82,23 @@ export class ContactsService {
     }
 
     const contact = await this.repo.createContact(tenantId, organizationId, dto, traceId);
+
+    // Audit: PII fields masked by maskOrgPiiSnapshot before storage.
+    await this.auditWriter.append({
+      resourceType: 'contact',
+      resourceId:   contact.id,
+      action:       'create',
+      beforeState:  null,
+      afterState:   maskOrgPiiSnapshot({
+        id:                  contact.id,
+        organizationId:      contact.organizationId,
+        email:               contact.email,
+        name:                (contact as Record<string, unknown>)['name'] ?? null,
+        phone:               (contact as Record<string, unknown>)['phone'] ?? null,
+        status:              contact.status,
+        portalAccessEnabled: contact.portalAccessEnabled,
+      }),
+    });
 
     // Bump org scope version if portal access is being enabled at creation time.
     if (dto.portalAccessEnabled) {
@@ -127,6 +147,27 @@ export class ContactsService {
       });
     }
 
+    // Audit: PII masked via maskOrgPiiSnapshot before passing to the writer.
+    await this.auditWriter.append({
+      resourceType: 'contact',
+      resourceId:   id,
+      action:       'update',
+      beforeState:  maskOrgPiiSnapshot({
+        email:               contact.email,
+        name:                (contact as Record<string, unknown>)['name'] ?? null,
+        phone:               (contact as Record<string, unknown>)['phone'] ?? null,
+        status:              contact.status,
+        portalAccessEnabled: contact.portalAccessEnabled,
+      }),
+      afterState:   maskOrgPiiSnapshot({
+        email:               updated.email,
+        name:                (updated as Record<string, unknown>)['name'] ?? null,
+        phone:               (updated as Record<string, unknown>)['phone'] ?? null,
+        status:              updated.status,
+        portalAccessEnabled: updated.portalAccessEnabled,
+      }),
+    });
+
     if (portalAccessChanging) {
       await this.bumpPortalScopeIfAffected(tenantId, organizationId);
     }
@@ -162,6 +203,15 @@ export class ContactsService {
 
     const updated = await this.repo.setStatus(tenantId, organizationId, id, 'suspended', traceId);
 
+    // Audit: record suspension.
+    await this.auditWriter.append({
+      resourceType: 'contact',
+      resourceId:   id,
+      action:       'suspend',
+      beforeState:  { status: 'active',    organizationId },
+      afterState:   { status: 'suspended', organizationId },
+    });
+
     // Revoke portal access immediately by bumping scope version.
     if (contact.portalAccessEnabled) {
       await this.bumpPortalScopeIfAffected(tenantId, organizationId);
@@ -179,7 +229,18 @@ export class ContactsService {
     const contact = await this.assertContactInOrg(tenantId, organizationId, id);
     if (contact.status === 'active') return contact;
 
-    return this.repo.setStatus(tenantId, organizationId, id, 'active', traceId);
+    const updated = await this.repo.setStatus(tenantId, organizationId, id, 'active', traceId);
+
+    // Audit: record reactivation.
+    await this.auditWriter.append({
+      resourceType: 'contact',
+      resourceId:   id,
+      action:       'reactivate',
+      beforeState:  { status: 'suspended', organizationId },
+      afterState:   { status: 'active',    organizationId },
+    });
+
+    return updated;
   }
 
   // --------------------------------------------------------------------------
