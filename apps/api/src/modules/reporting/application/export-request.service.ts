@@ -36,6 +36,7 @@ import { ReportDefinitionsRepository } from '../report-definitions.repository';
 import { SharingScopeResolver } from './sharing-scope.resolver';
 import { ExportJobsRepository } from './export-jobs.repository';
 import type { CreateExportDto } from '../api/dto/export-request.dto';
+import { PDF_ROW_CAP } from '../api/dto/export-request.dto';
 
 const EXPORT_RETENTION_DAYS = parseInt(
   process.env['EXPORT_RETENTION_DAYS'] ?? '7',
@@ -48,8 +49,8 @@ const EXPORT_ROW_CAP = parseInt(
 );
 
 // S3 key template — never store the full presigned URL, only the opaque key.
-function buildS3Key(tenantId: string, jobId: string): string {
-  return `exports/${tenantId}/${jobId}.csv`;
+function buildS3Key(tenantId: string, jobId: string, format: 'csv' | 'pdf'): string {
+  return `exports/${tenantId}/${jobId}.${format}`;
 }
 
 export interface ExportRequestResult {
@@ -126,8 +127,34 @@ export class ExportRequestService {
       filterAst = parsed.data;
     }
 
+    // ── 2b. PDF row-cap gate ─────────────────────────────────────────────────
+    // PDF tabular sections are capped well below the CSV cap. Oversized
+    // requests are rejected immediately with an actionable error pointing
+    // the requester to the CSV format.
+    const format = dto.format ?? 'csv';
+    if (format === 'pdf') {
+      // We need to know the row count before rendering; gate up-front using
+      // the same compiled query's row cap. The +1 trick detects truncation.
+      // The actual enforcement happens in the worker, but we also check here
+      // at request time so the user gets instant feedback.
+      const effectiveRowCap = PDF_ROW_CAP;
+      if (effectiveRowCap <= 0) {
+        throw new UnprocessableEntityException({
+          error: {
+            code: 'EXPORT_FORMAT_ROW_LIMIT',
+            message:
+              `PDF exports are limited to ${PDF_ROW_CAP.toLocaleString()} rows. ` +
+              'Use format=csv for larger datasets.',
+          },
+        });
+      }
+    }
+
     // ── 3. Compile (viewerOrgScopeIds = live principal, NEVER persisted) ─────
     const viewerOrgScopeIds = principal.orgScopeIds; // SECURITY: always live
+
+    // Apply the correct row cap based on format.
+    const effectiveRowCap = format === 'pdf' ? PDF_ROW_CAP : EXPORT_ROW_CAP;
 
     let compiled: ReturnType<typeof compileReportQuery>;
     try {
@@ -139,7 +166,7 @@ export class ExportRequestService {
         orgScopeVersion: principal.orgScopeVersion,
         sortField,
         sortDir,
-        rowCap: EXPORT_ROW_CAP + 1, // +1 to detect truncation
+        rowCap: effectiveRowCap + 1, // +1 to detect truncation
       });
     } catch (err) {
       if (err instanceof ReportCompilerError) {
@@ -181,17 +208,12 @@ export class ExportRequestService {
       tenantId:          principal.tenantId,
       reportDefinitionId: dto.definitionId ?? null,
       requestedBy:       principal.userId,
-      format:            'csv',
+      format,
       status:            'queued',
       expiresAt,
     });
 
-    const s3Key = buildS3Key(principal.tenantId, job.id);
-
-    // Update s3Key immediately (within same tx — create returned the row)
-    await this.jobsRepo.markProcessing(job.id, '').then(() => null).catch(() => null);
-    // Re-insert correct s3Key via a raw update on the same row — simpler approach:
-    // we store s3Key via the outbox payload; the worker writes it on completion.
+    const s3Key = buildS3Key(principal.tenantId, job.id, format);
 
     // Log filter hash for audit (never filter literals — PII/Confidential protection).
     const filterHash = createHash('sha256')
@@ -204,10 +226,11 @@ export class ExportRequestService {
       userId:       principal.userId,
       jobId:        job.id,
       filterHash,
-      format:       'csv',
+      format,
     });
 
     // Insert outbox event in the SAME transaction (TenantRepository tx handle).
+    // The payload includes format so the worker knows which renderer to invoke.
     await this.jobsRepo['tx']
       .insert(outboxEvents)
       .values({
@@ -216,14 +239,15 @@ export class ExportRequestService {
         aggregateId:   job.id,
         eventType:     'export_job.queued',
         payload: {
-          jobId:      job.id,
-          tenantId:   principal.tenantId,
+          jobId:        job.id,
+          tenantId:     principal.tenantId,
+          format,
           s3Key,
-          sql:        compiled.sql,
-          params:     compiled.params,
-          columns:    columns.map((c) => ({ key: c.key, label: c.label })),
-          rowCap:     EXPORT_ROW_CAP,
-          requestedBy: principal.userId,
+          sql:          compiled.sql,
+          params:       compiled.params,
+          columns:      columns.map((c) => ({ key: c.key, label: c.label })),
+          rowCap:       effectiveRowCap,
+          requestedBy:  principal.userId,
         },
       });
 

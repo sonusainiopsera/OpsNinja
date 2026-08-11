@@ -54,5 +54,5 @@ export const exportJobs = pgTable(
 
 export type ExportJob = typeof exportJobs.$inferSelect;
 export type NewExportJob = typeof exportJobs.$inferInsert;
-export type ExportJobFormat = 'csv';
+export type ExportJobFormat = 'csv' | 'pdf';
 export type ExportJobStatus = 'queued' | 'processing' | 'completed' | 'failed' | 'expired';

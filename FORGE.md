@@ -385,3 +385,10 @@
 - **Files:** 9 (+1646/-0)
 - **Duration:** 613ss
 - **Approach:** N/A
+
+## WO-077: User Story: WO-077 - Sandboxed Chromium PDF Report Renderer
+- **Status:** completed
+- **Commit:** `b7ffc7f`
+- **Files:** 12 (+1611/-20)
+- **Duration:** 550ss
+- **Approach:** N/A
