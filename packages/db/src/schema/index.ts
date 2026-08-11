@@ -17,3 +17,5 @@ export * from './audit.js';
 export * from './outbox.js';
 export * from './ai-synthesis.js';
 export * from './idp-connections.js';
+export * from './tags.js';
+export * from './assignment-groups.js';

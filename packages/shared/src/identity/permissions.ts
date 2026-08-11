@@ -61,6 +61,8 @@ export const PERMISSIONS = [
   // Categories
   'category:read',
   'category:manage',
+  // Assignment
+  'ticket:assign_self',
 ] as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[number];
@@ -87,7 +89,7 @@ export const ROLE_PERMISSIONS: Record<RoleName, ReadonlyArray<PermissionCode>> =
 
   support_manager: [
     'ticket:read', 'ticket:create', 'ticket:update', 'ticket:reassign',
-    'ticket:resolve', 'ticket:close',
+    'ticket:resolve', 'ticket:close', 'ticket:assign_self',
     'comment:read_public', 'comment:read_internal',
     'comment:write_public', 'comment:write_internal',
     'organization:read', 'organization:create', 'organization:update',
@@ -100,6 +102,7 @@ export const ROLE_PERMISSIONS: Record<RoleName, ReadonlyArray<PermissionCode>> =
 
   support_lead: [
     'ticket:read', 'ticket:create', 'ticket:update', 'ticket:reassign', 'ticket:resolve',
+    'ticket:assign_self',
     'comment:read_public', 'comment:read_internal',
     'comment:write_public', 'comment:write_internal',
     'organization:read', 'organization:update',
@@ -111,6 +114,7 @@ export const ROLE_PERMISSIONS: Record<RoleName, ReadonlyArray<PermissionCode>> =
 
   support_agent: [
     'ticket:read', 'ticket:create', 'ticket:update', 'ticket:reassign', 'ticket:resolve',
+    'ticket:assign_self',
     'comment:read_public', 'comment:read_internal',
     'comment:write_public', 'comment:write_internal',
     'organization:read',
