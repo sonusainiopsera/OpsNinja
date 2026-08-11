@@ -50,6 +50,38 @@ export class SlaPoliciesRepository extends TenantRepository {
       .limit(limit);
   }
 
+  /**
+   * Find a single active policy matching the given scope and priority.
+   * Used by SlaPolicyResolver for timer creation.
+   */
+  async findActiveByScope(
+    tenantId: string,
+    scopeType: string,
+    scopeId: string | null,
+    priority: string,
+  ): Promise<SlaPolicy | null> {
+    const conditions = [
+      eq(slaPolicies.tenantId, tenantId),
+      eq(slaPolicies.scopeType, scopeType),
+      eq(slaPolicies.priority, priority),
+      eq(slaPolicies.isActive, true),
+    ];
+
+    if (scopeId !== null) {
+      conditions.push(eq(slaPolicies.scopeId, scopeId));
+    } else {
+      conditions.push(sql`${slaPolicies.scopeId} IS NULL`);
+    }
+
+    const rows = await this.tx
+      .select()
+      .from(slaPolicies)
+      .where(and(...conditions))
+      .limit(1);
+
+    return rows[0] ?? null;
+  }
+
   async findVersionsByPolicyId(tenantId: string, policyId: string): Promise<SlaPolicyVersion[]> {
     return this.tx
       .select()

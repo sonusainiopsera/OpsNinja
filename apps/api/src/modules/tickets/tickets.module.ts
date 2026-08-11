@@ -4,6 +4,7 @@ import { AuthModule } from '../../common/auth/auth.module';
 import { AuditModule } from '../audit/audit.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { ViewsModule } from '../views/views.module';
+import { SlaModule } from '../sla/sla.module';
 import { TicketRepository } from './repositories/ticket.repository';
 import { CommentRepository } from './repositories/comment.repository';
 import { AttachmentRepository } from './repositories/attachment.repository';
@@ -27,7 +28,7 @@ import { S3ObjectStore } from './attachments/storage/s3-object-store';
 import { OBJECT_STORE_PORT } from './attachments/storage/object-store.port';
 
 @Module({
-  imports: [AuthModule, AuditModule, OrganizationsModule, ViewsModule],
+  imports: [AuthModule, AuditModule, OrganizationsModule, ViewsModule, SlaModule],
   controllers: [
     PortalTicketsController,
     PortalAttachmentsController,

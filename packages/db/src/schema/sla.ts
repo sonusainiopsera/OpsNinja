@@ -18,6 +18,7 @@ import {
   text,
   integer,
   smallint,
+  bigint,
   boolean,
   jsonb,
   date,
@@ -168,3 +169,43 @@ export const slaPolicyVersions = pgTable(
 
 export type SlaPolicyVersion = typeof slaPolicyVersions.$inferSelect;
 export type NewSlaPolicyVersion = typeof slaPolicyVersions.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// sla_timers — durable per-ticket response and resolution clocks (WO-045)
+// ---------------------------------------------------------------------------
+
+export const slaTimers = pgTable(
+  'sla_timers',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').notNull(),
+    ticketId: uuid('ticket_id').notNull(),
+    /** FK to sla_policies.id — recorded for audit reconstruction. */
+    slaPolicyId: uuid('sla_policy_id').notNull(),
+    /** 'response' | 'resolution' */
+    clockType: text('clock_type').notNull(),
+    /** 'running' | 'paused' | 'met' | 'breached' | 'cancelled' */
+    state: text('state').notNull().default('running'),
+    /** Accumulated paused duration in milliseconds (preserved across priority changes). */
+    pausedMs: bigint('paused_ms', { mode: 'number' }).notNull().default(0),
+    /** UTC instant the clock started (ticket createdAt; preserved across priority changes). */
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
+    /** UTC instant by which the SLA must be met. */
+    targetAt: timestamp('target_at', { withTimezone: true }).notNull(),
+    /** Earliest of first-reminder, second-reminder and target_at — drives the scheduler scan. */
+    nextFireAt: timestamp('next_fire_at', { withTimezone: true }),
+    lastStateChangeAt: timestamp('last_state_change_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    tenantIdx: index('sla_timers_tenant_idx').on(t.tenantId),
+    /** Unique: one timer per clock type per ticket. Enforces idempotent ON CONFLICT DO NOTHING. */
+    uniqueClockIdx: uniqueIndex('sla_timers_unique_clock').on(t.tenantId, t.ticketId, t.clockType),
+    /** Partial index used by the 15-second scheduler scan — only running timers. */
+    runningFireIdx: index('sla_timers_running_fire_idx').on(t.tenantId, t.nextFireAt),
+  }),
+);
+
+export type SlaTimer = typeof slaTimers.$inferSelect;
+export type NewSlaTimer = typeof slaTimers.$inferInsert;

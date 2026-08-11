@@ -5,17 +5,32 @@ import { SlaPoliciesService } from './sla-policies.service';
 import { SlaCalendarsService } from './sla-calendars.service';
 import { SlaPoliciesRepository } from './sla-policies.repository';
 import { SlaCalendarsRepository } from './sla-calendars.repository';
+import { SlaTimersRepository } from './sla-timers.repository';
+import { SlaPolicyResolver } from './sla-policy-resolver.service';
+import { SlaService } from './sla.service';
+import { RedisCacheService } from '../../infra/cache/redis-cache';
+import { RedisModule } from '../../common/redis/redis.module';
 import { AuditModule } from '../audit/audit.module';
 
 @Module({
-  imports: [AuditModule],
+  imports: [AuditModule, RedisModule],
   controllers: [SlaPoliciesController, SlaCalendarsController],
   providers: [
     SlaPoliciesService,
     SlaCalendarsService,
     SlaPoliciesRepository,
     SlaCalendarsRepository,
+    // WO-045: timer creation pipeline
+    SlaTimersRepository,
+    SlaPolicyResolver,
+    SlaService,
+    RedisCacheService,
   ],
-  exports: [SlaPoliciesService, SlaCalendarsService],
+  exports: [
+    SlaPoliciesService,
+    SlaCalendarsService,
+    // SlaService is the only cross-module entry point for timer operations.
+    SlaService,
+  ],
 })
 export class SlaModule {}
