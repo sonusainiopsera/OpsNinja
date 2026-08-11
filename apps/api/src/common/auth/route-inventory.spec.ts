@@ -27,6 +27,7 @@ import { SlaCalendarsController } from '../../modules/sla/sla-calendars.controll
 import { JiraConnectionsController } from '../../modules/jira/connections/jira-connections.controller';
 import { JiraOAuthController } from '../../modules/jira/oauth/jira-oauth.controller';
 import { OrganizationsController } from '../../modules/organizations/organizations.controller';
+import { ContactsController } from '../../modules/organizations/contacts/contacts.controller';
 import { AuditController } from '../../modules/audit/audit.controller';
 import { SubjectRequestsController } from '../../modules/privacy/subject-requests.controller';
 
@@ -52,6 +53,7 @@ const CONTROLLERS: Function[] = [
   JiraConnectionsController,
   JiraOAuthController,
   OrganizationsController,
+  ContactsController,
   AuditController,
   SubjectRequestsController,
 ];

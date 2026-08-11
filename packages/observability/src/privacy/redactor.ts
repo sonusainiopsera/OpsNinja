@@ -93,6 +93,10 @@ export const MASK_KEYS = new Set([
   'applicantName',
   'applicant_name',
   'name',  // only when encountered in identity context
+  // PII phone fields
+  'phone',
+  'phoneNumber',
+  'phone_number',
   // IP addresses
   'ipAddress',
   'ip_address',

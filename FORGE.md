@@ -315,3 +315,10 @@
 - **Files:** 12 (+1516/-4)
 - **Duration:** 397ss
 - **Approach:** N/A
+
+## WO-029: User Story: WO-029 - Admin console Organizations page with detail drawer tabs
+- **Status:** completed
+- **Commit:** `af558fe`
+- **Files:** 8 (+1940/-3)
+- **Duration:** 668ss
+- **Approach:** N/A
