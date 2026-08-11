@@ -427,3 +427,10 @@
 - **Files:** 10 (+2453/-2)
 - **Duration:** 767ss
 - **Approach:** N/A
+
+## WO-046: User Story: WO-046 - Durable SLA timer scheduler worker with claim-and-fire loop
+- **Status:** completed
+- **Commit:** `b1267c5`
+- **Files:** 10 (+2053/-0)
+- **Duration:** 651ss
+- **Approach:** N/A
