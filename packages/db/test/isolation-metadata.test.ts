@@ -37,6 +37,11 @@ const TENANT_SCOPED_TABLES: string[] = [
   'notification_templates',
   'notification_suppressions',
   'webhook_endpoints',
+  // WO-023: organization registry tables
+  'customer_accounts',
+  'contacts',
+  'organization_verified_domains',
+  'custom_field_defs',
 ];
 
 // Tables deliberately without per-row tenant_id (cross-tenant or system tables).

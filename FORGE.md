@@ -133,3 +133,10 @@
 - **Files:** 29 (+2085/-17)
 - **Duration:** 535ss
 - **Approach:** Created packages/api-client as a shared workspace package with dual browser/server entry points. Layered architecture: ApiError class with type guards → parseErrorEnvelope (handles malformed/empty/HTML bodies) → createRequestFn (fetch wrapper with credentials, timeout, AbortController) → retry logic (Retry-After + jitter, never-retry list, POST/PATCH never retried) → cursor pagination (limit clamped 1-100) → SessionManager (single-flight refresh via refreshPromise, loop guard via _isReplay flag, scope-changed 401 fails closed to reauthorization-required, unknown 401 codes also fail closed). TanStack Query factory with taxonomy-aligned retry predicates. Server entry point requires explicit cookieHeader. Both consumer apps wired with thin factory clients. MSW v2 handlers and JSON fixtures for all status codes. Vitest test suites including 5-concurrent-401 single-flight test and loop-guard test.
+
+## WO-023: User Story: WO-023 - Organization registry schema with tenant-scoped RLS policies
+- **Status:** completed
+- **Commit:** `7a9dad1`
+- **Files:** 7 (+989/-0)
+- **Duration:** 585ss
+- **Approach:** Expand/contract migration adds 7 columns to the existing organizations table (slug, sla_tier, region, status, custom_field_values, primary_contact_id, deactivated_at) plus a composite UNIQUE (tenant_id, id) constraint needed as the FK target for new tables. Four new tables — customer_accounts, contacts, organization_verified_domains, custom_field_defs — each carry a composite FK referencing (tenant_id, id) on organizations so cross-tenant references are impossible at the DB constraint level. The citext extension enables case-insensitive email storage in contacts. ENABLE FORCE ROW LEVEL SECURITY plus tenant_isolation_* policies (USING/WITH CHECK on tenant_id = current_setting('app.current_tenant')::uuid) are installed on all five tables. The ::uuid cast on an empty string throws rather than returning all rows, giving fail-closed behavior when app.current_tenant is unset.

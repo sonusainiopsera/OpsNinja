@@ -359,3 +359,31 @@ export type {
   NewWebhookEndpoint,
   WebhookEndpointStatus,
 } from './schema/webhooks';
+
+// ---------------------------------------------------------------------------
+// Organization registry (WO-023)
+//
+// Extended organizations + customer_accounts, contacts,
+// organization_verified_domains, custom_field_defs.
+// ---------------------------------------------------------------------------
+
+export {
+  organizationsRegistry,
+  customerAccounts,
+  contacts,
+  organizationVerifiedDomains,
+  customFieldDefs,
+} from './schema/organizations-registry';
+
+export type {
+  OrganizationRegistry,
+  NewOrganizationRegistry,
+  CustomerAccount,
+  NewCustomerAccount,
+  Contact,
+  NewContact,
+  OrganizationVerifiedDomain,
+  NewOrganizationVerifiedDomain,
+  CustomFieldDef,
+  NewCustomFieldDef,
+} from './schema/organizations-registry';
