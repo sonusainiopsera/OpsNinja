@@ -539,6 +539,17 @@ export type {
 } from './schema/jira-project-mappings';
 
 // ---------------------------------------------------------------------------
+// ticket_jira_links (WO-053)
+// ---------------------------------------------------------------------------
+
+export { ticketJiraLinks } from './schema/ticket-jira-links';
+
+export type {
+  TicketJiraLink,
+  NewTicketJiraLink,
+} from './schema/ticket-jira-links';
+
+// ---------------------------------------------------------------------------
 // retention_job_runs + erasure_receipts (WO-085)
 // ---------------------------------------------------------------------------
 

@@ -11,10 +11,17 @@ import {
   CREDENTIAL_VAULT,
   AwsSecretVaultAdapter,
 } from './tokens/credential-vault.service';
+// WO-053: Jira links submodule
+import { JiraLinksController } from './links/jira-links.controller';
+import { JiraLinksService, TicketDataRepository } from './links/jira-links.service';
+import { JiraLinksRepository } from './links/jira-links.repository';
+import { JiraPayloadBuilder } from './links/jira-payload.builder';
+import { JiraMappingRepository } from './mapping/jira-mapping.repository';
+import { AuditWriter } from '../audit/audit-writer';
 
 @Module({
   imports: [AuditModule],
-  controllers: [JiraConnectionsController, JiraOAuthController],
+  controllers: [JiraConnectionsController, JiraOAuthController, JiraLinksController],
   providers: [
     JiraConnectionsService,
     JiraConnectionsRepository,
@@ -32,7 +39,15 @@ import {
       provide: 'JIRA_CONNECTIONS_REPOSITORY',
       useExisting: JiraConnectionsRepository,
     },
+    // WO-053: links submodule
+    JiraLinksController,
+    JiraLinksService,
+    JiraLinksRepository,
+    JiraPayloadBuilder,
+    JiraMappingRepository,
+    TicketDataRepository,
+    AuditWriter,
   ],
-  exports: [JiraConnectionsService, JiraTokenProvider],
+  exports: [JiraConnectionsService, JiraTokenProvider, JiraLinksService],
 })
 export class JiraModule {}

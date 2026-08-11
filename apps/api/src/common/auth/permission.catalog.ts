@@ -20,6 +20,7 @@ export type Permission =
   | 'ticket:delete'
   | 'ticket:view_internal_notes'
   | 'ticket:add_internal_note'
+  | 'ticket:escalate'
   // ── Organizations (customers) ─────────────────────────────────────────────
   | 'org:read'
   | 'org:create'
@@ -79,7 +80,7 @@ export type Permission =
  */
 export const ALL_PERMISSIONS: readonly Permission[] = [
   'ticket:read', 'ticket:create', 'ticket:update', 'ticket:close',
-  'ticket:reassign', 'ticket:delete', 'ticket:view_internal_notes', 'ticket:add_internal_note',
+  'ticket:reassign', 'ticket:delete', 'ticket:view_internal_notes', 'ticket:add_internal_note', 'ticket:escalate',
   'org:read', 'org:create', 'org:update', 'org:deactivate', 'org:manage_fields', 'org:domain_manage',
   'org:manage_contacts',
   'user:read', 'user:create', 'user:update', 'user:deactivate', 'user:set_org_scope',
@@ -108,6 +109,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<string, readonly Permission[]>> =
   manager: [
     'ticket:read', 'ticket:create', 'ticket:update', 'ticket:close',
     'ticket:reassign', 'ticket:view_internal_notes', 'ticket:add_internal_note',
+    'ticket:escalate',
     'org:read', 'org:create', 'org:update', 'org:deactivate', 'org:manage_fields', 'org:domain_manage',
     'org:manage_scopes', 'org:manage_contacts',
     'user:read', 'user:create', 'user:update', 'user:set_org_scope',
@@ -121,6 +123,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<string, readonly Permission[]>> =
   agent: [
     'ticket:read', 'ticket:create', 'ticket:update', 'ticket:close',
     'ticket:reassign', 'ticket:view_internal_notes', 'ticket:add_internal_note',
+    'ticket:escalate',
     'org:read',
     'user:read',
     'sla:read',
