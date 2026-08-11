@@ -9,6 +9,7 @@
     "test": "jest --passWithNoTests",
     "test:e2e": "jest --config jest.e2e.config.js --passWithNoTests",
     "test:isolation": "jest --config jest.isolation.config.js --passWithNoTests --forceExit",
+    "test:isolation:ticketing": "jest --config jest.isolation.config.js --passWithNoTests --forceExit --testPathPattern='isolation/(table-matrix|route-matrix|org-scope|portal-visibility)|e2e/ticket-lifecycle|unit/suite-helpers'",
     "test:coverage": "jest --passWithNoTests --coverage --coverageThreshold='{\"global\":{\"lines\":70}}'",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --project tsconfig.json --noEmit"
