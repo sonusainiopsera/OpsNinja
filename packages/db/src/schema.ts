@@ -240,10 +240,34 @@ export const auditLogs = pgTable(
     traceId: text('trace_id').notNull(),
     metadata: jsonb('metadata'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    // ── Mutation audit columns (added in 0003_audit_mutation_columns.sql) ──────
+    /** Type of resource being mutated (e.g. 'ticket', 'ticket_comment'). */
+    resourceType: text('resource_type'),
+    /** UUID or identifier of the specific resource instance. */
+    resourceId: text('resource_id'),
+    /** Action performed: create | update | delete | deactivate | assign | transition. */
+    action: text('action'),
+    /** Redacted JSON snapshot of the resource before mutation. */
+    beforeState: jsonb('before_state'),
+    /** Redacted JSON snapshot of the resource after mutation. */
+    afterState: jsonb('after_state'),
+    /** Dotted-path keys that changed (e.g. ['status', 'custom_fields.cloud_provider']). */
+    changedFields: text('changed_fields').array(),
+    /** Source worker label for non-HTTP origins (e.g. 'jira-sync-worker'). */
+    source: text('source'),
+    /** SHA-256 idempotency key for worker retries — unique partial index ensures dedup. */
+    idempotencyKey: text('idempotency_key'),
+    /** HTTP or SQS correlation / request ID. */
+    requestId: text('request_id'),
+    /** SHA-256 of the client IP address (never stored raw). */
+    ipHash: text('ip_hash'),
+    /** Truncated User-Agent string (max 512 chars). */
+    userAgent: text('user_agent'),
   },
   (t) => ({
     tenantCreatedIdx: index('audit_logs_tenant_created_idx').on(t.tenantId, t.createdAt),
     traceIdx: index('audit_logs_trace_id_idx').on(t.traceId),
+    resourceIdx: index('audit_logs_resource_idx').on(t.tenantId, t.resourceType, t.resourceId),
   }),
 );
 

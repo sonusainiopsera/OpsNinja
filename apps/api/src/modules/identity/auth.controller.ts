@@ -29,11 +29,13 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { randomUUID } from 'crypto';
 
 import { NoTenantContext } from '../../common/tenant/no-tenant-context.decorator';
 import { Public } from '../../common/auth/public.decorator';
 import { TokenService } from './services/token.service';
 import { SessionService } from './services/session.service';
+import { AuditService } from '../../common/auth/audit.service';
 
 export const REFRESH_COOKIE_NAME = 'refresh_token';
 export const REFRESH_COOKIE_PATH = '/api/v1/auth';
@@ -48,6 +50,7 @@ export class AuthController {
   constructor(
     private readonly tokenService: TokenService,
     private readonly sessionService: SessionService,
+    private readonly auditService: AuditService,
   ) {}
 
   /**
@@ -152,6 +155,18 @@ export class AuthController {
     );
     this.setRefreshCookie(res, newCookieValue, REFRESH_TTL_SECONDS);
 
+    const tenantIdFinal = this.extractTenantFromCookie(cookieValue);
+    // Emit audit record — no token value in payload.
+    void this.auditService.writeAuthEvent({
+      tenantId: tenantIdFinal,
+      actorId: sessionMeta.userId,
+      actorKind: 'staff',
+      eventType: 'auth.token_refresh',
+      outcome: 'allowed',
+      route: '/api/v1/auth/refresh',
+      traceId: traceId ?? randomUUID(),
+    });
+
     return {
       accessToken: issued.accessToken,
       expiresIn: issued.expiresIn,
@@ -170,12 +185,27 @@ export class AuthController {
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const cookieValue = req.cookies?.[REFRESH_COOKIE_NAME] as string | undefined;
 
+    const logoutTraceId = req.headers['x-trace-id'] as string | undefined ?? randomUUID();
+    let logoutActorId: string | undefined;
+
     if (cookieValue) {
       const parsed = this.parseCookie(cookieValue);
       if (parsed) {
         const tenantId = this.extractTenantFromCookie(cookieValue);
         await this.sessionService
           .revokeSession({ sessionId: parsed.sessionId, tenantId, reason: 'logout' })
+          .then(() => {
+            // Emit logout audit record — no token value in payload.
+            void this.auditService.writeAuthEvent({
+              tenantId,
+              actorId: logoutActorId,
+              actorKind: 'staff',
+              eventType: 'auth.logout',
+              outcome: 'allowed',
+              route: '/api/v1/auth/logout',
+              traceId: logoutTraceId,
+            });
+          })
           .catch((err: Error) => {
             // Non-fatal: log but don't fail the logout — always clear the cookie.
             this.logger.warn('Failed to revoke session on logout', { error: err.message });

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { AuthModule } from '../../common/auth/auth.module';
+import { AuditModule } from '../audit/audit.module';
 import { TicketRepository } from './repositories/ticket.repository';
 import { CommentRepository } from './repositories/comment.repository';
 import { AttachmentRepository } from './repositories/attachment.repository';
@@ -11,7 +12,7 @@ import { PortalTicketsController } from './portal/portal-tickets.controller';
 import { PortalAttachmentsController } from './portal/portal-attachments.controller';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, AuditModule],
   controllers: [PortalTicketsController, PortalAttachmentsController],
   providers: [
     TicketRepository,

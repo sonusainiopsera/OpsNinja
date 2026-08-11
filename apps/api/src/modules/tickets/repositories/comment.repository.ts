@@ -6,9 +6,17 @@ import { TenantRepository } from '../../../data/tenant-repository';
 import { getPrincipalContext } from '../../../observability/request-context';
 import { isPortalPrincipal } from '../../identity/portal/portal-principal';
 import { portalCommentPredicate } from '../../../common/db/scoped-query.helper';
+import { Auditable } from '../../audit/auditable.decorator';
+import { AuditWriter } from '../../audit/audit-writer';
+import { AuditCoverageRegistry } from '../../audit/audit-coverage.registry';
 
 @Injectable()
 export class CommentRepository extends TenantRepository {
+  constructor(private readonly auditWriter: AuditWriter) {
+    super();
+    AuditCoverageRegistry.registerClass(CommentRepository.prototype);
+  }
+
   /**
    * Find all comments for a ticket, applying portal visibility predicate when
    * the caller is a portal principal. This is the single enforcement point for
@@ -39,10 +47,20 @@ export class CommentRepository extends TenantRepository {
     return rows[0] ?? null;
   }
 
+  @Auditable({ resourceType: 'ticket_comment', action: 'create' })
   async insert(
     data: Omit<typeof ticketComments.$inferInsert, 'id' | 'createdAt' | 'updatedAt'>,
   ): Promise<TicketComment> {
     const rows = await this.tx.insert(ticketComments).values(data).returning();
-    return rows[0]!;
+    const created = rows[0]!;
+
+    await this.auditWriter.append({
+      resourceType: 'ticket_comment',
+      action: 'create',
+      resourceId: created.id,
+      afterState: created as unknown as Record<string, unknown>,
+    });
+
+    return created;
   }
 }
