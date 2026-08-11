@@ -1,0 +1,17 @@
+{
+  "id": "bbbbbbbb-0000-0000-0000-000000000001",
+  "tenantId": "aaaaaaaa-0000-0000-0000-000000000001",
+  "url": "https://hooks.example.com/opsninja",
+  "description": "Active endpoint fixture",
+  "eventTypes": ["ticket.created", "ticket.resolved"],
+  "status": "active",
+  "secretKeyVersion": 1,
+  "previousSecretCiphertext": null,
+  "previousSecretExpiresAt": null,
+  "consecutiveFailures": 0,
+  "lastSuccessAt": null,
+  "createdBy": "user-001",
+  "createdAt": "2025-06-01T12:00:00.000Z",
+  "updatedAt": "2025-06-01T12:00:00.000Z",
+  "deletedAt": null
+}

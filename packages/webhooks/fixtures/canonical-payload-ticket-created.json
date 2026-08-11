@@ -1,0 +1,12 @@
+{
+  "_description": "Golden canonical payload for event type ticket.created",
+  "_serialized": "{\"id\":\"evt-001\",\"type\":\"ticket.created\",\"occurredAt\":\"2025-06-01T12:00:00.000Z\",\"tenantId\":\"tenant-abc\",\"data\":{\"priority\":\"p1\",\"ticketId\":\"tkt-1\"}}",
+  "id": "evt-001",
+  "type": "ticket.created",
+  "occurredAt": "2025-06-01T12:00:00.000Z",
+  "tenantId": "tenant-abc",
+  "data": {
+    "ticketId": "tkt-1",
+    "priority": "p1"
+  }
+}

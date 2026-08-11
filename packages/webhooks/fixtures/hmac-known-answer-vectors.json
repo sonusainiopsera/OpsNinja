@@ -1,0 +1,12 @@
+{
+  "_description": "Known-answer HMAC-SHA256 test vectors for webhook signature verification",
+  "_algorithm": "HMAC-SHA256 over string: `${timestamp}.${rawBody}`, secret decoded from base64url",
+  "vectors": [
+    {
+      "timestamp": 1717200000,
+      "secret_base64url": "dGVzdC1zZWNyZXQ",
+      "rawBody": "{\"id\":\"evt-001\",\"type\":\"ticket.created\",\"occurredAt\":\"2025-06-01T12:00:00.000Z\",\"tenantId\":\"tenant-abc\",\"data\":{\"priority\":\"p1\",\"ticketId\":\"tkt-1\"}}",
+      "expectedHeader": "t=1717200000,v1=<computed-in-test>"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "id": "bbbbbbbb-0000-0000-0000-000000000002",
+  "tenantId": "aaaaaaaa-0000-0000-0000-000000000001",
+  "url": "https://hooks.example.com/opsninja-rotate",
+  "description": "Endpoint in secret rotation fixture",
+  "eventTypes": ["ticket.created"],
+  "status": "active",
+  "secretKeyVersion": 2,
+  "previousSecretExpiresAt": "2099-01-01T00:00:00.000Z",
+  "consecutiveFailures": 0,
+  "lastSuccessAt": "2025-06-01T11:55:00.000Z",
+  "createdBy": "user-001",
+  "createdAt": "2025-06-01T12:00:00.000Z",
+  "updatedAt": "2025-06-02T09:00:00.000Z",
+  "deletedAt": null
+}
