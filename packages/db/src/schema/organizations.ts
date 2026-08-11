@@ -1,14 +1,46 @@
-import { pgTable, uuid, text, boolean, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  pgEnum,
+  uuid,
+  text,
+  boolean,
+  timestamp,
+  index,
+  uniqueIndex,
+  jsonb,
+} from 'drizzle-orm/pg-core';
 
-export const organizations = pgTable('organizations', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id').notNull(),
-  name: text('name').notNull(),
-  domain: text('domain'),
-  isActive: boolean('is_active').notNull().default(true),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
+// Data classification: Internal
+// Retention: 7 years after deactivation (compliance requirement)
+export const organizationStatusEnum = pgEnum('organization_status', ['active', 'inactive']);
+
+export const organizations = pgTable(
+  'organizations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').notNull(),
+    name: text('name').notNull(),
+    slug: text('slug'),
+    slaTier: text('sla_tier'),
+    region: text('region'),
+    // 'active' default; status column added in migration 005
+    status: organizationStatusEnum('status').notNull().default('active'),
+    // JSONB DevOps metadata — validated against custom_field_defs by application layer
+    customFieldValues: jsonb('custom_field_values').notNull().default({}),
+    primaryContactId: uuid('primary_contact_id'),
+    domain: text('domain'),
+    isActive: boolean('is_active').notNull().default(true),
+    deactivatedAt: timestamp('deactivated_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    tenantStatusIdx: index('organizations_tenant_status_idx').on(t.tenantId, t.status),
+    tenantSlaTierIdx: index('organizations_tenant_sla_tier_idx').on(t.tenantId, t.slaTier),
+    // Unique index for composite FK references from child tables
+    tenantIdUidx: uniqueIndex('organizations_tenant_id_uidx').on(t.tenantId, t.id),
+  }),
+);
 
 export type Organization = typeof organizations.$inferSelect;
 export type NewOrganization = typeof organizations.$inferInsert;

@@ -48,6 +48,11 @@ const TENANT_SCOPED_TABLES: string[] = [
   'notification_suppressions',
   'webhook_endpoints',
   'tenant_settings',
+  // WO-023: Organization registry
+  'customer_accounts',
+  'contacts',
+  'organization_verified_domains',
+  'custom_field_defs',
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
