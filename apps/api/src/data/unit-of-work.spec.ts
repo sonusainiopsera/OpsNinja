@@ -12,16 +12,10 @@ import { PrincipalFactory, TENANT_A_ID } from '../../test/factories/principal.fa
 
 // ─── Mock DB ──────────────────────────────────────────────────────────────────
 
-interface MockExecuteArg {
-  sql?: string;
-  queryChunks?: string[];
-  values?: unknown[];
-}
-
 function makeMockDb() {
-  const executeArgs: MockExecuteArg[] = [];
+  const executeArgs: unknown[] = [];
   const mockTx = {
-    execute: jest.fn().mockImplementation((query: MockExecuteArg) => {
+    execute: jest.fn().mockImplementation((query: unknown) => {
       executeArgs.push(query);
       return Promise.resolve([]);
     }),
@@ -34,7 +28,7 @@ function makeMockDb() {
     transaction: jest.fn().mockImplementation(
       async (fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx),
     ),
-    __executeArgs: executeArgs,
+    __executeArgs: executeArgs as unknown[],
     __tx: mockTx,
   };
 
@@ -68,14 +62,17 @@ describe('UnitOfWork', () => {
     await unitOfWork.withTenantTransaction(principal, async (_tx) => undefined);
 
     // The first (and only) execute call should contain all four app.* variables.
-    const query = mockDb.__executeArgs[0] as MockExecuteArg;
-    const rawSql = query?.sql ?? JSON.stringify(query);
-    expect(rawSql).toContain('app.current_tenant');
-    expect(rawSql).toContain('app.current_user');
-    expect(rawSql).toContain('app.principal_kind');
-    expect(rawSql).toContain('app.current_org_ids');
-    expect(rawSql).toContain('statement_timeout');
-    expect(rawSql).toContain('idle_in_transaction_session_timeout');
+    // Drizzle's `sql` template tag produces an SQL object whose queryChunks array
+    // holds the static string parts.  JSON.stringify serialises those chunks so we
+    // can assert the expected GUC names appear somewhere in the serialised form.
+    const query = mockDb.__executeArgs[0] as unknown;
+    const serialised = JSON.stringify(query);
+    expect(serialised).toContain('app.current_tenant');
+    expect(serialised).toContain('app.current_user');
+    expect(serialised).toContain('app.principal_kind');
+    expect(serialised).toContain('app.current_org_ids');
+    expect(serialised).toContain('statement_timeout');
+    expect(serialised).toContain('idle_in_transaction_session_timeout');
   });
 
   // ── Context store populated (AC2) ──────────────────────────────────────────

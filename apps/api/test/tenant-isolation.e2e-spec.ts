@@ -107,9 +107,7 @@ describe('Tenant Isolation (e2e)', () => {
      * a db:seed script (implemented in a later WO).  They are skipped in
      * environments where the database is not available.
      */
-    const isDbAvailable = !!process.env['DB_HOST'];
-
-    (isDbAvailable ? it : it.skip)(
+    (isDbAvailable() ? it : it.skip)(
       'Tenant A sees only Tenant A rows via RLS (no app-level predicate)',
       async () => {
         const principal = PrincipalFactory.staff({ tenantId: TENANT_A_ID });
@@ -128,7 +126,7 @@ describe('Tenant Isolation (e2e)', () => {
       },
     );
 
-    (isDbAvailable ? it : it.skip)(
+    (isDbAvailable() ? it : it.skip)(
       'Tenant B sees only Tenant B rows via RLS (no app-level predicate)',
       async () => {
         const principal = PrincipalFactory.staff({ tenantId: TENANT_B_ID });
@@ -145,7 +143,7 @@ describe('Tenant Isolation (e2e)', () => {
       },
     );
 
-    (isDbAvailable ? it : it.skip)(
+    (isDbAvailable() ? it : it.skip)(
       'Tenant A rows are disjoint from Tenant B rows',
       async () => {
         const [resA, resB] = await Promise.all([
@@ -187,7 +185,7 @@ describe('Tenant Isolation (e2e)', () => {
   // ── AC8: PgBouncer compatibility ──────────────────────────────────────────
   describe('AC8 – pooled-connection isolation', () => {
     (isDbAvailable() ? it : it.skip)(
-      'second request cannot see first request's session settings',
+      "second request cannot see first request's session settings",
       async () => {
         // Send two sequential requests to the same endpoint.  With pool size 1,
         // both requests hit the same backend connection.  If set_config uses
