@@ -403,3 +403,31 @@ export type {
   SavedViewPin,
   NewSavedViewPin,
 } from './schema/saved-views';
+
+// ---------------------------------------------------------------------------
+// SLA module (WO-044)
+//
+// sla_policies, sla_policy_versions, sla_calendars,
+// sla_calendar_windows, sla_calendar_holidays.
+// ---------------------------------------------------------------------------
+
+export {
+  slaPolicies,
+  slaPolicyVersions,
+  slaCalendars,
+  slaCalendarWindows,
+  slaCalendarHolidays,
+} from './schema/sla';
+
+export type {
+  SlaPolicy,
+  NewSlaPolicy,
+  SlaPolicyVersion,
+  NewSlaPolicyVersion,
+  SlaCalendar,
+  NewSlaCalendar,
+  SlaCalendarWindow,
+  NewSlaCalendarWindow,
+  SlaCalendarHoliday,
+  NewSlaCalendarHoliday,
+} from './schema/sla';

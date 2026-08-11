@@ -45,6 +45,12 @@ const TENANT_SCOPED_TABLES: string[] = [
   // WO-039: saved views tables
   'saved_views',
   'saved_view_pins',
+  // WO-044: SLA module tables
+  'sla_calendars',
+  'sla_calendar_windows',
+  'sla_calendar_holidays',
+  'sla_policies',
+  'sla_policy_versions',
 ];
 
 // Tables deliberately without per-row tenant_id (cross-tenant or system tables).

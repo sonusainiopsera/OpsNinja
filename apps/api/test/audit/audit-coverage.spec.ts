@@ -25,6 +25,8 @@ import { EXEMPT_KEYS } from './audit-exemptions';
 // ---------------------------------------------------------------------------
 
 import { CommentRepository } from '../../src/modules/tickets/repositories/comment.repository';
+import { SlaPoliciesRepository } from '../../src/modules/sla/sla-policies.repository';
+import { SlaCalendarsRepository } from '../../src/modules/sla/sla-calendars.repository';
 
 // ---------------------------------------------------------------------------
 // Mutation method naming convention
@@ -68,6 +70,9 @@ function collectMutationMethods(
 
 const CLASSES_TO_SCAN: Array<{ prototype: object; name: string }> = [
   { prototype: CommentRepository.prototype, name: 'CommentRepository' },
+  // WO-044: SLA repositories
+  { prototype: SlaPoliciesRepository.prototype, name: 'SlaPoliciesRepository' },
+  { prototype: SlaCalendarsRepository.prototype, name: 'SlaCalendarsRepository' },
   // Future classes: add here as modules are implemented
   // { prototype: OrganizationRepository.prototype, name: 'OrganizationRepository' },
   // { prototype: JiraConnectionRepository.prototype, name: 'JiraConnectionRepository' },

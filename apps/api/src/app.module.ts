@@ -29,6 +29,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { UsersModule } from './modules/users/users.module';
 import { ViewsModule } from './modules/views/views.module';
+import { SlaModule } from './modules/sla/sla.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { ViewsModule } from './modules/views/views.module';
     OrganizationsModule,
     UsersModule,
     ViewsModule,
+    SlaModule,
   ],
   providers: [
     // ── Global guard: AuthGuard ───────────────────────────────────────────────

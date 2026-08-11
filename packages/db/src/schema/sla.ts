@@ -1,0 +1,170 @@
+/**
+ * Drizzle ORM schema for SLA module tables — WO-044.
+ *
+ * Tables:
+ *  - sla_policies          — priority-based response/resolution targets
+ *  - sla_policy_versions   — append-only snapshot per mutation (never UPDATE/DELETE)
+ *  - sla_calendars         — business-hours or 24x7 working-time definitions
+ *  - sla_calendar_windows  — per-weekday start/end times within a calendar
+ *  - sla_calendar_holidays — date-keyed holiday overrides per calendar
+ *
+ * All tables carry a leading tenant_id for RLS and composite indexes.
+ * Cross-module access must go through the SlaModule service interface only.
+ */
+
+import {
+  pgTable,
+  uuid,
+  text,
+  integer,
+  smallint,
+  boolean,
+  jsonb,
+  date,
+  time,
+  timestamp,
+  index,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
+
+// ---------------------------------------------------------------------------
+// sla_calendars (defined first — sla_policies references it)
+// ---------------------------------------------------------------------------
+
+export const slaCalendars = pgTable(
+  'sla_calendars',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').notNull(),
+    name: text('name').notNull(),
+    /** 'business_hours' or 'twenty_four_seven' */
+    calendarType: text('calendar_type').notNull(),
+    /** IANA timezone string (validated at service layer against Intl.supportedValuesOf) */
+    timezone: text('timezone').notNull(),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    tenantIdx: index('sla_calendars_tenant_id_idx').on(t.tenantId),
+    tenantNameIdx: index('sla_calendars_tenant_name_idx').on(t.tenantId, t.name),
+  }),
+);
+
+export type SlaCalendar = typeof slaCalendars.$inferSelect;
+export type NewSlaCalendar = typeof slaCalendars.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// sla_calendar_windows
+// ---------------------------------------------------------------------------
+
+export const slaCalendarWindows = pgTable(
+  'sla_calendar_windows',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').notNull(),
+    calendarId: uuid('calendar_id').notNull(),
+    /** 0 = Monday … 6 = Sunday (ISO weekday minus 1) */
+    weekday: smallint('weekday').notNull(),
+    startLocalTime: time('start_local_time').notNull(),
+    endLocalTime: time('end_local_time').notNull(),
+  },
+  (t) => ({
+    tenantCalendarIdx: index('sla_calendar_windows_tenant_calendar_idx').on(t.tenantId, t.calendarId),
+  }),
+);
+
+export type SlaCalendarWindow = typeof slaCalendarWindows.$inferSelect;
+export type NewSlaCalendarWindow = typeof slaCalendarWindows.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// sla_calendar_holidays
+// ---------------------------------------------------------------------------
+
+export const slaCalendarHolidays = pgTable(
+  'sla_calendar_holidays',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').notNull(),
+    calendarId: uuid('calendar_id').notNull(),
+    holidayDate: date('holiday_date').notNull(),
+    label: text('label').notNull(),
+  },
+  (t) => ({
+    tenantCalendarIdx: index('sla_calendar_holidays_tenant_calendar_idx').on(t.tenantId, t.calendarId),
+    uniqueDateIdx: uniqueIndex('sla_calendar_holidays_date_uniq').on(t.tenantId, t.calendarId, t.holidayDate),
+  }),
+);
+
+export type SlaCalendarHoliday = typeof slaCalendarHolidays.$inferSelect;
+export type NewSlaCalendarHoliday = typeof slaCalendarHolidays.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// sla_policies
+// ---------------------------------------------------------------------------
+
+export const slaPolicies = pgTable(
+  'sla_policies',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').notNull(),
+    /** Scope discriminator: 'tenant' | 'organization' | 'custom' */
+    scopeType: text('scope_type').notNull().default('tenant'),
+    /** Non-null for organization/custom scope; null for tenant-wide */
+    scopeId: uuid('scope_id'),
+    /** Priority tier: 'P1' | 'P2' | 'P3' | 'P4' */
+    priority: text('priority').notNull(),
+    /** Response target in minutes; must be > 0 and <= 43200 (30 days) */
+    responseTargetMins: integer('response_target_mins').notNull(),
+    /** Resolution target in minutes; must be > 0 and <= 43200 */
+    resolutionTargetMins: integer('resolution_target_mins').notNull(),
+    /** FK to sla_calendars.id */
+    calendarId: uuid('calendar_id').notNull(),
+    /** First reminder threshold: 0–98, must be < reminderPctSecond */
+    reminderPctFirst: integer('reminder_pct_first').notNull().default(50),
+    /** Second reminder threshold: 1–99, must be > reminderPctFirst */
+    reminderPctSecond: integer('reminder_pct_second').notNull().default(75),
+    isActive: boolean('is_active').notNull().default(true),
+    /** True once product has approved the target values. Defaults false (provisional). */
+    targetsRatified: boolean('targets_ratified').notNull().default(false),
+    /** Monotonic version counter; incremented on every update for optimistic locking. */
+    version: integer('version').notNull().default(1),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    createdBy: uuid('created_by'),
+    updatedBy: uuid('updated_by'),
+  },
+  (t) => ({
+    tenantIdx: index('sla_policies_tenant_id_idx').on(t.tenantId),
+    tenantScopePriorityIdx: index('sla_policies_tenant_scope_priority_idx').on(
+      t.tenantId, t.scopeType, t.scopeId, t.priority,
+    ),
+  }),
+);
+
+export type SlaPolicy = typeof slaPolicies.$inferSelect;
+export type NewSlaPolicy = typeof slaPolicies.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// sla_policy_versions (append-only snapshot — no UPDATE/DELETE)
+// ---------------------------------------------------------------------------
+
+export const slaPolicyVersions = pgTable(
+  'sla_policy_versions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    tenantId: uuid('tenant_id').notNull(),
+    policyId: uuid('policy_id').notNull(),
+    version: integer('version').notNull(),
+    /** Full serialised policy snapshot at this version. */
+    payload: jsonb('payload').notNull(),
+    changedBy: uuid('changed_by'),
+    changedAt: timestamp('changed_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    tenantPolicyIdx: index('sla_policy_versions_tenant_policy_idx').on(t.tenantId, t.policyId),
+  }),
+);
+
+export type SlaPolicyVersion = typeof slaPolicyVersions.$inferSelect;
+export type NewSlaPolicyVersion = typeof slaPolicyVersions.$inferInsert;

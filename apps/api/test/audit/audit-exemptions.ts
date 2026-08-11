@@ -45,14 +45,7 @@ export const AUDIT_EXEMPTIONS: AuditExemption[] = [
     key: 'JiraFieldMappingRepository.upsert',
     reason: 'JiraFieldMappingRepository does not exist yet — pending Jira integration WO.',
   },
-  {
-    key: 'SlaConfigRepository.create',
-    reason: 'SlaConfigRepository does not exist yet — pending SLA module WO.',
-  },
-  {
-    key: 'SlaConfigRepository.update',
-    reason: 'SlaConfigRepository does not exist yet — pending SLA module WO.',
-  },
+  // SlaPoliciesRepository and SlaCalendarsRepository — implemented in WO-044 with @Auditable
   // ViewsRepository.create/update/softDelete — implemented in WO-039 with @Auditable
   // ---------------------------------------------------------------------------
   // AuditService (auth events) — writes directly to audit_logs, not auditable itself
