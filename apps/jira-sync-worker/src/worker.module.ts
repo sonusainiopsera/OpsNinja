@@ -16,6 +16,7 @@
  *   OutboundHandler       — outbound Jira sync pipeline
  *   JiraOperationsService — thin Jira HTTP client
  *   JiraRateLimiter       — per-tenant Redis token bucket
+ *   ReconciliationJob     — hourly drift-heal job (WO-057)
  *   SqsConsumerService    — SQS long-polling loop
  */
 
@@ -28,6 +29,7 @@ import { InboundHandler } from './inbound/inbound.handler';
 import { OutboundHandler } from './outbound/outbound.handler';
 import { JiraOperationsService } from './outbound/jira-operations.service';
 import { JiraRateLimiter } from './outbound/rate-limiter';
+import { ReconciliationJob } from './reconciliation/reconciliation.job';
 import type { SqsConsumerConfig } from './sqs-consumer.service';
 
 // ---------------------------------------------------------------------------
@@ -120,6 +122,23 @@ export const SQS_CONFIG   = 'SQS_CONFIG';
       inject: [PG_POOL, REDIS_CLIENT, JiraOperationsService, JiraRateLimiter, SQS_CLIENT, SQS_CONFIG],
     },
 
+    // ── Reconciliation job (WO-057) ───────────────────────────────────────
+    {
+      provide: ReconciliationJob,
+      useFactory: (
+        pool: Pool,
+        redis: Redis,
+        jiraOps: JiraOperationsService,
+        rateLimiter: JiraRateLimiter,
+        sqsClient: SQSClient,
+        config: SqsConsumerConfig,
+      ) =>
+        new ReconciliationJob(
+          pool, redis, jiraOps, rateLimiter, sqsClient, config.queueUrl,
+        ),
+      inject: [PG_POOL, REDIS_CLIENT, JiraOperationsService, JiraRateLimiter, SQS_CLIENT, SQS_CONFIG],
+    },
+
     {
       provide: SqsConsumerService,
       useFactory: (
@@ -127,8 +146,9 @@ export const SQS_CONFIG   = 'SQS_CONFIG';
         config: SqsConsumerConfig,
         inbound: InboundHandler,
         outbound: OutboundHandler,
-      ) => new SqsConsumerService(sqsClient, config, inbound, outbound),
-      inject: [SQS_CLIENT, SQS_CONFIG, InboundHandler, OutboundHandler],
+        recon: ReconciliationJob,
+      ) => new SqsConsumerService(sqsClient, config, inbound, outbound, recon),
+      inject: [SQS_CLIENT, SQS_CONFIG, InboundHandler, OutboundHandler, ReconciliationJob],
     },
   ],
 })

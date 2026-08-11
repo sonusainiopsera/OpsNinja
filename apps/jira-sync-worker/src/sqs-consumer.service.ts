@@ -2,7 +2,8 @@
  * SqsConsumerService — long-polling SQS consumer for the jira-sync queue.
  *
  * Message routing:
- *   source == 'jira-webhook'   → InboundHandler (Jira → OpsNinja)
+ *   source == 'jira-webhook'        → InboundHandler (Jira → OpsNinja)
+ *   source == 'jira-reconciliation' → ReconciliationJob (WO-057)
  *   source == 'jira-outbound' (or absent/other) → OutboundHandler (OpsNinja → Jira)
  *
  * Backoff is enforced server-side via SQS visibility timeout extension; this
@@ -25,6 +26,8 @@ import {
 } from '@aws-sdk/client-sqs';
 import { InboundHandler } from './inbound/inbound.handler';
 import { OutboundHandler } from './outbound/outbound.handler';
+import type { ReconciliationJob } from './reconciliation/reconciliation.job';
+import type { JiraReconciliationMessage } from './reconciliation/reconciliation.job';
 
 export interface SqsConsumerConfig {
   queueUrl: string;
@@ -47,6 +50,7 @@ export class SqsConsumerService implements OnModuleDestroy {
     private readonly config: SqsConsumerConfig,
     private readonly inboundHandler: InboundHandler,
     private readonly outboundHandler: OutboundHandler,
+    private readonly reconciliationJob?: ReconciliationJob,
   ) {
     this.shutdownPromise = new Promise<void>((resolve) => {
       this.shutdownResolve = resolve;
@@ -148,6 +152,10 @@ export class SqsConsumerService implements OnModuleDestroy {
           webhookEventId: body['webhookEventId'] as string,
           receiptHandle,
         });
+        shouldDelete = true;
+      } else if (source === 'jira-reconciliation' && this.reconciliationJob) {
+        // Reconciliation: hourly per-connection drift healing (WO-057)
+        await this.reconciliationJob.handle(body as unknown as JiraReconciliationMessage);
         shouldDelete = true;
       } else {
         // Outbound: OpsNinja → Jira

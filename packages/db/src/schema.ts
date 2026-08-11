@@ -621,6 +621,24 @@ export { jiraSyncDlq } from './schema/jira-sync-dlq';
 export type { JiraSyncDlqItem, NewJiraSyncDlqItem } from './schema/jira-sync-dlq';
 
 // ---------------------------------------------------------------------------
+// jira_reconciliation_runs: per-connection reconciliation run records (WO-057)
+// ---------------------------------------------------------------------------
+
+export { jiraReconciliationRuns } from './schema/jira-reconciliation';
+export type {
+  JiraReconciliationRun,
+  NewJiraReconciliationRun,
+  ReconciliationOutcome,
+} from './schema/jira-reconciliation';
+export {
+  RECON_LOOKBACK_DEFAULT_HOURS,
+  RECON_LOOKBACK_MAX_HOURS,
+  RECON_PAGE_SIZE,
+  RECON_MAX_PAGES,
+  PENDING_REPAIR_AGE_MINUTES,
+} from './schema/jira-reconciliation';
+
+// ---------------------------------------------------------------------------
 // AI synthesis tables (WO-062)
 // ---------------------------------------------------------------------------
 
