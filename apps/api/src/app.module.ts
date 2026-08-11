@@ -33,6 +33,7 @@ import { SlaModule } from './modules/sla/sla.module';
 import { JiraModule } from './modules/jira/jira.module';
 import { CsatModule } from './modules/csat/csat.module';
 import { PrivacyModule } from './modules/privacy/privacy.module';
+import { AiModule } from './modules/ai/ai.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { PrivacyModule } from './modules/privacy/privacy.module';
     JiraModule,
     CsatModule,
     PrivacyModule,
+    AiModule,
   ],
   providers: [
     // ── Global guard: AuthGuard ───────────────────────────────────────────────

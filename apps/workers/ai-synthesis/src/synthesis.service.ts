@@ -4,7 +4,8 @@
  * Transaction sequence (AC-4, AC-5, AC-7):
  *   Tx-1: SET LOCAL app.current_tenant
  *         Idempotency guard (INSERT ... ON CONFLICT DO NOTHING)
- *         UPSERT ticket_ai_summaries SET ai_status = 'running'
+ *         UPSERT ticket_ai_summaries SET ai_status = 'running',
+ *           attempt_count = attempt_count + 1   ← WO-064 attempt counting
  *         SELECT ... FOR UPDATE on the summary row (serialises concurrent redeliveries)
  *         COMMIT
  *
@@ -21,6 +22,12 @@
  *
  *   SQS message deleted only after Tx-2 commits.
  *
+ * Attempt cap (WO-064, AC-4):
+ *   attempt_count is incremented before every provider call.
+ *   When attempt_count reaches MAX_ATTEMPTS (3) and inference fails, the worker
+ *   transitions to failed, emits ai.synthesis.failed, and does NOT rethrow —
+ *   the SQS message is deleted so it does not flow to the DLQ.
+ *
  * AC-10: ticket closure never blocked — the ticket.resolved transition writes
  *        ai_status = 'pending' before the worker ever sees the message. Ticket
  *        resolution is complete regardless of whether this worker is running.
@@ -28,18 +35,7 @@
 
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { eq, and, sql } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import {
-  ticketAiSummaries,
-  ticketAffectedAreas,
-  aiSynthesisIdempotency,
-  outboxEvents,
-  auditLogs,
-} from '@opsninja/db';
-import { ThreadLoader } from './thread-loader';
-import { IdempotencyRepository } from './idempotency.repository';
 import {
   LLM_PROVIDER,
   RetryableLlmError,
@@ -47,6 +43,20 @@ import {
   type LlmProviderPort,
 } from './llm-provider.port';
 import { AI_POLICY, type AiPolicyPort } from './ai-policy.port';
+import { ThreadLoader } from './thread-loader';
+import { IdempotencyRepository } from './idempotency.repository';
+import {
+  emitAttemptMetric,
+  emitLagMetric,
+  type AttemptOutcome,
+} from './metrics';
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/** Maximum number of processing attempts before terminal failure (matches SQS maxReceiveCount). */
+export const MAX_ATTEMPTS = 3;
 
 // ---------------------------------------------------------------------------
 // SQS message shape
@@ -95,9 +105,10 @@ export class SynthesisService {
     const { tenantId, ticketId, eventId } = msg;
     const start = Date.now();
 
-    // ── Tx-1: idempotency + claim running ───────────────────────────────────
+    // ── Tx-1: idempotency + claim running + increment attempt_count ─────────
     let summaryId: string | null = null;
     let alreadyProcessed = false;
+    let attemptCount = 0;
 
     const client1 = await this.pool.connect();
     try {
@@ -112,23 +123,32 @@ export class SynthesisService {
       } else {
         // AI policy check (short-circuit before upsert)
         const policy = await this.aiPolicy.check(tenantId, ticketId);
-        if (policy === 'skip') {
-          await this.upsertSummaryStatus(client1, tenantId, ticketId, 'skipped', null);
+        if (policy.decision === 'skip') {
+          await this.upsertSummaryStatus(client1, tenantId, ticketId, 'skipped', policy.reason);
           await client1.query('COMMIT');
-          this.emitMetric('ai_synthesis_processed_total', { tenantId, outcome: 'skipped' });
+          this.logger.log('AI policy skip', { tenantId, ticketId, reason: policy.reason });
+          emitAttemptMetric({ tenantId, outcome: 'skipped', errorCode: policy.reason }, 0);
           return { outcome: 'skipped', shouldRetry: false };
         }
 
-        // Upsert running + SELECT FOR UPDATE to serialise concurrent redeliveries
-        const result = await client1.query<{ id: string }>(
-          `INSERT INTO ticket_ai_summaries (tenant_id, ticket_id, ai_status, created_at, updated_at)
-           VALUES ($1, $2, 'running', now(), now())
+        // Upsert running + atomically increment attempt_count (WO-064 AC-1)
+        const result = await client1.query<{ id: string; attempt_count: number }>(
+          `INSERT INTO ticket_ai_summaries
+             (tenant_id, ticket_id, ai_status, attempt_count, created_at, updated_at)
+           VALUES ($1, $2, 'running', 1, now(), now())
            ON CONFLICT (tenant_id, ticket_id) DO UPDATE
-             SET ai_status = 'running', updated_at = now()
-           RETURNING id`,
+             SET ai_status     = 'running',
+                 attempt_count = ticket_ai_summaries.attempt_count + 1,
+                 updated_at    = now()
+           RETURNING id, attempt_count`,
           [tenantId, ticketId],
         );
         summaryId = result.rows[0]?.id ?? null;
+        attemptCount = result.rows[0]?.attempt_count ?? 1;
+
+        this.logger.log('Synthesis attempt started', {
+          tenantId, ticketId, attempt: attemptCount,
+        });
 
         // SELECT FOR UPDATE ensures only one concurrent worker proceeds
         if (summaryId) {
@@ -146,9 +166,6 @@ export class SynthesisService {
       this.logger.error('Tx-1 failed', { tenantId, ticketId, error: (err as Error).message });
       return { outcome: 'failed_retryable', shouldRetry: true };
     } finally {
-      if (!alreadyProcessed || summaryId === null) {
-        // only release after commit/rollback branch above
-      }
       client1.release();
     }
 
@@ -163,15 +180,17 @@ export class SynthesisService {
       await client2.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
       request = await this.threadLoader.load(client2, tenantId, ticketId);
     } catch (err) {
-      const msg2 = (err as Error).message;
-      if (msg2.includes('not found')) {
+      const errMsg = (err as Error).message;
+      if (errMsg.includes('not found')) {
         this.logger.warn('Ticket not found — skipping synthesis', { tenantId, ticketId });
         client2.release();
-        await this.markFailedPermanent(tenantId, ticketId, 'TICKET_NOT_FOUND');
+        await this.markFailedPermanent(tenantId, ticketId, 'TICKET_NOT_FOUND', attemptCount, msg.traceparent);
+        emitAttemptMetric({ tenantId, outcome: 'ticket_not_found', errorCode: 'TICKET_NOT_FOUND' }, attemptCount);
         return { outcome: 'ticket_not_found', shouldRetry: false };
       }
       client2.release();
-      this.logger.error('Thread load failed', { tenantId, ticketId, error: msg2 });
+      this.logger.error('Thread load failed', { tenantId, ticketId, attempt: attemptCount, error: errMsg });
+      emitAttemptMetric({ tenantId, outcome: 'failed_retryable' }, attemptCount);
       return { outcome: 'failed_retryable', shouldRetry: true };
     } finally {
       client2.release();
@@ -182,18 +201,29 @@ export class SynthesisService {
     try {
       result = await this.llmProvider.synthesise(request);
     } catch (err) {
-      if (err instanceof NonRetryableLlmError) {
-        this.logger.error('Non-retryable LLM error', {
-          tenantId, ticketId, errorCode: err.errorCode,
-        });
-        await this.markFailedPermanent(tenantId, ticketId, err.errorCode);
-        this.emitMetric('ai_synthesis_processed_total', { tenantId, outcome: 'failed_permanent' });
+      const errorCode =
+        err instanceof NonRetryableLlmError ? err.errorCode : 'LLM_RETRYABLE_ERROR';
+      const isNonRetryable = err instanceof NonRetryableLlmError;
+      const isCapReached = attemptCount >= MAX_ATTEMPTS;
+
+      this.logger.error('LLM error', {
+        tenantId, ticketId, attempt: attemptCount, errorCode,
+        type: isNonRetryable ? 'non_retryable' : 'retryable',
+        capReached: isCapReached,
+      });
+
+      if (isNonRetryable || isCapReached) {
+        // Terminal failure: write failed state + emit ai.synthesis.failed outbox event
+        await this.markFailedPermanent(tenantId, ticketId, errorCode, attemptCount, msg.traceparent);
+        emitAttemptMetric(
+          { tenantId, outcome: 'failed_permanent', errorCode },
+          attemptCount,
+        );
         return { outcome: 'failed_permanent', shouldRetry: false };
       }
-      this.logger.warn('Retryable LLM error', {
-        tenantId, ticketId, error: (err as Error).message,
-      });
-      this.emitMetric('ai_synthesis_processed_total', { tenantId, outcome: 'failed_retryable' });
+
+      // Retryable and under cap — rethrow for SQS redelivery
+      emitAttemptMetric({ tenantId, outcome: 'failed_retryable', errorCode }, attemptCount);
       return { outcome: 'failed_retryable', shouldRetry: true };
     }
 
@@ -206,17 +236,17 @@ export class SynthesisService {
       // Update summary to succeeded
       await client3.query(
         `UPDATE ticket_ai_summaries
-         SET ai_status        = 'succeeded',
-             crux_summary     = $3,
+         SET ai_status          = 'succeeded',
+             crux_summary       = $3,
              resolution_summary = $4,
-             model_id         = $5,
-             prompt_version   = $6,
-             generated_at     = $7,
-             truncated        = $8,
-             prompt_tokens    = $9,
-             completion_tokens = $10,
-             last_error_code  = NULL,
-             updated_at       = now()
+             model_id           = $5,
+             prompt_version     = $6,
+             generated_at       = $7,
+             truncated          = $8,
+             prompt_tokens      = $9,
+             completion_tokens  = $10,
+             last_error_code    = NULL,
+             updated_at         = now()
          WHERE tenant_id = $1 AND ticket_id = $2`,
         [
           tenantId, ticketId,
@@ -246,7 +276,7 @@ export class SynthesisService {
         );
       }
 
-      // Outbox event (AC-9)
+      // Outbox event (ai.synthesis.completed)
       await client3.query(
         `INSERT INTO outbox_events (id, tenant_id, aggregate_type, aggregate_id, event_type, payload, status, created_at)
          VALUES ($1, $2, 'ticket', $3, 'ai.synthesis.completed', $4, 'pending', now())`,
@@ -256,6 +286,7 @@ export class SynthesisService {
             tenantId,
             ticketId,
             aiStatus: 'succeeded',
+            attemptCount,
             areaCount: deduped.length,
             modelId: result.modelId,
             promptVersion: result.promptVersion,
@@ -263,7 +294,7 @@ export class SynthesisService {
         ],
       );
 
-      // Audit record (AC-8)
+      // Audit record
       await client3.query(
         `INSERT INTO audit_logs (tenant_id, actor_id, actor_kind, event_type, outcome, resource_type, resource_id,
           action, after_state, source, trace_id, created_at)
@@ -271,7 +302,10 @@ export class SynthesisService {
                  'ticket', $2, 'synthesise', $3, 'ai-synthesis-worker', $4, now())`,
         [
           tenantId, ticketId,
-          JSON.stringify({ modelId: result.modelId, promptVersion: result.promptVersion, areaCount: deduped.length }),
+          JSON.stringify({
+            modelId: result.modelId, promptVersion: result.promptVersion,
+            areaCount: deduped.length, attemptCount,
+          }),
           msg.traceparent ?? randomUUID(),
         ],
       );
@@ -280,19 +314,34 @@ export class SynthesisService {
     } catch (err) {
       await client3.query('ROLLBACK').catch(() => undefined);
       this.logger.error('Tx-2 writeback failed', {
-        tenantId, ticketId, error: (err as Error).message,
+        tenantId, ticketId, attempt: attemptCount, error: (err as Error).message,
       });
+      emitAttemptMetric({ tenantId, outcome: 'failed_retryable' }, attemptCount);
       return { outcome: 'failed_retryable', shouldRetry: true };
     } finally {
       client3.release();
     }
 
+    // ── Post-success ──────────────────────────────────────────────────────
     const durationMs = Date.now() - start;
-    this.emitMetric('ai_synthesis_processed_total', { tenantId, outcome: 'succeeded' });
-    this.emitMetric('ai_synthesis_duration_ms', { tenantId, value: String(durationMs) });
+
+    emitAttemptMetric({ tenantId, outcome: 'succeeded' }, attemptCount);
+    emitLagMetric({
+      tenantId,
+      resolvedAt:  msg.occurredAt,
+      generatedAt: result.generatedAt.toISOString(),
+    });
+
     this.logger.log('Synthesis succeeded', {
-      tenantId, ticketId, durationMs,
+      tenantId, ticketId, attempt: attemptCount, durationMs,
       modelId: result.modelId, areaCount: result.affectedAreas.length,
+    });
+
+    // Record token usage for AI budget accounting (WO-063)
+    void this.aiPolicy.recordUsage(tenantId, {
+      inputTokens:  result.promptTokens,
+      outputTokens: result.completionTokens,
+      modelId:      result.modelId,
     });
 
     return { outcome: 'succeeded', shouldRetry: false };
@@ -313,30 +362,72 @@ export class SynthesisService {
       `INSERT INTO ticket_ai_summaries (tenant_id, ticket_id, ai_status, last_error_code, created_at, updated_at)
        VALUES ($1, $2, $3, $4, now(), now())
        ON CONFLICT (tenant_id, ticket_id) DO UPDATE
-         SET ai_status = EXCLUDED.ai_status,
+         SET ai_status       = EXCLUDED.ai_status,
              last_error_code = EXCLUDED.last_error_code,
-             updated_at = now()`,
+             updated_at      = now()`,
       [tenantId, ticketId, status, errorCode],
     );
   }
 
-  private async markFailedPermanent(
+  async markFailedPermanent(
     tenantId: string,
     ticketId: string,
     errorCode: string,
+    attemptCount: number,
+    traceId?: string,
   ): Promise<void> {
     const client = await this.pool.connect();
     try {
+      await client.query('BEGIN');
       await client.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
-      await this.upsertSummaryStatus(client, tenantId, ticketId, 'failed', errorCode);
+
+      // Set terminal failed state
+      await client.query(
+        `INSERT INTO ticket_ai_summaries
+           (tenant_id, ticket_id, ai_status, last_error_code, created_at, updated_at)
+         VALUES ($1, $2, 'failed', $3, now(), now())
+         ON CONFLICT (tenant_id, ticket_id) DO UPDATE
+           SET ai_status       = 'failed',
+               last_error_code = EXCLUDED.last_error_code,
+               updated_at      = now()`,
+        [tenantId, ticketId, errorCode],
+      );
+
+      // Emit ai.synthesis.failed domain event (WO-064 AC-4)
+      await client.query(
+        `INSERT INTO outbox_events
+           (id, tenant_id, aggregate_type, aggregate_id, event_type, payload, status, created_at)
+         VALUES ($1, $2, 'ticket', $3, 'ai.synthesis.failed', $4, 'pending', now())`,
+        [
+          randomUUID(), tenantId, ticketId,
+          JSON.stringify({
+            eventType:    'ai.synthesis.failed',
+            tenantId,
+            ticketId,
+            attemptCount,
+            lastErrorCode: errorCode,
+          }),
+        ],
+      );
+
+      await client.query('COMMIT');
+
+      this.logger.error('Synthesis failed permanently', {
+        tenantId, ticketId, attemptCount, errorCode, traceId,
+      });
     } catch (err) {
-      this.logger.error('Failed to mark summary as failed', { tenantId, ticketId, error: (err as Error).message });
+      await client.query('ROLLBACK').catch(() => undefined);
+      this.logger.error('Failed to write terminal failure state', {
+        tenantId, ticketId, error: (err as Error).message,
+      });
     } finally {
       client.release();
     }
   }
 
-  private deduplicateAreas(areas: Array<{ areaLabel: string; confidence: string }>): Array<{ areaLabel: string; confidence: string }> {
+  private deduplicateAreas(
+    areas: Array<{ areaLabel: string; confidence: string }>,
+  ): Array<{ areaLabel: string; confidence: string }> {
     const seen = new Map<string, string>();
     for (const a of areas) {
       const key = a.areaLabel.toLowerCase().trim();
@@ -345,9 +436,5 @@ export class SynthesisService {
       }
     }
     return Array.from(seen.entries()).map(([areaLabel, confidence]) => ({ areaLabel, confidence }));
-  }
-
-  private emitMetric(name: string, labels: Record<string, string>): void {
-    console.log(JSON.stringify({ metric: name, labels, value: 1, ts: Date.now() }));
   }
 }

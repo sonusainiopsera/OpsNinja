@@ -518,3 +518,10 @@
 - **Files:** 9 (+975/-9)
 - **Duration:** 452ss
 - **Approach:** N/A
+
+## WO-064: User Story: WO-064 - Synthesis retry cap, DLQ and operator alerting
+- **Status:** completed
+- **Commit:** `36a9225`
+- **Files:** 12 (+973/-79)
+- **Duration:** 575ss
+- **Approach:** N/A

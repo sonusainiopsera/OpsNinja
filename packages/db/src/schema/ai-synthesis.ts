@@ -68,6 +68,13 @@ export const ticketAiSummaries = pgTable(
     /** Stable error code when ai_status = 'failed'. */
     lastErrorCode: text('last_error_code'),
 
+    /**
+     * Number of processing attempts made. Atomically incremented before each
+     * LLM invocation so the cap is durable across worker crashes.
+     * Cap = 3 (matches SQS maxReceiveCount). WO-064.
+     */
+    attemptCount: integer('attempt_count').notNull().default(0),
+
     /** Prompt token count (for cost tracking). */
     promptTokens: integer('prompt_tokens'),
 

@@ -1,0 +1,85 @@
+# AI Synthesis alert rules — WO-064 AC-7
+#
+# Prometheus alerting rules for the ai-synthesis pipeline.
+# Each alert links to the runbook at docs/runbooks/ai-synthesis.md.
+#
+# Thresholds (AC-7):
+#   DLQ depth  > 0 for 5 minutes     → PagerDuty P2
+#   Success rate < 95% over 30 min   → PagerDuty P2
+#   Stuck count > 10                 → PagerDuty P3
+#
+# Metric sources (see packages/observability/src/jira-metrics.ts for reference):
+#   ai_synthesis_attempts_total{outcome,error_code}  — emitted by SynthesisService
+#   ai_synthesis_dlq_depth                           — emitted by SynthesisConsumer.emitQueueDepth
+#   ai_synthesis_stuck_total                         — emitted by ReconciliationJob
+#   ai_synthesis_lag_seconds                         — emitted by SynthesisService post-success
+
+groups:
+  - name: ai_synthesis
+    interval: 60s
+    rules:
+
+      # ── DLQ depth ─────────────────────────────────────────────────────────
+      - alert: AiSynthesisDlqNonEmpty
+        expr: ai_synthesis_dlq_depth > 0
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "AI synthesis DLQ has {{ $value }} messages"
+          description: >
+            The ai-synthesis dead-letter queue has been non-empty for 5 minutes.
+            Messages are routed here after {{ "{{ .maxReceiveCount }}" }} failed delivery
+            attempts. Investigate the root cause before redriving.
+          runbook_url: "https://github.com/opsninja/opsninja-api/blob/main/docs/runbooks/ai-synthesis.md"
+
+      # ── Success rate ──────────────────────────────────────────────────────
+      - alert: AiSynthesisLowSuccessRate
+        expr: >
+          (
+            sum(rate(ai_synthesis_attempts_total{outcome="succeeded"}[30m]))
+            /
+            sum(rate(ai_synthesis_attempts_total[30m]))
+          ) < 0.95
+        for: 30m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "AI synthesis success rate is {{ $value | humanizePercentage }}"
+          description: >
+            Synthesis success rate has been below 95% for 30 minutes.
+            Check ai_synthesis_attempts_total grouped by error_code to identify
+            the dominant failure mode.
+          runbook_url: "https://github.com/opsninja/opsninja-api/blob/main/docs/runbooks/ai-synthesis.md"
+
+      # ── Stuck summaries ───────────────────────────────────────────────────
+      - alert: AiSynthesisHighStuckCount
+        expr: ai_synthesis_stuck_total > 10
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "{{ $value }} AI synthesis rows are stuck in pending/running"
+          description: >
+            More than 10 ticket_ai_summaries rows are stuck in 'pending' or 'running'
+            beyond their staleness thresholds. The reconciliation job should auto-heal
+            these. If the count keeps rising, the reconciliation job may be unhealthy.
+          runbook_url: "https://github.com/opsninja/opsninja-api/blob/main/docs/runbooks/ai-synthesis.md"
+
+      # ── P95 lag ───────────────────────────────────────────────────────────
+      - alert: AiSynthesisHighLag
+        expr: histogram_quantile(0.95, rate(ai_synthesis_lag_seconds_bucket[30m])) > 300
+        for: 15m
+        labels:
+          severity: info
+          team: platform
+        annotations:
+          summary: "AI synthesis p95 lag is {{ $value | humanizeDuration }}"
+          description: >
+            The 95th-percentile time between ticket resolution and summary write
+            has exceeded 5 minutes for 15 minutes. This may indicate a backlog
+            or slow Bedrock responses.
+          runbook_url: "https://github.com/opsninja/opsninja-api/blob/main/docs/runbooks/ai-synthesis.md"
