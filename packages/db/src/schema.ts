@@ -505,3 +505,19 @@ export type {
   PortalUser,
   NewPortalUser,
 } from './schema/portal-signup';
+
+// ---------------------------------------------------------------------------
+// jira_project_mappings: project scoping and field/status mapping per connection
+// ---------------------------------------------------------------------------
+
+export { jiraProjectMappings } from './schema/jira-project-mappings';
+
+export type {
+  JiraProjectMapping,
+  NewJiraProjectMapping,
+  FieldMapEntry,
+  StatusMapEntry,
+  SyncRules,
+  MappingSource,
+  MappingTransform,
+} from './schema/jira-project-mappings';

@@ -40,6 +40,15 @@ export class JiraHttpClient {
     return data;
   }
 
+  /**
+   * Public generic GET — used by JiraMetadataService to call project/createmeta/field
+   * endpoints with arbitrary URL shapes. Internal callers should use the typed
+   * helpers below when possible.
+   */
+  async getJson<T>(url: string, bearerToken: string): Promise<T> {
+    return this.get<T>(url, bearerToken);
+  }
+
   /** Probe the Jira server for connectivity and version info. */
   async getServerInfo(siteUrl: string, accessToken: string): Promise<JiraServerInfo> {
     const url = `${siteUrl.replace(/\/$/, '')}/rest/api/3/serverInfo`;
