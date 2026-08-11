@@ -1,0 +1,22 @@
+{
+  "name": "@opsninja/e2e",
+  "version": "0.0.1",
+  "private": true,
+  "description": "OpsNinja critical-journey and accessibility E2E regression suite",
+  "scripts": {
+    "test": "vitest run unit",
+    "test:smoke": "playwright test --config playwright.config.ts --grep @smoke",
+    "test:full": "playwright test --config playwright.config.ts --grep @full",
+    "test:synthetic": "playwright test --config playwright.config.ts --grep @synthetic",
+    "test:e2e": "playwright test --config playwright.config.ts",
+    "test:e2e:report": "playwright show-report ../../test-results/e2e/html"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@axe-core/playwright": "^4.9.0",
+    "@playwright/test": "^1.47.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.0.0"
+  }
+}

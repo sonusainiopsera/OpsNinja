@@ -21,6 +21,18 @@
       "dependsOn": ["build"],
       "cache": false
     },
+    "test:smoke": {
+      "dependsOn": ["build"],
+      "cache": false
+    },
+    "test:full": {
+      "dependsOn": ["build"],
+      "cache": false
+    },
+    "test:synthetic": {
+      "dependsOn": ["build"],
+      "cache": false
+    },
     "test:isolation": {
       "dependsOn": ["build"],
       "cache": false
