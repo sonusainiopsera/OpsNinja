@@ -1,4 +1,16 @@
 {
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "@opsninja/shared": ["../../packages/shared/src/index.ts"],
+      "@opsninja/shared/*": ["../../packages/shared/src/*"]
+    }
+  },
+  "include": ["src/**/*", "test/**/*", "scripts/**/*"],
+  "exclude": ["node_modules", "dist"]
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "baseUrl": "./",
