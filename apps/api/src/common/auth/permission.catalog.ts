@@ -25,6 +25,7 @@ export type Permission =
   | 'org:create'
   | 'org:update'
   | 'org:deactivate'
+  // org:deactivate covers both deactivate and reactivate lifecycle transitions
   // ── Users & scope management ─────────────────────────────────────────────
   | 'user:read'
   | 'user:create'
@@ -91,7 +92,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<string, readonly Permission[]>> =
   manager: [
     'ticket:read', 'ticket:create', 'ticket:update', 'ticket:close',
     'ticket:reassign', 'ticket:view_internal_notes', 'ticket:add_internal_note',
-    'org:read', 'org:create', 'org:update',
+    'org:read', 'org:create', 'org:update', 'org:deactivate',
     'org:manage_scopes',
     'user:read', 'user:create', 'user:update', 'user:set_org_scope',
     'sla:read', 'sla:manage',

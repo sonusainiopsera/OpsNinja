@@ -28,6 +28,8 @@ import type { CreateOrganizationDto } from './dto/create-organization.dto';
 import type { UpdateOrganizationDto } from './dto/update-organization.dto';
 import type { ListOrganizationsQuery } from './dto/list-organizations.query';
 import type { PaginatedOrganizations } from './organizations.repository';
+import type { DeactivateOrganizationDto } from './dto/deactivate-organization.dto';
+import type { ReactivateOrganizationDto } from './dto/reactivate-organization.dto';
 
 @Injectable()
 export class OrganizationsService {
@@ -209,6 +211,127 @@ export class OrganizationsService {
       changedFields: Object.keys(changes).filter((k) => changes[k as keyof typeof changes] !== undefined),
     });
 
+    return result;
+  }
+
+  // --------------------------------------------------------------------------
+  // Lifecycle: isOrganizationActive (public interface for cross-module use)
+  // --------------------------------------------------------------------------
+
+  /**
+   * Returns true when the organisation exists and has status='active'.
+   *
+   * Called by the tickets module before creating a new ticket so it never
+   * joins directly to the organizations table (module boundary enforcement).
+   * Returns false for unknown IDs so callers may treat unknown as inactive.
+   */
+  async isOrganizationActive(tenantId: string, organizationId: string): Promise<boolean> {
+    return this.repo.isOrganizationActive(tenantId, organizationId);
+  }
+
+  // --------------------------------------------------------------------------
+  // Lifecycle: deactivate
+  // --------------------------------------------------------------------------
+
+  /**
+   * Deactivate an organisation.
+   *
+   * Business rules:
+   *   - confirmName must match org.name exactly (case-sensitive) — prevents
+   *     UI misclicks from propagating.
+   *   - Idempotent: already-inactive returns 200 with current state.
+   *   - Running SLA timers on in-flight tickets are intentionally NOT touched.
+   *     Support obligations survive the customer relationship ending; pausing
+   *     timers would penalise the customer unfairly.
+   *   - Contacts' portal_access_enabled is set to false in the same TX.
+   *   - Outbox event emitted once per genuine transition (not on idempotent repeat).
+   */
+  async deactivate(
+    tenantId: string,
+    id: string,
+    dto: DeactivateOrganizationDto,
+    actorId: string,
+    traceId?: string,
+  ): Promise<OrganizationRegistry> {
+    // Load org for name-confirmation check (before the FOR UPDATE lock)
+    const org = await this.repo.findById(tenantId, id);
+    if (!org) {
+      throw new NotFoundException({
+        error: { code: 'ORGANIZATION_NOT_FOUND', message: `Organization ${id} not found.`, details: [] },
+      });
+    }
+
+    // Confirmation name must match exactly
+    if (dto.confirmName !== org.name) {
+      throw new BadRequestException({
+        error: {
+          code: 'CONFIRMATION_NAME_MISMATCH',
+          message: `confirmName "${dto.confirmName}" does not match the organization name "${org.name}".`,
+        },
+      });
+    }
+
+    const result = await this.repo.deactivateOrganization(tenantId, id, actorId, traceId);
+
+    if (result === 'NOT_FOUND') {
+      throw new NotFoundException({
+        error: { code: 'ORGANIZATION_NOT_FOUND', message: `Organization ${id} not found.`, details: [] },
+      });
+    }
+
+    if (result === 'ALREADY_INACTIVE') {
+      // Idempotent — return current state without side effects
+      this.logger.log('Organization already inactive (idempotent deactivate)', { tenantId, orgId: id, actorId });
+      return org;
+    }
+
+    this.logger.log('Organization deactivated', { tenantId, orgId: id, actorId, operation: 'organization.deactivate' });
+    return result;
+  }
+
+  // --------------------------------------------------------------------------
+  // Lifecycle: reactivate
+  // --------------------------------------------------------------------------
+
+  async reactivate(
+    tenantId: string,
+    id: string,
+    dto: ReactivateOrganizationDto,
+    actorId: string,
+    traceId?: string,
+  ): Promise<OrganizationRegistry> {
+    const org = await this.repo.findById(tenantId, id);
+    if (!org) {
+      throw new NotFoundException({
+        error: { code: 'ORGANIZATION_NOT_FOUND', message: `Organization ${id} not found.`, details: [] },
+      });
+    }
+
+    // If already active, return idempotently
+    if (org.status === 'active') {
+      this.logger.log('Organization already active (idempotent reactivate)', { tenantId, orgId: id, actorId });
+      return org;
+    }
+
+    // Name-collision check: another active org may have taken the name
+    const nameConflict = await this.repo.findByName(tenantId, org.name);
+    if (nameConflict && nameConflict.id !== id) {
+      throw new ConflictException({
+        error: {
+          code: 'ORGANIZATION_NAME_CONFLICT',
+          message: `An active organization named "${org.name}" already exists. Rename it first, then reactivate.`,
+          details: [{ existingId: nameConflict.id }],
+        },
+      });
+    }
+
+    const result = await this.repo.reactivateOrganization(tenantId, id, actorId, traceId);
+
+    if (result === 'NOT_FOUND' || result === 'ALREADY_ACTIVE') {
+      return org; // idempotent
+    }
+
+    this.logger.log('Organization reactivated', { tenantId, orgId: id, actorId, operation: 'organization.reactivate' });
     return result;
   }
 

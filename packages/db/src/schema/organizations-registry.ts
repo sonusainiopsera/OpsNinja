@@ -76,6 +76,9 @@ export const organizationsRegistry = pgTable(
     /** Set when status transitions to 'inactive'. Null for active records. */
     deactivatedAt: timestamp('deactivated_at', { withTimezone: true }),
 
+    /** UUID of the staff user who performed the deactivation. Added by WO-025. */
+    deactivatedBy: uuid('deactivated_by'),
+
     /**
      * Optimistic-concurrency version counter. Incremented on every PATCH.
      * PATCH requests must supply the current version; a mismatch returns 409.

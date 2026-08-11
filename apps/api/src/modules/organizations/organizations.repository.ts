@@ -240,6 +240,150 @@ export class OrganizationsRepository extends TenantRepository {
   }
 
   // --------------------------------------------------------------------------
+  // Lifecycle: deactivate / reactivate
+  // --------------------------------------------------------------------------
+
+  /**
+   * Returns true when the organization exists and is active.
+   * Used by the tickets module to gate new ticket creation.
+   */
+  async isOrganizationActive(tenantId: string, id: string): Promise<boolean> {
+    const rows = await this.tx
+      .select({ status: organizationsRegistry.status })
+      .from(organizationsRegistry)
+      .where(
+        and(
+          eq(organizationsRegistry.tenantId, tenantId),
+          eq(organizationsRegistry.id, id),
+        ),
+      )
+      .limit(1);
+    return rows.length > 0 && rows[0]!.status === 'active';
+  }
+
+  /**
+   * Locks the organization row FOR UPDATE and deactivates it.
+   *
+   * Returns 'ALREADY_INACTIVE' for idempotency (caller returns 200).
+   * Returns 'NOT_FOUND' when the row doesn't exist in this tenant.
+   *
+   * NOTE: Running SLA timers on in-flight tickets are intentionally NOT
+   * touched here. Support obligations on open work survive the relationship
+   * ending — pausing timers would penalise the customer unfairly.
+   */
+  @Auditable()
+  async deactivateOrganization(
+    tenantId: string,
+    id: string,
+    actorId: string,
+    traceId?: string,
+  ): Promise<OrganizationRegistry | 'ALREADY_INACTIVE' | 'NOT_FOUND'> {
+    // Lock row for UPDATE to serialise concurrent deactivation requests
+    const locked = await this.tx.execute(
+      sql`SELECT id, status, name FROM organizations
+          WHERE tenant_id = ${tenantId} AND id = ${id}
+          FOR UPDATE`,
+    );
+
+    if ((locked as { rows: unknown[] }).rows.length === 0) return 'NOT_FOUND';
+    const current = (locked as { rows: Array<{ status: string }> }).rows[0]!;
+    if (current.status === 'inactive') return 'ALREADY_INACTIVE';
+
+    // Update organization
+    const rows = await this.tx
+      .update(organizationsRegistry)
+      .set({
+        status: 'inactive',
+        deactivatedAt: sql`now()`,
+        deactivatedBy: actorId,
+        version: sql`${organizationsRegistry.version} + 1`,
+        updatedAt: sql`now()`,
+      })
+      .where(
+        and(
+          eq(organizationsRegistry.tenantId, tenantId),
+          eq(organizationsRegistry.id, id),
+        ),
+      )
+      .returning();
+
+    // Suspend portal access for all contacts in this org
+    await this.tx
+      .update(contacts)
+      .set({ portalAccessEnabled: false, updatedAt: sql`now()` })
+      .where(
+        and(
+          eq(contacts.tenantId, tenantId),
+          eq(contacts.organizationId, id),
+        ),
+      );
+
+    await this.emitOutboxEvent(
+      tenantId,
+      'organization',
+      id,
+      'organization.deactivated',
+      { previousStatus: 'active', newStatus: 'inactive', actorId, occurredAt: new Date().toISOString() },
+      traceId,
+    );
+
+    return rows[0]!;
+  }
+
+  /**
+   * Locks the organization row FOR UPDATE and reactivates it.
+   *
+   * Returns 'ALREADY_ACTIVE' for idempotency (caller returns 200).
+   * Returns 'NOT_FOUND' when the row doesn't exist in this tenant.
+   * Caller is responsible for name-collision check before calling this.
+   */
+  @Auditable()
+  async reactivateOrganization(
+    tenantId: string,
+    id: string,
+    actorId: string,
+    traceId?: string,
+  ): Promise<OrganizationRegistry | 'ALREADY_ACTIVE' | 'NOT_FOUND'> {
+    const locked = await this.tx.execute(
+      sql`SELECT id, status FROM organizations
+          WHERE tenant_id = ${tenantId} AND id = ${id}
+          FOR UPDATE`,
+    );
+
+    if ((locked as { rows: unknown[] }).rows.length === 0) return 'NOT_FOUND';
+    const current = (locked as { rows: Array<{ status: string }> }).rows[0]!;
+    if (current.status === 'active') return 'ALREADY_ACTIVE';
+
+    const rows = await this.tx
+      .update(organizationsRegistry)
+      .set({
+        status: 'active',
+        deactivatedAt: null,
+        deactivatedBy: null,
+        version: sql`${organizationsRegistry.version} + 1`,
+        updatedAt: sql`now()`,
+      })
+      .where(
+        and(
+          eq(organizationsRegistry.tenantId, tenantId),
+          eq(organizationsRegistry.id, id),
+        ),
+      )
+      .returning();
+
+    await this.emitOutboxEvent(
+      tenantId,
+      'organization',
+      id,
+      'organization.reactivated',
+      { previousStatus: 'inactive', newStatus: 'active', actorId, occurredAt: new Date().toISOString() },
+      traceId,
+    );
+
+    return rows[0]!;
+  }
+
+  // --------------------------------------------------------------------------
   // Outbox helper
   // --------------------------------------------------------------------------
 

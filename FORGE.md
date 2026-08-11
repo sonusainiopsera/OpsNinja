@@ -224,3 +224,10 @@
 - **Files:** 12 (+916/-3)
 - **Duration:** 436ss
 - **Approach:** N/A
+
+## WO-025: User Story: WO-025 - Organization deactivation and reactivation lifecycle endpoint
+- **Status:** completed
+- **Commit:** `e9cc5e0`
+- **Files:** 13 (+932/-12)
+- **Duration:** 421ss
+- **Approach:** N/A
