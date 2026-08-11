@@ -1,0 +1,23 @@
+{
+  "name": "@opsninja/filter-compiler",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Allow-listed filter AST compiler for OpsNinja ticket queries",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^2.0.0",
+    "typescript": "^5.3.3",
+    "vitest": "^2.0.0"
+  }
+}
