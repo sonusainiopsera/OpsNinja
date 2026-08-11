@@ -6,7 +6,8 @@
   "types": "./src/index.ts",
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:isolation": "jest --config jest.config.js"
   },
   "dependencies": {
     "drizzle-orm": "^0.30.10",

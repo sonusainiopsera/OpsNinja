@@ -9,7 +9,8 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "lint": "eslint . --ext .ts"
+    "lint": "eslint . --ext .ts",
+    "test:isolation": "npm run test:isolation --workspace apps/api --workspace packages/db --if-present"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^6.21.0",
