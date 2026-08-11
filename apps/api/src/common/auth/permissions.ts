@@ -43,6 +43,10 @@ export const Permission = {
 
   // ── Integration administration ───────────────────────────────────────────
   WEBHOOKS_MANAGE: 'integrations:webhooks:manage',
+
+  // ── Security administration ──────────────────────────────────────────────
+  /** Allows unlocking a throttle-locked email address via POST /admin/auth/unlock. */
+  ADMIN_AUTH_UNLOCK: 'admin:auth:unlock',
 } as const;
 
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -71,6 +75,7 @@ export const ROLE_PERMISSION_MAP: Record<string, Permission[]> = {
     Permission.ROLES_WRITE,
     Permission.TENANT_SETTINGS,
     Permission.WEBHOOKS_MANAGE,
+    Permission.ADMIN_AUTH_UNLOCK,
   ],
   // ── Manager / Supervisor (can manage agent scopes) ──────────────────────
   supervisor: [

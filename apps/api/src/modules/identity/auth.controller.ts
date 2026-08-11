@@ -8,6 +8,7 @@ import {
   Req,
   Res,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
@@ -16,6 +17,7 @@ import { ErrorCode } from '../../common/errors/app-errors';
 import { SessionService, REFRESH_COOKIE_NAME, REFRESH_TTL_S } from './session.service';
 import { TokenService } from './token.service';
 import { AuditWriter } from '../../common/audit/audit-writer';
+import { ThrottleGuard, ThrottleByIp } from '../../common/security/throttle.guard';
 import { DB_TOKEN } from '../../data/db.module';
 import type { DB } from '@opsninja/db';
 
@@ -44,8 +46,11 @@ export class AuthController {
    * Validates the refresh cookie, rotates the session atomically, and returns a
    * fresh access token plus an updated httpOnly refresh cookie.
    * Returns 401 on missing/invalid/reused tokens, 503 when Redis is unavailable.
+   * Rate-limited per IP to prevent refresh token stuffing.
    */
   @Post('refresh')
+  @UseGuards(ThrottleGuard)
+  @ThrottleByIp()
   async refresh(@Req() req: Request, @Res() res: Response): Promise<void> {
     const cookieValue = this.readRefreshCookie(req);
 

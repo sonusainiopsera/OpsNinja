@@ -20,6 +20,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DbModule } from './data/db.module';
 import { HealthModule } from './health/health.module';
 import { RedisModule } from './common/redis/redis.module';
+import { SecurityModule } from './common/security/security.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { AuditModule } from './common/audit/audit.module';
 import { TicketsModule } from './modules/tickets/tickets.module';
@@ -40,6 +41,7 @@ import { UnitOfWork } from './data/unit-of-work';
     }),
     DbModule,
     RedisModule,
+    SecurityModule,
     AuditModule,
     HealthModule,
     IdentityModule,

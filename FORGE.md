@@ -119,3 +119,10 @@
 - **Files:** 9 (+889/-2)
 - **Duration:** 855ss
 - **Approach:** Built on the WO-006 foundation (OrgScopeService, agentOrgScopes table, scope predicate). Added the WO-013 API contract: (1) AUTH_REAUTHORIZE_REQUIRED error code (details:[{reason:'scope_changed'}]) replacing SCOPE_VERSION_STALE in the staleness check; (2) agentOrgScopeFilter() helper in scoped-query.helper.ts as the single repository integration point; (3) GET/PUT /api/v1/users/:userId/org-scope endpoints in users.controller.ts returning tenantWide flag, added/removed diff, and scopeVersion; (4) architecture test scanning repository files for unguarded scoped-table access; (5) org-scope fixture matrix with two partially-overlapping agents across three orgs; (6) unit tests covering all new behaviors.
+
+## WO-016: User Story: WO-016 - Authentication abuse throttling and security audit telemetry
+- **Status:** completed
+- **Commit:** `134e179`
+- **Files:** 14 (+1204/-9)
+- **Duration:** 604ss
+- **Approach:** Implemented application-level authentication throttling and security telemetry in three layers: (1) ThrottleService with Redis INCR sliding-window counters keyed by SHA-256(type:subject) — no PII at rest — plus a separate lockout key with exact TTL; configurable via THROTTLE_* env vars with defaults of 5 failures/hour and 15-min lockout; fail-closed on Redis unavailability (503 not fail-open); (2) ThrottleGuard with @ThrottleByEmail()/@ThrottleByIp() decorators applied to auth routes, Retry-After computed from actual lockout TTL, uniform 429 body for existing and non-existing accounts; (3) AuthAuditEmitter as a single funnel for all identity security events, POST /api/v1/admin/auth/unlock endpoint requiring ADMIN_AUTH_UNLOCK permission; extended PII redactor in @opsninja/observability with phone number (E.164/national), IPv4/IPv6, and free-text field patterns.

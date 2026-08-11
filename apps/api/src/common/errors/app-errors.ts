@@ -56,6 +56,15 @@ export const ErrorCode = {
   /** Portal client attempted to set a field reserved for internal/staff use. */
   PORTAL_FIELD_NOT_ALLOWED: 'PORTAL_FIELD_NOT_ALLOWED',
 
+  // ── Rate-limiting / throttle error codes ─────────────────────────────────
+  /**
+   * Too many authentication attempts from this email or IP.
+   * The client must honour the Retry-After response header.
+   * Response body is identical for existing and non-existing accounts to
+   * prevent account-enumeration.
+   */
+  AUTH_RATE_LIMITED: 'AUTH_RATE_LIMITED',
+
   // ── Org-scope error codes ─────────────────────────────────────────────────
   /**
    * Token's org_scope_version is behind the server-side counter.
