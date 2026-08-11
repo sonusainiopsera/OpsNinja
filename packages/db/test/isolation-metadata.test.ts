@@ -64,6 +64,9 @@ const TENANT_SCOPED_TABLES: string[] = [
   'sla_policy_versions',
   // WO-051: Jira connection and credential vault
   'jira_connections',
+  // WO-073: Report definitions and export jobs
+  'report_definitions',
+  'export_jobs',
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

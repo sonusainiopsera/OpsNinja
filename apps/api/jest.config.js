@@ -19,6 +19,8 @@ module.exports = {
     '^@opsninja/db/(.*)$': '<rootDir>/../../packages/db/src/$1',
     '^@opsninja/crypto$': '<rootDir>/../../packages/crypto/src/index.ts',
     '^@opsninja/crypto/(.*)$': '<rootDir>/../../packages/crypto/src/$1',
+    '^@opsninja/filter-compiler$': '<rootDir>/../../packages/filter-compiler/src/index.ts',
+    '^@opsninja/filter-compiler/(.*)$': '<rootDir>/../../packages/filter-compiler/src/$1',
   },
   collectCoverageFrom: [
     'src/**/*.ts',
