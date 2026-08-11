@@ -9,7 +9,7 @@
  * ReportQueryCompiler rejects unknown field names at compile time.
  */
 
-import { pgTable, uuid, text, timestamp, jsonb, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, timestamp, jsonb, integer, index } from 'drizzle-orm/pg-core';
 
 export const reportDefinitions = pgTable(
   'report_definitions',
@@ -23,6 +23,8 @@ export const reportDefinitions = pgTable(
     filterAst: jsonb('filter_ast'),
     chartType: text('chart_type'),
     sharingScope: text('sharing_scope').notNull().default('private'),
+    /** Optimistic-concurrency version counter. Incremented on every update. */
+    version: integer('version').notNull().default(1),
     schedule: jsonb('schedule'),
     createdBy: uuid('created_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -38,4 +40,4 @@ export const reportDefinitions = pgTable(
 
 export type ReportDefinition = typeof reportDefinitions.$inferSelect;
 export type NewReportDefinition = typeof reportDefinitions.$inferInsert;
-export type ReportSharingScope = 'private' | 'shared' | 'system';
+export type ReportSharingScope = 'private' | 'team' | 'tenant';

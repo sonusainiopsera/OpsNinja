@@ -41,6 +41,8 @@ export type Permission =
   | 'sla:manage'
   // ── Reports ──────────────────────────────────────────────────────────────
   | 'report:read'
+  | 'report:run'
+  | 'report:manage'
   | 'report:export'
   // ── Jira integration ─────────────────────────────────────────────────────
   | 'jira:read'
