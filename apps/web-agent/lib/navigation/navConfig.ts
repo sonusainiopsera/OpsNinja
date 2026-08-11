@@ -74,4 +74,17 @@ export const NAV_CONFIG: NavGroup[] = [
       },
     ],
   },
+  {
+    id: 'analytics',
+    label: 'Analytics',
+    items: [
+      {
+        id: 'reports',
+        label: 'Report Builder',
+        href: '/reports',
+        iconName: 'bar-chart',
+        requiredRoles: ['lead_analyst', 'admin', 'manager'],
+      },
+    ],
+  },
 ];
