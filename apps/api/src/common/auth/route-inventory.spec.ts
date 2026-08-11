@@ -16,6 +16,7 @@ import { REQUIRE_PERMISSION_KEY } from './require-permission.decorator';
 import { PUBLIC_KEY } from './public.decorator';
 import { HealthController } from '../../health/health.controller';
 import { AuthController } from '../../modules/identity/auth.controller';
+import { AdminAuthController } from '../../modules/identity/admin.auth.controller';
 import { PortalTicketsController } from '../../modules/tickets/portal/portal-tickets.controller';
 import { PortalAttachmentsController } from '../../modules/tickets/portal/portal-attachments.controller';
 import { AgentScopesController } from '../../modules/organizations/agent-scopes.controller';
@@ -32,6 +33,7 @@ const METHOD_METADATA = 'method';
 const CONTROLLERS: Function[] = [
   HealthController,
   AuthController,
+  AdminAuthController,
   PortalTicketsController,
   PortalAttachmentsController,
   AgentScopesController,

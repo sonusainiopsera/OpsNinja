@@ -119,3 +119,10 @@
 - **Files:** 11 (+850/-14)
 - **Duration:** 708ss
 - **Approach:** WO-013 builds on top of WO-006 infrastructure. Key changes: (1) Updated auth guard scope-version-mismatch error code from SCOPE_VERSION_STALE to AUTH_REAUTHORIZE_REQUIRED with details:[{reason:'scope_changed'}] per the WO-013 API contract. (2) Fixed validation error for cross-tenant org IDs: changed from 404 NotFoundException to 422 UnprocessableEntityException with code ORG_SCOPE_INVALID_ORGANIZATION. (3) Added new /api/v1/users/:userId/org-scope endpoint path (GET + PUT) with correct response shapes — GET returns {userId, tenantWide, organizationIds, scopeVersion}; PUT returns {scopeVersion, added, removed} diff. UsersController delegates to two new methods on AgentScopesService: getUserOrgScope and replaceUserOrgScope. (4) Architecture test scans repository files for missing org-scope predicate calls. (5) Three-org/two-agent fixture and comprehensive integration test suite covering all 10 ACs including the scope-narrowing reauthorization scenario.
+
+## WO-016: User Story: WO-016 - Authentication abuse throttling and security audit telemetry
+- **Status:** completed
+- **Commit:** `1fd0c67`
+- **Files:** 12 (+1002/-4)
+- **Duration:** 609ss
+- **Approach:** Created ThrottleService (Redis INCR+lockout pattern, SHA-256 subject keys, fail-closed on Redis failure), ThrottleGuard (NestJS CanActivate, Retry-After from actual TTL, uniform 429 AUTH_RATE_LIMITED envelope), PII redactor (hash email/phone/IP, redact free-text), AuthAuditEmitter (single funnel for all identity security events), and AdminAuthController (POST /api/v1/admin/auth/unlock with admin:unlock_auth permission). Added admin:unlock_auth to permission catalog and ALL_PERMISSIONS. SecurityModule exports ThrottleService and ThrottleGuard; IdentityModule imports SecurityModule. ThrottleGuard applied @UseGuards on the refresh endpoint.

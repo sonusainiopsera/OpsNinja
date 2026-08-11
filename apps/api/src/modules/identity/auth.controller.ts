@@ -27,6 +27,7 @@ import {
   UnauthorizedException,
   ServiceUnavailableException,
   InternalServerErrorException,
+  UseGuards,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
@@ -36,6 +37,7 @@ import { Public } from '../../common/auth/public.decorator';
 import { TokenService } from './services/token.service';
 import { SessionService } from './services/session.service';
 import { AuditService } from '../../common/auth/audit.service';
+import { ThrottleGuard } from '../../common/security/throttle.guard';
 
 export const REFRESH_COOKIE_NAME = 'refresh_token';
 export const REFRESH_COOKIE_PATH = '/api/v1/auth';
@@ -65,6 +67,7 @@ export class AuthController {
    */
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottleGuard)
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const cookieValue = req.cookies?.[REFRESH_COOKIE_NAME] as string | undefined;
     const traceId = req.headers['x-trace-id'] as string | undefined;

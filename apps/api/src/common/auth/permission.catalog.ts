@@ -43,6 +43,7 @@ export type Permission =
   // ── Tenant administration ─────────────────────────────────────────────────
   | 'admin:manage_tenant'
   | 'admin:revoke_sessions'
+  | 'admin:unlock_auth'
   // ── Webhooks ──────────────────────────────────────────────────────────────
   | 'webhook:read'
   | 'webhook:manage'
@@ -64,7 +65,7 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
   'sla:read', 'sla:manage',
   'report:read', 'report:export',
   'jira:read', 'jira:manage',
-  'admin:manage_tenant', 'admin:revoke_sessions',
+  'admin:manage_tenant', 'admin:revoke_sessions', 'admin:unlock_auth',
   'webhook:read', 'webhook:manage',
   'org:manage_scopes',
   'machine:jira_sync', 'machine:notification_send', 'machine:export',
