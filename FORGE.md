@@ -462,3 +462,10 @@
 - **Files:** 22 (+1838/-0)
 - **Duration:** 709ss
 - **Approach:** Implemented apps/workers/dashboard-aggregator as a NestJS standalone worker following the existing notification-worker scaffolding pattern. The design uses a functional core / imperative shell architecture: pure handler functions (one per event family) return typed Redis mutation command arrays; AggregateStore binds them to Redis via a Lua EVALSHA call that atomically performs the dedup SET NX and all counter mutations in a single round-trip. The Lua script clamps all HINCRBY results to zero to prevent negative counters. ReconcilerService runs every 60 s, executing tenant-scoped Postgres queries inside SET LOCAL app.current_tenant transactions with a 5 s statement timeout, then overwrites Redis and emits per-counter drift gauges. A backwards-compatible CONCURRENTLY migration adds the three partial indexes required for index-backed reconciliation queries.
+
+## WO-081: User Story: WO-081 - Ticket Lifecycle Event Notification Rules and Preferences
+- **Status:** completed
+- **Commit:** `b633f82`
+- **Files:** 17 (+3214/-3)
+- **Duration:** 801ss
+- **Approach:** N/A

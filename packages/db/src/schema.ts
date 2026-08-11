@@ -314,6 +314,19 @@ export type {
 } from './schema/notifications';
 
 // ---------------------------------------------------------------------------
+// Notification preferences (WO-081)
+// ---------------------------------------------------------------------------
+
+export { notificationPreferences } from './schema/notification-preferences';
+
+export type {
+  NotificationPreference,
+  NewNotificationPreference,
+  NotificationScope,
+  NotificationMode,
+} from './schema/notification-preferences';
+
+// ---------------------------------------------------------------------------
 // Webhooks (webhook_endpoints)
 // ---------------------------------------------------------------------------
 
