@@ -1,0 +1,32 @@
+{
+  "name": "@opsninja/test-seed",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Deterministic multi-tenant seed and fixture generator for OpsNinja test environments",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "bin": {
+    "opsninja-seed": "./src/cli.ts"
+  },
+  "scripts": {
+    "seed:small": "ts-node src/cli.ts seed --profile=small",
+    "seed:large": "ts-node src/cli.ts seed --profile=large",
+    "seed:reset": "ts-node src/cli.ts reset",
+    "seed:verify": "ts-node src/cli.ts verify",
+    "test": "jest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opsninja/db": "*",
+    "drizzle-orm": "^0.30.10",
+    "pg": "^8.11.5"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.5",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3",
+    "@types/jest": "^29.5.12",
+    "jest": "^29.7.0"
+  }
+}

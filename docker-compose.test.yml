@@ -1,0 +1,35 @@
+version: '3.9'
+
+# Test-environment Docker Compose for OpsNinja.
+# Provides a PostgreSQL 16 instance for integration and seed tests.
+# Usage:
+#   docker compose -f docker-compose.test.yml up -d
+#   TEST_DATABASE_URL=postgresql://opsninja_test:opsninja_test@localhost:5433/opsninja_test npm run seed:small -w @opsninja/test-seed
+#   docker compose -f docker-compose.test.yml down -v
+
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: opsninja-postgres-test
+    environment:
+      POSTGRES_USER: opsninja_test
+      POSTGRES_PASSWORD: opsninja_test
+      POSTGRES_DB: opsninja_test
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+      - ./packages/db/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U opsninja_test -d opsninja_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    tmpfs:
+      # Use tmpfs for faster tests when data persistence is not needed.
+      # Remove this line if you want data to survive restarts.
+      - /var/lib/postgresql/data
+
+volumes:
+  postgres_test_data:
+    driver: local

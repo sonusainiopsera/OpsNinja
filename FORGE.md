@@ -91,3 +91,10 @@
 - **Files:** 22 (+1552/-13)
 - **Duration:** 938ss
 - **Approach:** Implemented a cross-cutting audit capture layer using AsyncLocalStorage for context propagation. AuditContext seeds actor/tenant/trace metadata from HTTP interceptors (AuditInterceptor, registered as 2nd global APP_INTERCEPTOR inside TenantContextInterceptor) and from withAuditContext() wrappers for SQS workers. AuditWriter.append() uses the ambient transaction handle from RequestContextStore.getTx() ensuring audit records are transactionally coupled to mutations — failure re-throws, rolling back the mutation. Sensitive data is redacted through a DefaultRedactor injected as REDACTION_PORT. The @Auditable decorator registers method metadata in AuditCoverageRegistry at bootstrap; a CI guard test (audit-coverage.spec.ts) enumerates required methods and fails if any lack @Auditable decoration.
+
+## WO-097: User Story: WO-097 - Anonymised Multi-Tenant Seed and Fixture Generator
+- **Status:** completed
+- **Commit:** `ca4b5da`
+- **Files:** 26 (+2191/-0)
+- **Duration:** 661ss
+- **Approach:** Created a standalone @opsninja/test-seed workspace package with a functional-core / imperative-shell architecture. Pure factory modules (no DB) build typed objects conforming to Drizzle schema inferred types; a SeededPrng (Mulberry32) is injected through every factory constructor and Math.random() is banned via ESLint no-restricted-syntax. The persistence shell (SeedRunner) orchestrates factory calls, streams inserts in 500-row batches, pre-creates monthly partitions via PartitionProvisioner SQL, and enforces a test-host guard. AnonymisationValidator scans every generated value with regex deny-lists. The collision matrix config explicitly names which natural keys (email local-parts, ticket subjects, Jira issue keys) are shared across tenant pairs so isolation tests can assert on them.

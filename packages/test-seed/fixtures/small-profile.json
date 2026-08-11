@@ -1,0 +1,52 @@
+{
+  "_comment": "Snapshot of the small seed profile generated with seed=42 on 2025-01-15. Used by unit tests that need fixture data without a database.",
+  "meta": {
+    "profile": "small",
+    "seed": 42,
+    "generatedAt": "2025-01-15T00:00:00.000Z",
+    "partitionMonths": [
+      "2023-11", "2023-12",
+      "2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06",
+      "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12",
+      "2025-01", "2025-02"
+    ]
+  },
+  "tenants": [
+    { "index": 0, "slug": "alpha", "name": "Tenant Alpha" },
+    { "index": 1, "slug": "beta",  "name": "Tenant Beta"  },
+    { "index": 2, "slug": "gamma", "name": "Tenant Gamma" }
+  ],
+  "counts": {
+    "tenants": 3,
+    "organizations": 12,
+    "staff_users": 21,
+    "contacts_approx": 48,
+    "tickets": 400,
+    "comments_approx": 3000,
+    "sla_policies": 12,
+    "sla_timers_approx": 400
+  },
+  "collision_matrix": {
+    "contact_email_local_parts": [
+      { "tenants": [0, 1], "local_part": "john.doe"   },
+      { "tenants": [0, 1], "local_part": "jane.smith" },
+      { "tenants": [1, 2], "local_part": "admin"      }
+    ],
+    "ticket_subjects": [
+      { "tenants": [0, 1], "subject": "Cannot access dashboard"   },
+      { "tenants": [0, 2], "subject": "API rate limit exceeded"   }
+    ],
+    "jira_issue_keys": [
+      { "tenants": [0, 1], "issue_key": "OPS-1"   },
+      { "tenants": [0, 1], "issue_key": "OPS-2"   },
+      { "tenants": [1, 2], "issue_key": "INFRA-1" }
+    ]
+  },
+  "sample_tenant_alpha_org": {
+    "id": "DETERMINISTIC_REPLACE_ME",
+    "tenantId": "DETERMINISTIC_REPLACE_ME",
+    "name": "Apex Systems",
+    "domain": "apex-systems.example.com",
+    "isActive": true
+  }
+}
