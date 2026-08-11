@@ -30,6 +30,7 @@ import type { TokenService } from './token.service.js';
 import type { SessionService } from './session.service.js';
 import type { OidcService } from './oidc.service.js';
 import type { UsersRepository } from './users.repository.js';
+import type { UserProvisioningService } from './user-provisioning.service.js';
 import { OidcError } from './oidc.service.js';
 import { hashToken } from './session.service.js';
 
@@ -78,6 +79,8 @@ export interface AuthControllerOptions {
   sessionService: SessionService;
   oidcService: OidcService;
   usersRepository: UsersRepository;
+  /** Optional UserProvisioningService — used by the OIDC callback for WO-010 flow. */
+  userProvisioningService?: UserProvisioningService;
   throttleStore: ThrottleStore;
   /** Cookie name. Default: opsninja_rt */
   cookieName?: string;
@@ -99,6 +102,7 @@ export class AuthController {
   private readonly sessionService: SessionService;
   private readonly oidcService: OidcService;
   private readonly usersRepo: UsersRepository;
+  private readonly userProvisioningSvc: UserProvisioningService | undefined;
   private readonly throttleStore: ThrottleStore;
   private readonly cookieName: string;
   private readonly refreshTtlSeconds: number;
@@ -113,6 +117,7 @@ export class AuthController {
     this.sessionService = opts.sessionService;
     this.oidcService = opts.oidcService;
     this.usersRepo = opts.usersRepository;
+    this.userProvisioningSvc = opts.userProvisioningService;
     this.throttleStore = opts.throttleStore;
     this.cookieName = opts.cookieName ?? 'opsninja_rt';
     this.refreshTtlSeconds = opts.refreshTokenTtlSeconds ?? 8 * 60 * 60;
@@ -123,18 +128,25 @@ export class AuthController {
   }
 
   // -------------------------------------------------------------------------
-  // GET /api/v1/auth/login
+  // POST /api/v1/auth/login
+  // Returns { authorizationUrl, state, codeVerifier } so the SPA can redirect
+  // and present the raw verifier in the callback.
   // -------------------------------------------------------------------------
 
   async handleLogin(req: AuthRequest): Promise<AuthResponse> {
     const state = randomBytes(16).toString('base64url');
-    const redirectTo = req.query['redirect_to'];
+    const body = req.body as Record<string, unknown> | null | undefined;
+    const redirectTo = (body?.['redirectTo'] as string | undefined) ?? req.query['redirect_to'];
 
     try {
-      const authUrl = await this.oidcService.buildAuthorizationUrl(state, redirectTo);
+      const { authorizationUrl, codeVerifier } = await this.oidcService.buildAuthorizationUrl(
+        state,
+        redirectTo,
+      );
       return {
-        status: 302,
-        headers: { Location: authUrl },
+        status: 200,
+        headers: {},
+        body: { authorizationUrl, state, codeVerifier },
       };
     } catch (e) {
       return this.oidcError(e, 'OIDC_PROVIDER_UNAVAILABLE', 'OIDC provider unreachable', 503);
@@ -143,15 +155,18 @@ export class AuthController {
 
   // -------------------------------------------------------------------------
   // POST /api/v1/auth/callback
+  // Accepts { code, state, codeVerifier }. codeVerifier is validated against
+  // the S256 challenge stored at login time, then used to exchange the code.
   // -------------------------------------------------------------------------
 
   async handleCallback(req: AuthRequest): Promise<AuthResponse> {
     const body = req.body as Record<string, unknown> | null | undefined;
-    const code  = (body?.['code']  ?? req.query['code']) as string | undefined;
-    const state = (body?.['state'] ?? req.query['state']) as string | undefined;
+    const code         = (body?.['code']         ?? req.query['code']) as string | undefined;
+    const state        = (body?.['state']        ?? req.query['state']) as string | undefined;
+    const codeVerifier = (body?.['codeVerifier'] ?? req.query['codeVerifier']) as string | undefined;
 
-    if (!code || !state) {
-      return this.errorResponse(400, 'AUTH_INVALID_REQUEST', 'Missing code or state');
+    if (!code || !state || !codeVerifier) {
+      return this.errorResponse(400, 'AUTH_INVALID_REQUEST', 'Missing code, state or codeVerifier');
     }
 
     const ipHash = this.hashField(req.ip);
@@ -165,11 +180,17 @@ export class AuthController {
 
     let idTokenClaims;
     try {
-      idTokenClaims = (await this.oidcService.exchangeCode(code, state)).idTokenClaims;
+      idTokenClaims = (await this.oidcService.exchangeCode(code, state, codeVerifier)).idTokenClaims;
     } catch (e) {
       if (e instanceof OidcError) {
-        if (e.code === 'AUTH_INVALID_STATE') {
-          return this.errorResponse(401, 'AUTH_INVALID_STATE', 'Invalid or expired state');
+        if (e.code === 'AUTH_STATE_INVALID') {
+          return this.errorResponse(401, 'AUTH_STATE_INVALID', 'Invalid or expired state');
+        }
+        if (e.code === 'AUTH_EMAIL_UNVERIFIED') {
+          return this.errorResponse(401, 'AUTH_EMAIL_UNVERIFIED', 'Email address is not verified');
+        }
+        if (e.code === 'AUTH_TOKEN_INVALID' || e.code === 'AUTH_TOKEN_EXPIRED' || e.code === 'AUTH_NONCE_MISMATCH') {
+          return this.errorResponse(401, 'AUTH_TOKEN_INVALID', 'ID token validation failed');
         }
         if (e.code === 'OIDC_PROVIDER_UNREACHABLE' || e.code === 'OIDC_PROVIDER_ERROR') {
           return this.errorResponse(503, 'OIDC_PROVIDER_UNAVAILABLE', 'Provider error');
@@ -202,6 +223,49 @@ export class AuthController {
     const result = await this.sql.begin(async (tx) => {
       await tx.unsafe(`SET LOCAL "app.current_tenant" = '${tenantId}'`);
 
+      const expiresAt = new Date(this.clock().getTime() + this.refreshTtlSeconds * 1000);
+      const uaHash = req.headers['user-agent']
+        ? this.hashField(Array.isArray(req.headers['user-agent']) ? req.headers['user-agent'][0]! : req.headers['user-agent'] as string)
+        : undefined;
+
+      // Use UserProvisioningService (WO-010 flow) if available
+      if (this.userProvisioningSvc) {
+        const outcome = await this.userProvisioningSvc.provisionAndResolve(
+          tx as unknown as Sql,
+          {
+            tenantId,
+            externalSubject: idTokenClaims.sub,
+            email: idTokenClaims.email,
+            displayName: idTokenClaims.name,
+            emailVerified: idTokenClaims.email_verified === true,
+          },
+        );
+
+        if (!outcome.ok) {
+          return { provisionError: outcome.error as string };
+        }
+
+        const { principal } = outcome;
+
+        const session = await this.sessionService.create(tx as unknown as Sql, {
+          tenantId,
+          userId: principal.userId,
+          expiresAt,
+          userAgentHash: uaHash,
+          ipHash,
+        });
+
+        const accessToken = await this.tokenService.issueAccessToken({
+          sub: principal.userId,
+          tenant_id: tenantId,
+          roles: principal.roles,
+          org_scope_version: principal.orgScopeVersion,
+        });
+
+        return { principal, session, accessToken };
+      }
+
+      // Legacy path (WO-005 style, no externalSubject)
       const user = await this.usersRepo.provisionStaff(tx as unknown as Sql, {
         tenantId,
         email: idTokenClaims.email,
@@ -209,20 +273,19 @@ export class AuthController {
       });
 
       if (user.status === 'deactivated') {
-        return { error: 'USER_DEACTIVATED' as const };
+        return { provisionError: 'AUTH_USER_DISABLED' as string };
       }
 
       const roles = await this.usersRepo.findUserRoles(tx as unknown as Sql, tenantId, user.id);
+      if (roles.length === 0) {
+        return { provisionError: 'AUTH_NO_ROLES' as string };
+      }
       const orgScopeVersion = await this.usersRepo.getOrgScopeVersion(
         tx as unknown as Sql,
         tenantId,
         user.id,
       );
-
-      const expiresAt = new Date(this.clock().getTime() + this.refreshTtlSeconds * 1000);
-      const uaHash = req.headers['user-agent']
-        ? this.hashField(Array.isArray(req.headers['user-agent']) ? req.headers['user-agent'][0]! : req.headers['user-agent'] as string)
-        : undefined;
+      const orgScope = await this.usersRepo.getOrgScopeIds(tx as unknown as Sql, tenantId, user.id);
 
       const session = await this.sessionService.create(tx as unknown as Sql, {
         tenantId,
@@ -239,15 +302,37 @@ export class AuthController {
         org_scope_version: orgScopeVersion,
       });
 
-      return { user, session, accessToken, roles, orgScopeVersion };
+      const principal = {
+        userId: user.id,
+        tenantId,
+        email: user.email,
+        displayName: user.displayName,
+        roles: roles.map((r) => r.roleName),
+        orgScope,
+        orgScopeVersion,
+      };
+      return { principal, session, accessToken };
     });
 
-    if ('error' in result) {
-      return this.errorResponse(403, result.error, 'Account is deactivated');
+    if ('provisionError' in result) {
+      const code = result.provisionError;
+      if (code === 'EMAIL_UNVERIFIED' || code === 'AUTH_EMAIL_UNVERIFIED') {
+        return this.errorResponse(401, 'AUTH_EMAIL_UNVERIFIED', 'Email address is not verified');
+      }
+      if (code === 'DISABLED' || code === 'AUTH_USER_DISABLED') {
+        return this.errorResponse(401, 'AUTH_USER_DISABLED', 'Account is disabled');
+      }
+      if (code === 'DOMAIN_NOT_ALLOWED') {
+        return this.errorResponse(401, 'AUTH_EMAIL_UNVERIFIED', 'Email domain not permitted');
+      }
+      if (code === 'NO_ROLES' || code === 'AUTH_NO_ROLES') {
+        return this.errorResponse(403, 'AUTH_NO_ROLES', 'User has no roles assigned');
+      }
+      return this.errorResponse(401, 'AUTH_CALLBACK_FAILED', 'Authentication failed');
     }
 
-    const { session, accessToken } = result;
-    return this.successWithCookie(accessToken, session.rawToken, session.expiresAt);
+    const { principal, session, accessToken } = result;
+    return this.successWithPrincipal(principal, accessToken, session.rawToken, session.expiresAt);
   }
 
   // -------------------------------------------------------------------------
@@ -345,6 +430,38 @@ export class AuthController {
   // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
+
+  private successWithPrincipal(
+    principal: { userId: string; tenantId: string; displayName: string | null; email: string; roles: string[]; orgScope: string[]; orgScopeVersion: number },
+    accessToken: string,
+    rawRefreshToken: string,
+    expiresAt: Date,
+  ): AuthResponse {
+    const cookieAttrs = [
+      `${this.cookieName}=${rawRefreshToken}`,
+      'HttpOnly',
+      this.secureCookies ? 'Secure' : '',
+      'SameSite=Strict',
+      'Path=/api/v1/auth',
+      `Expires=${expiresAt.toUTCString()}`,
+    ].filter(Boolean).join('; ');
+
+    return {
+      status: 200,
+      headers: { 'Set-Cookie': cookieAttrs },
+      body: {
+        user: {
+          id: principal.userId,
+          displayName: principal.displayName,
+          tenantId: principal.tenantId,
+          roles: principal.roles,
+          orgScope: principal.orgScope,
+        },
+        accessToken,
+        expiresIn: 900,
+      },
+    };
+  }
 
   private successWithCookie(
     accessToken: string,

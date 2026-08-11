@@ -69,9 +69,16 @@ export interface OidcDiscovery {
 }
 
 export interface PkceState {
-  codeVerifier: string;
+  /** SHA-256 (S256) challenge derived from the code_verifier. */
+  s256Challenge: string;
   nonce: string;
   redirectTo?: string;
+}
+
+export interface BuildAuthorizationUrlResult {
+  authorizationUrl: string;
+  /** Raw code verifier — must be presented unchanged at the callback. */
+  codeVerifier: string;
 }
 
 export interface IdTokenClaims extends JWTPayload {
@@ -126,15 +133,21 @@ export class OidcService {
   }
 
   /**
-   * Generates a PKCE state (verifier + nonce), stores it in the KV store
-   * under the given state parameter, and returns the authorization URL.
+   * Generates a PKCE state (verifier + nonce), stores the S256 challenge in
+   * the KV store under the given state parameter, and returns both the
+   * authorization URL and the raw code_verifier (which the caller must
+   * present unchanged in the callback request).
    */
-  async buildAuthorizationUrl(state: string, redirectTo?: string): Promise<string> {
-    const codeVerifier = randomBytes(32).toString('base64url');
+  async buildAuthorizationUrl(
+    state: string,
+    redirectTo?: string,
+  ): Promise<BuildAuthorizationUrlResult> {
+    // code_verifier: 43–128 char base64url from CSPRNG (PKCE spec §4.1)
+    const codeVerifier = randomBytes(48).toString('base64url');
     const nonce = randomBytes(16).toString('base64url');
-    const codeChallenge = this.s256Challenge(codeVerifier);
+    const s256Challenge = this.s256Challenge(codeVerifier);
 
-    const pkceState: PkceState = { codeVerifier, nonce, redirectTo };
+    const pkceState: PkceState = { s256Challenge, nonce, redirectTo };
     await this.store.set(
       this.stateKey(state),
       JSON.stringify(pkceState),
@@ -149,11 +162,14 @@ export class OidcService {
       scope: this.config.scopes.join(' '),
       state,
       nonce,
-      code_challenge: codeChallenge,
+      code_challenge: s256Challenge,
       code_challenge_method: 'S256',
     });
 
-    return `${discovery.authorization_endpoint}?${params.toString()}`;
+    return {
+      authorizationUrl: `${discovery.authorization_endpoint}?${params.toString()}`,
+      codeVerifier,
+    };
   }
 
   /**
@@ -161,12 +177,19 @@ export class OidcService {
    *
    * The PKCE state is deleted BEFORE validation (single-use semantics).
    * If validation fails after deletion, the state cannot be replayed.
+   *
+   * @param codeVerifier - Raw verifier presented by the client; must hash to
+   *   the S256 challenge stored at login time.
    */
-  async exchangeCode(code: string, state: string): Promise<TokenExchangeResult> {
+  async exchangeCode(
+    code: string,
+    state: string,
+    codeVerifier: string,
+  ): Promise<TokenExchangeResult> {
     const stateKey = this.stateKey(state);
     const stateJson = await this.store.get(stateKey);
     if (!stateJson) {
-      throw new OidcError('AUTH_INVALID_STATE', 'PKCE state not found or expired');
+      throw new OidcError('AUTH_STATE_INVALID', 'PKCE state not found or expired');
     }
 
     // Single-use: delete before validation
@@ -176,14 +199,20 @@ export class OidcService {
     try {
       pkceState = JSON.parse(stateJson) as PkceState;
     } catch {
-      throw new OidcError('AUTH_INVALID_STATE', 'Corrupt PKCE state');
+      throw new OidcError('AUTH_STATE_INVALID', 'Corrupt PKCE state');
+    }
+
+    // Validate code_verifier against stored S256 challenge
+    const computedChallenge = this.s256Challenge(codeVerifier);
+    if (computedChallenge !== pkceState.s256Challenge) {
+      throw new OidcError('AUTH_STATE_INVALID', 'Code verifier does not match stored challenge');
     }
 
     const discovery = await this.discover();
     const tokenResponse = await this.fetchTokens(
       discovery.token_endpoint,
       code,
-      pkceState.codeVerifier,
+      codeVerifier,
     );
 
     const idTokenClaims = await this.validateIdToken(
@@ -263,6 +292,9 @@ export class OidcService {
       }
       if (!claims.email) {
         throw new OidcError('AUTH_TOKEN_INVALID', 'ID token missing email claim');
+      }
+      if (claims.email_verified !== true) {
+        throw new OidcError('AUTH_EMAIL_UNVERIFIED', 'Email address is not verified by the identity provider');
       }
 
       return claims;

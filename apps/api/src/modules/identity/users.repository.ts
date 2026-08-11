@@ -187,6 +187,67 @@ export class UsersRepository {
     `, [tenantId, userId]);
     return Number((rows[0] as Record<string, unknown>)['n'] ?? 0);
   }
+
+  /**
+   * Returns the list of organization UUIDs in the agent's org scope.
+   */
+  async getOrgScopeIds(
+    sql: Sql,
+    tenantId: string,
+    userId: string,
+  ): Promise<string[]> {
+    const rows = await sql.unsafe<Record<string, unknown>[]>(`
+      SELECT organization_id
+      FROM   agent_org_scopes
+      WHERE  tenant_id = $1::uuid
+        AND  user_id   = $2::uuid
+    `, [tenantId, userId]);
+    return rows.map((r) => r['organization_id'] as string);
+  }
+
+  /**
+   * Upserts a staff user matching on (tenant_id, external_subject).
+   * Updates display_name and email on every re-login (OIDC subject is stable).
+   * Falls back to email_normalized if external_subject is already taken by
+   * a different email (unlikely but safe: updates email on the subject row).
+   */
+  async provisionStaffBySubject(
+    sql: Sql,
+    params: {
+      tenantId: string;
+      externalSubject: string;
+      email: string;
+      displayName?: string;
+    },
+  ): Promise<UserRecord> {
+    const emailNormalized = params.email.toLowerCase().trim();
+    const rows = await sql.unsafe<Record<string, unknown>[]>(`
+      INSERT INTO users
+        (tenant_id, id, external_subject, email, email_normalized, display_name, kind, status, user_type)
+      VALUES
+        ($1::uuid, gen_random_uuid(), $2, $3, $4, $5, 'staff', 'active', 'staff')
+      ON CONFLICT (tenant_id, external_subject)
+        WHERE external_subject IS NOT NULL
+        DO UPDATE SET
+          email            = EXCLUDED.email,
+          email_normalized = EXCLUDED.email_normalized,
+          display_name     = EXCLUDED.display_name,
+          status           = CASE
+                               WHEN users.status = 'deactivated' THEN users.status
+                               ELSE 'active'
+                             END,
+          updated_at       = now()
+      RETURNING id, tenant_id, email, email_normalized, display_name, kind, status
+    `, [
+      params.tenantId,
+      params.externalSubject,
+      params.email,
+      emailNormalized,
+      params.displayName ?? null,
+    ]);
+
+    return mapUserRow(rows[0]!);
+  }
 }
 
 function mapUserRow(row: Record<string, unknown>): UserRecord {
