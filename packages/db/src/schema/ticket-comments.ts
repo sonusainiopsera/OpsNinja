@@ -43,6 +43,20 @@ export const ticketComments = pgTable(
     /** Full comment body. No length cap at DB layer; 64KB+ bodies are fine. */
     body: text('body').notNull(),
 
+    /**
+     * External system comment ID for idempotent mirroring — e.g. the Jira
+     * comment id.  Null for ordinary agent / portal comments.
+     * Combined with external_source, forms a unique key preventing duplicate
+     * mirrors on webhook redelivery (enforced by migration 0032 index).
+     */
+    externalRef: text('external_ref'),
+
+    /**
+     * The external system that originated the comment (e.g. 'jira').
+     * Null for ordinary agent / portal comments.
+     */
+    externalSource: text('external_source'),
+
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

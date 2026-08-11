@@ -13,6 +13,7 @@ import {
   pgTable,
   uuid,
   text,
+  boolean,
   timestamp,
   index,
   uniqueIndex,
@@ -49,6 +50,18 @@ export const ticketJiraLinks = pgTable(
     errorCode: text('error_code'),
     /** Human-readable error message for the UI card. */
     errorMessage: text('error_message'),
+    /**
+     * The issue.fields.updated timestamp from the most-recently processed
+     * inbound event.  Used to detect and discard out-of-order (stale) events.
+     */
+    jiraUpdatedAt: timestamp('jira_updated_at', { withTimezone: true }),
+
+    /**
+     * Set to true when a jira:issue_deleted event arrives.  The inbound
+     * worker skips further processing for orphaned links.
+     */
+    orphaned: boolean('orphaned').notNull().default(false),
+
     createdBy: uuid('created_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

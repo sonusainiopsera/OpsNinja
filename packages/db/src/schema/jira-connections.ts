@@ -37,6 +37,13 @@ export const jiraConnections = pgTable(
      * overlap window during which both current and previous secrets are accepted.
      */
     webhookSecretRotatedAt: timestamp('webhook_secret_rotated_at', { withTimezone: true }),
+    /**
+     * Jira account ID (e.g. '5e8c…a3f2') for the OAuth service account that
+     * OpsNinja uses to write to Jira.  The inbound worker skips events authored
+     * by this account to break the feedback loop.  Populated on first successful
+     * API call after OAuth consent.
+     */
+    integrationAccountId: text('integration_account_id'),
     createdBy: uuid('created_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
