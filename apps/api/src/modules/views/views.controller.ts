@@ -1,11 +1,13 @@
 /**
- * ViewsController — WO-039.
+ * ViewsController — WO-039 + WO-040.
  *
  * REST surface for saved views: list, create, update, delete, duplicate,
  * pin/unpin, and batch reorder pins.
+ * Also serves GET /api/v1/views/counts (WO-040) for the views rail badges.
  *
  * Endpoint map:
  *   GET    /api/v1/views
+ *   GET    /api/v1/views/counts        ← WO-040
  *   POST   /api/v1/views
  *   GET    /api/v1/views/:id
  *   PATCH  /api/v1/views/:id
@@ -14,6 +16,9 @@
  *   PUT    /api/v1/views/:id/pin
  *   DELETE /api/v1/views/:id/pin
  *   PUT    /api/v1/views/pins/order
+ *
+ * NOTE: /counts and /pins/order must be declared BEFORE /:id routes to avoid
+ * being captured by the /:id pattern. NestJS uses declaration order for matching.
  */
 
 import {
@@ -30,6 +35,7 @@ import {
 } from '@nestjs/common';
 import { RequirePermission } from '../../common/auth/require-permission.decorator';
 import { ViewsService } from './views.service';
+import { ViewCountsService } from './view-counts.service';
 import {
   CreateViewSchema,
   UpdateViewSchema,
@@ -43,7 +49,10 @@ import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 
 @Controller('views')
 export class ViewsController {
-  constructor(private readonly service: ViewsService) {}
+  constructor(
+    private readonly service: ViewsService,
+    private readonly viewCountsService: ViewCountsService,
+  ) {}
 
   private ctx() {
     return getPrincipalContext();
@@ -65,6 +74,20 @@ export class ViewsController {
     const principal = this.ctx();
     const views = await this.service.listForPrincipal(principal);
     return { data: views };
+  }
+
+  // --------------------------------------------------------------------------
+  // Counts — per-view ticket counts for the views rail (WO-040)
+  // NOTE: must be declared BEFORE ':id' route to avoid pattern capture.
+  // --------------------------------------------------------------------------
+
+  @Get('counts')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('view:read')
+  async getCounts() {
+    const principal = this.ctx();
+    const counts = await this.viewCountsService.getCounts(principal);
+    return { counts };
   }
 
   // --------------------------------------------------------------------------

@@ -252,3 +252,10 @@
 - **Files:** 13 (+1560/-82)
 - **Duration:** 687ss
 - **Approach:** N/A
+
+## WO-040: User Story: WO-040 - Cached Agent Queue Listing With Cursor Pagination
+- **Status:** completed
+- **Commit:** `d2767bb`
+- **Files:** 10 (+1244/-6)
+- **Duration:** 718ss
+- **Approach:** N/A
