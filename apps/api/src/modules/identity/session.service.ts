@@ -77,8 +77,16 @@ export interface CreateSessionInput {
   tenantId: string;
   userId: string;
   principalKind: string;
+  /** Roles snapshot stored in the session for use when re-minting access tokens. */
+  roles?: string[];
   userAgent?: string;
   ipAddress?: string;
+}
+
+export interface SessionPrincipal {
+  userId: string;
+  principalKind: string;
+  roles: string[];
 }
 
 export interface SessionToken {
@@ -109,7 +117,10 @@ export class SessionService {
     const hash = this.hashToken(rawToken);
     const expiresAt = new Date(this.now() + REFRESH_TTL_S * 1_000);
 
-    await this.writeToRedis(input.tenantId, sessionId, familyId, hash, input.userId);
+    await this.writeToRedis(
+      input.tenantId, sessionId, familyId, hash,
+      input.userId, input.principalKind, input.roles ?? [],
+    );
     await this.sessionRepo.create({
       id: sessionId,
       tenantId: input.tenantId,
@@ -146,7 +157,7 @@ export class SessionService {
     tenantId: string,
     sessionId: string,
     presentedRawToken: string,
-  ): Promise<{ newRawToken: string; orgScopeVersion: number }> {
+  ): Promise<{ newRawToken: string; orgScopeVersion: number; principal: SessionPrincipal }> {
     const newRawToken = randomBytes(TOKEN_BYTES).toString('hex');
     const presentedHash = this.hashToken(presentedRawToken);
     const newHash = this.hashToken(newRawToken);
@@ -164,8 +175,11 @@ export class SessionService {
         await this.sessionRepo.recordRotation(tenantId, sessionId).catch(() => {});
       }
       this.audit('session.rotated', { tenantId, sessionId, familyId, graceWindow: status === 2 });
-      const orgScopeVersion = await this.getOrgScopeVersion(tenantId);
-      return { newRawToken, orgScopeVersion };
+      const [orgScopeVersion, principal] = await Promise.all([
+        this.getOrgScopeVersion(tenantId),
+        this.readSessionPrincipal(key),
+      ]);
+      return { newRawToken, orgScopeVersion, principal };
     }
 
     if (status === -1) {
@@ -291,12 +305,22 @@ export class SessionService {
     return `session_family:${tenantId}:${familyId}`;
   }
 
+  private async readSessionPrincipal(key: string): Promise<SessionPrincipal> {
+    const vals = await this.redis.hmget(key, 'userId', 'principalKind', 'roles');
+    const [userId, principalKind, rolesJson] = vals as (string | null)[];
+    let roles: string[] = [];
+    try { roles = rolesJson ? (JSON.parse(rolesJson) as string[]) : []; } catch { /* ignore */ }
+    return { userId: userId ?? '', principalKind: principalKind ?? 'staff', roles };
+  }
+
   private async writeToRedis(
     tenantId: string,
     sessionId: string,
     familyId: string,
     hash: string,
     userId: string,
+    principalKind: string,
+    roles: string[],
   ): Promise<void> {
     const key = this.sessionKey(tenantId, sessionId);
     try {
@@ -305,6 +329,8 @@ export class SessionService {
         prevHash: '',
         prevHashExpiry: '0',
         userId,
+        principalKind,
+        roles: JSON.stringify(roles),
         familyId,
         rotationCount: '0',
         revoked: '0',

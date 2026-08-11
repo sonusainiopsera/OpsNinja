@@ -115,15 +115,19 @@ describe('SessionService', () => {
 
   it('ROTATED path: returns a new raw token and calls recordRotation', async () => {
     redis.evalsha.mockResolvedValueOnce([1, 'ROTATED', 'family-id-1']);
+    redis.hmget.mockResolvedValueOnce(['user-1', 'staff', '["agent"]']);
     const result = await svc.rotateSession(TENANT_A_ID, 'session-1', 'old-token');
     expect(result.newRawToken).toHaveLength(64);
+    expect(result.principal).toMatchObject({ userId: 'user-1', principalKind: 'staff', roles: ['agent'] });
     expect(repo.recordRotation).toHaveBeenCalledWith(TENANT_A_ID, 'session-1');
   });
 
   it('GRACE_ROTATED path: returns new token but skips recordRotation', async () => {
     redis.evalsha.mockResolvedValueOnce([2, 'GRACE_ROTATED', 'family-id-1']);
+    redis.hmget.mockResolvedValueOnce(['user-1', 'portal', '[]']);
     const result = await svc.rotateSession(TENANT_A_ID, 'session-1', 'old-token');
     expect(result.newRawToken).toHaveLength(64);
+    expect(result.principal.principalKind).toBe('portal');
     expect(repo.recordRotation).not.toHaveBeenCalled();
   });
 

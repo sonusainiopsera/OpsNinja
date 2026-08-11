@@ -111,6 +111,11 @@ export function makeFakeRedis() {
       Promise.resolve(strings.get(key) ?? null),
     ),
 
+    hmget: jest.fn().mockImplementation((key: string, ...fields: string[]) => {
+      const m = store.get(key);
+      return Promise.resolve(fields.map((f) => m?.get(f) ?? null));
+    }),
+
     pipeline: jest.fn().mockImplementation(() => {
       const cmds: Array<() => void> = [];
       const pipe = {

@@ -69,6 +69,11 @@ function makeFakeRedisForE2E() {
 
     get: jest.fn().mockResolvedValue(null),
 
+    hmget: jest.fn().mockImplementation((key: string, ...fields: string[]) => {
+      const m = self._store.get(key);
+      return Promise.resolve(fields.map((f) => m?.get(f) ?? null));
+    }),
+
     pipeline: jest.fn().mockImplementation(() => {
       const pipe = {
         hset: jest.fn().mockReturnThis(),
@@ -198,6 +203,7 @@ describe('Auth Session lifecycle (e2e)', () => {
       tenantId: TENANT_A_ID,
       userId: TEST_PRINCIPAL.userId,
       principalKind: 'staff',
+      roles: TEST_PRINCIPAL.roles,
     });
     const cookieValue = sessionService.buildRefreshCookie(token);
     return { token, cookieValue };
@@ -221,7 +227,6 @@ describe('Auth Session lifecycle (e2e)', () => {
     const res = await request(server)
       .post('/api/v1/auth/refresh')
       .set('Cookie', `${REFRESH_COOKIE_NAME}=${cookieValue}`)
-      .set('x-test-principal', JSON.stringify(TEST_PRINCIPAL))
       .expect(200);
 
     expect(res.body).toMatchObject({
@@ -274,7 +279,6 @@ describe('Auth Session lifecycle (e2e)', () => {
     await request(server)
       .post('/api/v1/auth/refresh')
       .set('Cookie', `${REFRESH_COOKIE_NAME}=${cookieValue}`)
-      .set('x-test-principal', JSON.stringify(TEST_PRINCIPAL))
       .expect(401);
   });
 
@@ -287,7 +291,6 @@ describe('Auth Session lifecycle (e2e)', () => {
     const res1 = await request(server)
       .post('/api/v1/auth/refresh')
       .set('Cookie', `${REFRESH_COOKIE_NAME}=${cookieValue}`)
-      .set('x-test-principal', JSON.stringify(TEST_PRINCIPAL))
       .expect(200);
 
     expect(res1.body.accessToken).toBeDefined();
@@ -296,7 +299,6 @@ describe('Auth Session lifecycle (e2e)', () => {
     const res2 = await request(server)
       .post('/api/v1/auth/refresh')
       .set('Cookie', `${REFRESH_COOKIE_NAME}=${cookieValue}`)
-      .set('x-test-principal', JSON.stringify(TEST_PRINCIPAL))
       .expect(401);
 
     expect(res2.body).toMatchObject({ response: expect.objectContaining({ code: 'AUTH_REFRESH_REUSED' }) });
@@ -330,11 +332,9 @@ describe('Auth Session lifecycle (e2e)', () => {
       request(server)
         .post('/api/v1/auth/refresh')
         .set('Cookie', `${REFRESH_COOKIE_NAME}=${cookieValue}`)
-        .set('x-test-principal', JSON.stringify(TEST_PRINCIPAL)),
       request(server)
         .post('/api/v1/auth/refresh')
         .set('Cookie', `${REFRESH_COOKIE_NAME}=${cookieValue}`)
-        .set('x-test-principal', JSON.stringify(TEST_PRINCIPAL)),
     ]);
 
     // Both should succeed (200)
