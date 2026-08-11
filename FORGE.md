@@ -42,3 +42,10 @@
 - **Files:** 32 (+2315/-0)
 - **Duration:** 874ss
 - **Approach:** Created @opsninja/ui-kit from scratch with a functional-core/imperative-shell split: computeRemaining is a pure function tested without React; SlaClockProvider owns the single shared interval and aria-live region; SlaCountdown subscribes to the provider and renders via slaStateMeta tokens. SlaHint is fully isolated from the countdown stack to serve the portal bundle. DataTable is a controlled headless grid with a useGridKeyboardNavigation hook implementing the roving-tabindex ARIA grid pattern. JiraLinkChip URL guard validates protocol=https before rendering any anchor. Two fixture files drive all unit tests. The portal-dependency-graph test traces static imports to assert SlaCountdown is unreachable from portal.ts. @opsninja/web-agent provides a Playwright config and a queue-sla spec with 5-second delta replay and axe-core assertions.
+
+## WO-020: User Story: WO-020 - Implement Agent Workspace Application Shell
+- **Status:** completed
+- **Commit:** `e090011`
+- **Files:** 39 (+2565/-5)
+- **Duration:** 590ss
+- **Approach:** Built the full Next.js 15 App Router shell. Navigation is declarative config (navConfig.ts) filtered by a pure canFor() RBAC helper that removes items from the DOM — never CSS-hides them. Sidebar collapse is SSR-safe (read from localStorage after hydration, defaulting to expanded on failure). LiveStatusPill reads a Zustand store written by the realtime layer; the shell never opens the WebSocket. ExportMenu dispatches to a page-registered React context handler; renders disabled with aria-disabled when no page has registered. ShellErrorBoundary extracts traceId from the API error envelope, shows a recoverable Retry panel, never exposes stack traces. Identity and org-scope are TanStack Query fetches with suspense skeleton fallbacks. AppShell owns all cross-cutting concerns; feature pages contribute content only.
