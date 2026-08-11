@@ -56,6 +56,7 @@ export type Permission =
   | 'webhook:manage'
   // ── Organization scope management ────────────────────────────────────────
   | 'org:manage_scopes'
+  | 'org:manage_contacts'
   // ── Saved views ──────────────────────────────────────────────────────────
   | 'view:read'
   | 'view:create'
@@ -80,6 +81,7 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
   'ticket:read', 'ticket:create', 'ticket:update', 'ticket:close',
   'ticket:reassign', 'ticket:delete', 'ticket:view_internal_notes', 'ticket:add_internal_note',
   'org:read', 'org:create', 'org:update', 'org:deactivate', 'org:manage_fields', 'org:domain_manage',
+  'org:manage_contacts',
   'user:read', 'user:create', 'user:update', 'user:deactivate', 'user:set_org_scope',
   'sla:read', 'sla:manage',
   'report:read', 'report:export',
@@ -107,7 +109,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<string, readonly Permission[]>> =
     'ticket:read', 'ticket:create', 'ticket:update', 'ticket:close',
     'ticket:reassign', 'ticket:view_internal_notes', 'ticket:add_internal_note',
     'org:read', 'org:create', 'org:update', 'org:deactivate', 'org:manage_fields', 'org:domain_manage',
-    'org:manage_scopes',
+    'org:manage_scopes', 'org:manage_contacts',
     'user:read', 'user:create', 'user:update', 'user:set_org_scope',
     'sla:read', 'sla:manage',
     'report:read', 'report:export',

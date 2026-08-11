@@ -154,7 +154,7 @@ export const contacts = pgTable(
     /** Composite FK: (tenant_id, organization_id) → organizations. */
     organizationId: uuid('organization_id').notNull(),
 
-    /** PII — citext (case-insensitive). Unique per tenant+organization. */
+    /** PII — citext (case-insensitive). Unique per tenant. */
     email: text('email').notNull(),
 
     /** PII — display name. */
@@ -162,11 +162,20 @@ export const contacts = pgTable(
 
     jobTitle: text('job_title'),
 
+    /** PII — business phone number. Added in WO-027. */
+    phone: text('phone'),
+
     /** When true, this contact may log in to the customer portal. */
     portalAccessEnabled: boolean('portal_access_enabled').notNull().default(false),
 
-    /** 'active' | 'inactive' */
+    /** 'active' | 'suspended' | 'inactive' */
     status: text('status').notNull().default('active'),
+
+    /**
+     * Optimistic-concurrency version counter. Incremented on every PATCH.
+     * Added in WO-027.
+     */
+    version: integer('version').notNull().default(1),
 
     /** Timestamp of last portal login; null if never logged in. */
     lastPortalLoginAt: timestamp('last_portal_login_at', { withTimezone: true }),
@@ -183,6 +192,7 @@ export const contacts = pgTable(
 
 export type Contact = typeof contacts.$inferSelect;
 export type NewContact = typeof contacts.$inferInsert;
+export type ContactStatus = 'active' | 'suspended' | 'inactive';
 
 // ---------------------------------------------------------------------------
 // organization_verified_domains

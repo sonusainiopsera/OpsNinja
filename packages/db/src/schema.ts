@@ -363,6 +363,7 @@ export type {
   NewCustomerAccount,
   Contact,
   NewContact,
+  ContactStatus,
   OrganizationVerifiedDomain,
   NewOrganizationVerifiedDomain,
   CustomFieldDef,
