@@ -18,6 +18,7 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, '.'),
       '@opsninja/api-client': resolve(__dirname, '../../packages/api-client/src/index.browser.ts'),
+      '@opsninja/filter-compiler': resolve(__dirname, '../../packages/filter-compiler/src/index.ts'),
       '@opsninja/ui-kit': resolve(__dirname, '../../packages/ui-kit/src/index.ts'),
     },
   },

@@ -350,3 +350,10 @@
 - **Files:** 16 (+1593/-12)
 - **Duration:** 706ss
 - **Approach:** N/A
+
+## WO-041: User Story: WO-041 - Agent Workspace Queue Interface With SLA Countdowns
+- **Status:** completed
+- **Commit:** `d466084`
+- **Files:** 19 (+3789/-12)
+- **Duration:** 772ss
+- **Approach:** N/A

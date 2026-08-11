@@ -17,6 +17,7 @@
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
     "@opsninja/api-client": "workspace:*",
+    "@opsninja/filter-compiler": "workspace:*",
     "@opsninja/ui-kit": "workspace:*",
     "@tanstack/react-query": "^5.56.0",
     "next": "^15.0.0",
