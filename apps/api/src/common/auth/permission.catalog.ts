@@ -72,6 +72,9 @@ export type Permission =
   | 'privacy:manage'
   // ── Dashboard snapshot (WO-068) ───────────────────────────────────────────
   | 'dashboard:read'
+  // ── AI summary (WO-065) ───────────────────────────────────────────────────
+  | 'ai:read'
+  | 'ai:manage'
   // ── Machine / worker ─────────────────────────────────────────────────────
   | 'machine:jira_sync'
   | 'machine:notification_send'
@@ -96,6 +99,7 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
   'audit:read', 'audit:export', 'audit:verify',
   'privacy:manage',
   'dashboard:read',
+  'ai:read', 'ai:manage',
   'machine:jira_sync', 'machine:notification_send', 'machine:export',
 ];
 
@@ -135,6 +139,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<string, readonly Permission[]>> =
     'jira:read',
     'view:read', 'view:create', 'view:update', 'view:delete',
     'dashboard:read',
+    'ai:read', 'ai:manage',
   ],
 
   lead_analyst: [

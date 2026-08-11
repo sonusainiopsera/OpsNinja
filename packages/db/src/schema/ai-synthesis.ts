@@ -81,6 +81,27 @@ export const ticketAiSummaries = pgTable(
     /** Completion token count (for cost tracking). */
     completionTokens: integer('completion_tokens'),
 
+    /**
+     * UUID of the last agent who edited the summary (set when source = 'human').
+     * Null when no human edit has been made.
+     */
+    editedBy: uuid('edited_by'),
+
+    /** Timestamp of the most recent human edit. */
+    editedAt: timestamp('edited_at', { withTimezone: true }),
+
+    /**
+     * Human-readable reason when ai_status = 'skipped'.
+     * E.g. 'budget_exceeded', 'tenant_disabled', 'attempt_cap_reached'.
+     */
+    skipReason: text('skip_reason'),
+
+    /**
+     * Optimistic-concurrency version counter. Incremented on every human edit
+     * and on every regenerate. PATCH must send the current version; mismatch → 409.
+     */
+    version: integer('version').notNull().default(1),
+
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -114,8 +135,14 @@ export const ticketAffectedAreas = pgTable(
     /** Normalised area label — e.g. 'authentication', 'billing', 'api'. */
     areaLabel: text('area_label').notNull(),
 
-    /** Model confidence [0, 1]. */
+    /** Model confidence — 'low' | 'medium' | 'high'. */
     confidence: text('confidence'),
+
+    /**
+     * Origin of this area: 'ai' (model-generated) or 'human' (agent-edited).
+     * Human edits set source = 'human' for every row in the replacement set.
+     */
+    source: text('source').notNull().default('ai'),
 
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
