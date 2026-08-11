@@ -30,6 +30,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { ViewsModule } from './modules/views/views.module';
 import { SlaModule } from './modules/sla/sla.module';
+import { JiraModule } from './modules/jira/jira.module';
 import { AuthGuard } from './common/guards/auth.guard';
 import { TenantContextInterceptor } from './common/tenant/tenant-context.interceptor';
 import { AuditInterceptor } from './common/audit/audit.interceptor';
@@ -54,6 +55,7 @@ import { UnitOfWork } from './data/unit-of-work';
     OrganizationsModule,
     ViewsModule,
     SlaModule,
+    JiraModule,
   ],
   providers: [
     // ── Global guard (runs first) ────────────────────────────────────────────

@@ -57,6 +57,10 @@ export const Permission = {
   SLA_POLICY_READ:  'sla_policy:read',
   /** Allows creating, updating and deactivating SLA policies and calendars. */
   SLA_POLICY_WRITE: 'sla_policy:write',
+
+  // ── Jira integration management ──────────────────────────────────────────
+  /** Allows connecting, testing, and revoking Jira integrations. */
+  JIRA_MANAGE: 'integrations:jira:manage',
 } as const;
 
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -85,6 +89,7 @@ export const ROLE_PERMISSION_MAP: Record<string, Permission[]> = {
     Permission.ROLES_WRITE,
     Permission.TENANT_SETTINGS,
     Permission.WEBHOOKS_MANAGE,
+    Permission.JIRA_MANAGE,
     Permission.ADMIN_AUTH_UNLOCK,
     Permission.VIEWS_SHARE,
     Permission.SLA_POLICY_READ,
@@ -163,6 +168,7 @@ export const ROLE_PERMISSION_MAP: Record<string, Permission[]> = {
   // ── Integration administrator ────────────────────────────────────────────
   integration_admin: [
     Permission.WEBHOOKS_MANAGE,
+    Permission.JIRA_MANAGE,
     Permission.ORGS_READ,
   ],
 };

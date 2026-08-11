@@ -62,6 +62,20 @@ const REDACTED_FIELDS = new Set([
   'description',
   'freeText',
   'free_text',
+  // OAuth / credential material
+  'token',
+  'access_token',
+  'accessToken',
+  'refresh_token',
+  'refreshToken',
+  'api_token',
+  'apiToken',
+  'code',
+  'code_verifier',
+  'codeVerifier',
+  'client_secret',
+  'clientSecret',
+  'state',
 ]);
 
 /**
