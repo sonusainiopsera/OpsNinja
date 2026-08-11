@@ -42,6 +42,26 @@ const EXPECTED_TENANT_SCOPED_TABLES = [
   'ticket_comments',
   'audit_logs',
   'outbox_events',
+  'ticket_ai_summaries',
+  'ticket_affected_areas',
+];
+
+// Tables that must have ENABLE ROW LEVEL SECURITY (CI RLS-coverage check).
+const RLS_REQUIRED_TABLES = [
+  'organizations',
+  'organization_verified_domains',
+  'custom_field_defs',
+  'users',
+  'customer_contacts',
+  'role_assignments',
+  'agent_org_scopes',
+  'categories',
+  'tickets',
+  'ticket_comments',
+  'audit_logs',
+  'outbox_events',
+  'ticket_ai_summaries',
+  'ticket_affected_areas',
 ];
 
 let ctx: TestDbContext;
@@ -141,6 +161,45 @@ describe('tenant_id design rule — leading index column', () => {
         violators,
         `Tables without tenant_id-leading index:\n  ${violators.join('\n  ')}`,
       ).toHaveLength(0);
+    } finally {
+      await sql.end();
+    }
+  });
+});
+
+describe('RLS coverage — CI fails on any tenant-scoped table missing a policy', () => {
+  it('every RLS-required table has ENABLE ROW LEVEL SECURITY and a tenant_isolation policy', async () => {
+    const sql = postgres(ctx.connectionString, { max: 1 });
+    try {
+      // pg_policies lists all RLS policies in the current schema.
+      const policyRows = await sql<{ tablename: string; policyname: string }[]>`
+        SELECT tablename, policyname
+        FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = ANY(${RLS_REQUIRED_TABLES})
+      `;
+
+      // pg_class.relrowsecurity is TRUE when ENABLE ROW LEVEL SECURITY is set.
+      const rlsRows = await sql<{ relname: string; relrowsecurity: boolean; relforcerowsecurity: boolean }[]>`
+        SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public'
+          AND c.relname = ANY(${RLS_REQUIRED_TABLES})
+          AND c.relkind = 'r'
+      `;
+
+      const rlsEnabled = new Set(rlsRows.filter((r) => r.relrowsecurity).map((r) => r.relname));
+      const rlsForced  = new Set(rlsRows.filter((r) => r.relforcerowsecurity).map((r) => r.relname));
+      const hasPolicies = new Set(policyRows.map((r) => r.tablename));
+
+      const missingEnable  = RLS_REQUIRED_TABLES.filter((t) => !rlsEnabled.has(t));
+      const missingForce   = RLS_REQUIRED_TABLES.filter((t) => !rlsForced.has(t));
+      const missingPolicies = RLS_REQUIRED_TABLES.filter((t) => !hasPolicies.has(t));
+
+      expect(missingEnable, `Tables missing ENABLE ROW LEVEL SECURITY: ${missingEnable.join(', ')}`).toHaveLength(0);
+      expect(missingForce,  `Tables missing FORCE ROW LEVEL SECURITY: ${missingForce.join(', ')}`).toHaveLength(0);
+      expect(missingPolicies, `Tables missing tenant_isolation policy: ${missingPolicies.join(', ')}`).toHaveLength(0);
     } finally {
       await sql.end();
     }

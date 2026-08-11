@@ -27,16 +27,20 @@ const CONFIDENTIAL_FIELDS = new Set([
   'email',
   'contactEmail',
   'requesterEmail',
-  'body',          // ticket comment bodies
+  'body',               // ticket comment bodies
   'commentBody',
   'note',
   'internalNote',
   'message',
   'description',
-  'subject',       // ticket subjects may contain PII
+  'subject',            // ticket subjects may contain PII
   'name',
   'contactName',
   'displayName',
+  'cruxSummary',        // AI synthesis — Confidential tier
+  'resolutionSummary',  // AI synthesis — Confidential tier
+  'crux_summary',       // snake_case variants from DB row objects
+  'resolution_summary',
 ]);
 
 /** Fields replaced with a SHA-256 hex hash of their string representation. */

@@ -99,6 +99,8 @@ export async function truncateAll(connectionString: string): Promise<void> {
   try {
     await sql.unsafe(`
       TRUNCATE TABLE
+        ticket_affected_areas,
+        ticket_ai_summaries,
         outbox_events,
         audit_logs,
         ticket_comments,
