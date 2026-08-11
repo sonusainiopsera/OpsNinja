@@ -145,6 +145,69 @@ export interface ExportRequestResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Export job lifecycle (WO-079)
+// ---------------------------------------------------------------------------
+
+export type ExportJobStatus =
+  | 'queued'
+  | 'processing'
+  | 'completed'
+  | 'failed'
+  | 'expired';
+
+export interface ExportJob {
+  id: string;
+  format: 'csv' | 'pdf';
+  status: ExportJobStatus;
+  rowCount?: number;
+  fileSizeBytes?: number;
+  createdAt: string;
+  expiresAt?: string;
+  /** Only present when status === 'completed' — fetch fresh at download time */
+  downloadUrl?: string;
+  /** Structured error code when status === 'failed' */
+  errorCode?: string;
+  traceId?: string;
+  definition: {
+    metrics: string[];
+    groupBy: string[];
+    filterAst?: FilterAst;
+  };
+}
+
+export interface CreateExportPayload {
+  format: 'csv' | 'pdf';
+  definition?: {
+    metrics: string[];
+    groupBy: string[];
+    filterAst?: FilterAst;
+  };
+  definitionId?: string;
+  scope?: 'report' | 'dashboard';
+}
+
+export interface CreateExportResponse {
+  jobId: string;
+  status: 'queued';
+  pollUrl: string;
+}
+
+/** Schedule DTO — mirrors the server Zod schema */
+export interface ScheduleDto {
+  cadence: 'daily' | 'weekly' | 'monthly' | 'custom';
+  cronExpression?: string;
+  timezone: string;
+  format: 'csv' | 'pdf';
+  recipients: string[];
+  definitionId?: string;
+  definition?: {
+    metrics: string[];
+    groupBy: string[];
+    filterAst?: FilterAst;
+  };
+}
+
+// ---------------------------------------------------------------------------
 // API error envelope
 // ---------------------------------------------------------------------------
 
