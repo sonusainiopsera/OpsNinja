@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { TenantErrorFilter } from './common/filters/tenant-error.filter';
 
@@ -8,6 +9,7 @@ async function bootstrap(): Promise<void> {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
+  app.use(cookieParser());
   app.setGlobalPrefix('api/v1');
 
   app.useGlobalPipes(

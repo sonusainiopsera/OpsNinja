@@ -18,6 +18,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { DbModule } from './data/db.module';
 import { HealthModule } from './health/health.module';
+import { RedisModule } from './common/redis/redis.module';
+import { IdentityModule } from './modules/identity/identity.module';
 import { AuthGuard } from './common/guards/auth.guard';
 import { TenantContextInterceptor } from './common/tenant/tenant-context.interceptor';
 import { UnitOfWork } from './data/unit-of-work';
@@ -29,7 +31,9 @@ import { UnitOfWork } from './data/unit-of-work';
       envFilePath: ['.env.local', '.env'],
     }),
     DbModule,
+    RedisModule,
     HealthModule,
+    IdentityModule,
   ],
   providers: [
     // ── Global guard (runs first) ────────────────────────────────────────────

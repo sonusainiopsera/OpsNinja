@@ -20,6 +20,20 @@ export const ErrorCode = {
 
   /** The authenticated principal maps to a deactivated tenant. */
   TENANT_DEACTIVATED: 'TENANT_DEACTIVATED',
+
+  // ── Auth / session error codes ───────────────────────────────────────────
+  /** Refresh cookie is absent from the request. */
+  AUTH_REFRESH_MISSING: 'AUTH_REFRESH_MISSING',
+  /** Refresh token is malformed, not found, or already expired in Redis. */
+  AUTH_REFRESH_INVALID: 'AUTH_REFRESH_INVALID',
+  /** Refresh token's Redis TTL has expired. */
+  AUTH_REFRESH_EXPIRED: 'AUTH_REFRESH_EXPIRED',
+  /** A previously rotated refresh token was presented — session family revoked. */
+  AUTH_REFRESH_REUSED: 'AUTH_REFRESH_REUSED',
+  /** Redis is unavailable; client should retry with Retry-After. */
+  AUTH_SESSION_STORE_UNAVAILABLE: 'AUTH_SESSION_STORE_UNAVAILABLE',
+  /** Generic unauthenticated (missing Bearer token). */
+  UNAUTHENTICATED: 'UNAUTHENTICATED',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
