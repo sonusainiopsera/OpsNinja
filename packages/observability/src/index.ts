@@ -59,6 +59,21 @@ export { createLogger } from './logging/create-logger';
 export type { CreateLoggerOptions } from './logging/create-logger';
 
 // ---------------------------------------------------------------------------
+// Jira SLI metric definitions (WO-059)
+// ---------------------------------------------------------------------------
+export {
+  JIRA_METRICS,
+  buildJiraLabels,
+  computeInboundLag,
+  computeOutboundLag,
+} from './jira-metrics';
+
+export type {
+  MetricDescriptor,
+  JiraMetricLabels,
+} from './jira-metrics';
+
+// ---------------------------------------------------------------------------
 // PII corpus fixture (for test use)
 // ---------------------------------------------------------------------------
 export {

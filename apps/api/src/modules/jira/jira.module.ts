@@ -22,6 +22,9 @@ import { AuditWriter } from '../audit/audit-writer';
 import { JiraHealthController } from './health/jira-health.controller';
 import { JiraHealthService, JiraEventsReadRepository } from './health/jira-health.service';
 import { RedisCacheService } from '../../infra/cache/redis-cache';
+// WO-059: audit trail and observability
+import { JiraAuditController } from './audit/jira-audit.controller';
+import { JiraAuditRecorder } from './audit/jira-audit.recorder';
 
 @Module({
   imports: [AuditModule],
@@ -30,6 +33,7 @@ import { RedisCacheService } from '../../infra/cache/redis-cache';
     JiraOAuthController,
     JiraLinksController,
     JiraHealthController,
+    JiraAuditController,
   ],
   providers: [
     JiraConnectionsService,
@@ -61,7 +65,9 @@ import { RedisCacheService } from '../../infra/cache/redis-cache';
     JiraHealthService,
     JiraEventsReadRepository,
     RedisCacheService,
+    // WO-059: audit recorder
+    JiraAuditRecorder,
   ],
-  exports: [JiraConnectionsService, JiraTokenProvider, JiraLinksService],
+  exports: [JiraConnectionsService, JiraTokenProvider, JiraLinksService, JiraAuditRecorder],
 })
 export class JiraModule {}
