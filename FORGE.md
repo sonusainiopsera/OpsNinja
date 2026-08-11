@@ -525,3 +525,10 @@
 - **Files:** 12 (+973/-79)
 - **Duration:** 575ss
 - **Approach:** N/A
+
+## WO-068: User Story: WO-068 - Dashboard Snapshot API with Postgres Fallback Path
+- **Status:** completed
+- **Commit:** `be0c296`
+- **Files:** 4 (+207/-0)
+- **Duration:** 341ss
+- **Approach:** N/A

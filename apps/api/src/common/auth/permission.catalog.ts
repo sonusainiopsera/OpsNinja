@@ -70,6 +70,8 @@ export type Permission =
   | 'audit:verify'
   // ── Privacy / subject requests (WO-096) ──────────────────────────────────
   | 'privacy:manage'
+  // ── Dashboard snapshot (WO-068) ───────────────────────────────────────────
+  | 'dashboard:read'
   // ── Machine / worker ─────────────────────────────────────────────────────
   | 'machine:jira_sync'
   | 'machine:notification_send'
@@ -93,6 +95,7 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
   'view:read', 'view:create', 'view:update', 'view:delete', 'view:share',
   'audit:read', 'audit:export', 'audit:verify',
   'privacy:manage',
+  'dashboard:read',
   'machine:jira_sync', 'machine:notification_send', 'machine:export',
 ];
 
@@ -118,6 +121,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<string, readonly Permission[]>> =
     'jira:read',
     'admin:revoke_sessions',
     'view:read', 'view:create', 'view:update', 'view:delete', 'view:share',
+    'dashboard:read',
   ],
 
   agent: [
@@ -130,6 +134,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<string, readonly Permission[]>> =
     'report:read',
     'jira:read',
     'view:read', 'view:create', 'view:update', 'view:delete',
+    'dashboard:read',
   ],
 
   lead_analyst: [
@@ -141,6 +146,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<string, readonly Permission[]>> =
     'view:read',
     'audit:read', 'audit:export', 'audit:verify',
     'privacy:manage',
+    'dashboard:read',
   ],
 
   integration_admin: [
