@@ -26,7 +26,9 @@
       "@opsninja/db": ["./packages/db/src/index.ts"],
       "@opsninja/db/*": ["./packages/db/src/*"],
       "@opsninja/filter-compiler": ["./packages/filter-compiler/src/index.ts"],
-      "@opsninja/filter-compiler/*": ["./packages/filter-compiler/src/*"]
+      "@opsninja/filter-compiler/*": ["./packages/filter-compiler/src/*"],
+      "@opsninja/observability": ["./packages/observability/src/index.ts"],
+      "@opsninja/observability/*": ["./packages/observability/src/*"]
     }
   }
 }

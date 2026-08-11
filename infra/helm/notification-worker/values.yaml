@@ -1,0 +1,63 @@
+replicaCount: 2
+
+image:
+  repository: opsninja/notification-worker
+  pullPolicy: IfNotPresent
+  tag: ""
+
+serviceAccount:
+  create: true
+  annotations:
+    # IRSA: inject web identity token for SES and SQS access.
+    eks.amazonaws.com/role-arn: "arn:aws:iam::ACCOUNT_ID:role/notification-worker"
+
+env:
+  AWS_REGION: us-east-1
+  HEALTH_PORT: "3001"
+  # SQS_QUEUE_URL and DATABASE_URL injected via Secrets Manager / environment.
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 3001
+  initialDelaySeconds: 10
+  periodSeconds: 30
+
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: 3001
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+# ── DLQ CloudWatch Alarm ──────────────────────────────────────────────────────
+# Fires when any message arrives in the notification dead-letter queue.
+# A single DLQ message indicates a notification that failed MAX_SES_ATTEMPTS
+# retries — requires operational investigation.
+cloudwatchAlarms:
+  dlq:
+    enabled: true
+    alarmName: "notification-worker-dlq-not-empty"
+    alarmDescription: "One or more notifications reached the DLQ after 5 delivery attempts"
+    # ApproximateNumberOfMessagesVisible >= 1 for 1 evaluation period (1 minute).
+    metricName: ApproximateNumberOfMessagesVisible
+    namespace: AWS/SQS
+    statistic: Sum
+    period: 60
+    evaluationPeriods: 1
+    threshold: 1
+    comparisonOperator: GreaterThanOrEqualToThreshold
+    treatMissingData: notBreaching
+    # SNS ARN for P2 on-call alert.
+    alarmActions:
+      - "arn:aws:sns:us-east-1:ACCOUNT_ID:opsninja-p2-alerts"
+    dimensions:
+      QueueName: "opsninja-notification-dlq"

@@ -265,3 +265,24 @@ export type NewUser = typeof users.$inferInsert;
 
 export type Ticket = typeof tickets.$inferSelect;
 export type NewTicket = typeof tickets.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Notifications (notification_templates, notifications, notification_suppressions)
+// ---------------------------------------------------------------------------
+
+export {
+  notificationTemplates,
+  notifications,
+  notificationSuppressions,
+} from './schema/notifications';
+
+export type {
+  NotificationTemplate,
+  NewNotificationTemplate,
+  NotificationStatus,
+  Notification,
+  NewNotification,
+  SuppressionReason,
+  NotificationSuppression,
+  NewNotificationSuppression,
+} from './schema/notifications';
