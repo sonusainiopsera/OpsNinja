@@ -62,6 +62,12 @@ export type Permission =
   | 'view:update'
   | 'view:delete'
   | 'view:share'
+  // ── Audit log query (WO-096) ─────────────────────────────────────────────
+  | 'audit:read'
+  | 'audit:export'
+  | 'audit:verify'
+  // ── Privacy / subject requests (WO-096) ──────────────────────────────────
+  | 'privacy:manage'
   // ── Machine / worker ─────────────────────────────────────────────────────
   | 'machine:jira_sync'
   | 'machine:notification_send'
@@ -82,6 +88,8 @@ export const ALL_PERMISSIONS: readonly Permission[] = [
   'webhook:read', 'webhook:manage',
   'org:manage_scopes',
   'view:read', 'view:create', 'view:update', 'view:delete', 'view:share',
+  'audit:read', 'audit:export', 'audit:verify',
+  'privacy:manage',
   'machine:jira_sync', 'machine:notification_send', 'machine:export',
 ];
 
@@ -126,6 +134,8 @@ export const ROLE_PERMISSIONS: Readonly<Record<string, readonly Permission[]>> =
     'report:read', 'report:export',
     'jira:read',
     'view:read',
+    'audit:read', 'audit:export', 'audit:verify',
+    'privacy:manage',
   ],
 
   integration_admin: [

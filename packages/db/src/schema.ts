@@ -548,3 +548,16 @@ export type {
   NewErasureReceipt,
   ErasureReceiptEntry,
 } from './schema/retention';
+
+// ---------------------------------------------------------------------------
+// subject_requests: GDPR data-subject rights lifecycle (WO-096)
+// ---------------------------------------------------------------------------
+
+export { subjectRequests } from './schema/subject-requests';
+
+export type {
+  SubjectRequest,
+  NewSubjectRequest,
+  SubjectRequestType,
+  SubjectRequestStatus,
+} from './schema/subject-requests';

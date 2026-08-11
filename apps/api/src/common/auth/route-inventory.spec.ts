@@ -27,6 +27,8 @@ import { SlaCalendarsController } from '../../modules/sla/sla-calendars.controll
 import { JiraConnectionsController } from '../../modules/jira/connections/jira-connections.controller';
 import { JiraOAuthController } from '../../modules/jira/oauth/jira-oauth.controller';
 import { OrganizationsController } from '../../modules/organizations/organizations.controller';
+import { AuditController } from '../../modules/audit/audit.controller';
+import { SubjectRequestsController } from '../../modules/privacy/subject-requests.controller';
 
 // NestJS sets 'path' and 'method' metadata keys on route handler methods.
 const PATH_METADATA = 'path';
@@ -49,6 +51,9 @@ const CONTROLLERS: Function[] = [
   SlaCalendarsController,
   JiraConnectionsController,
   JiraOAuthController,
+  OrganizationsController,
+  AuditController,
+  SubjectRequestsController,
 ];
 
 // ---------------------------------------------------------------------------

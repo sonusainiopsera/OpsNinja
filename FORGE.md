@@ -301,3 +301,10 @@
 - **Files:** 13 (+889/-0)
 - **Duration:** 565ss
 - **Approach:** N/A
+
+## WO-096: User Story: WO-096 - Compliance Audit Query and Subject Data Export API
+- **Status:** completed
+- **Commit:** `ac708ab`
+- **Files:** 15 (+1232/-1)
+- **Duration:** 532ss
+- **Approach:** N/A
