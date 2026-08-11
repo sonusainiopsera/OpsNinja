@@ -511,3 +511,10 @@
 - **Files:** 9 (+1257/-1)
 - **Duration:** 683ss
 - **Approach:** N/A
+
+## WO-063: User Story: WO-063 - Per-tenant AI token budget and opt-out policy
+- **Status:** completed
+- **Commit:** `f362079`
+- **Files:** 9 (+975/-9)
+- **Duration:** 452ss
+- **Approach:** N/A

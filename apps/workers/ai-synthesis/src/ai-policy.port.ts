@@ -1,24 +1,67 @@
 /**
  * AiPolicy port — injectable interface for per-tenant AI enablement checks.
  *
- * WO-063 will supply the real budget/opt-out implementation.
- * This permissive default allows synthesis to proceed for all tenants until
- * the real policy service is wired in.
+ * WO-063 supplies DbAiPolicy as the real implementation.
+ * The permissive default is kept for test overrides only.
  */
 
 export const AI_POLICY = 'AI_POLICY';
 
-export interface AiPolicyPort {
-  /**
-   * Returns 'allow' to proceed with inference, 'skip' to short-circuit
-   * with ai_status = 'skipped' without calling the LLM.
-   */
-  check(tenantId: string, ticketId: string): Promise<'allow' | 'skip'>;
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+/** Machine-readable reason codes for the policy decision. */
+export type AiPolicyReason =
+  | 'allowed'
+  | 'disabled'
+  | 'budget_exhausted'
+  | 'policy_unavailable';
+
+export interface AiPolicyCheckResult {
+  /** 'allow' → proceed with inference; 'skip' → short-circuit. */
+  decision: 'allow' | 'skip';
+  /** Stable reason code written to last_error_code on skip. */
+  reason: AiPolicyReason;
 }
 
-/** Default permissive policy — always allows synthesis. */
+export interface TokenUsage {
+  inputTokens:  number;
+  outputTokens: number;
+  modelId:      string;
+}
+
+// ---------------------------------------------------------------------------
+// Port interface
+// ---------------------------------------------------------------------------
+
+export interface AiPolicyPort {
+  /**
+   * Returns the policy decision for the given tenant.
+   * Must never throw — returns { decision: 'skip', reason: 'policy_unavailable' }
+   * on any unexpected error so ticket closure is never blocked.
+   */
+  check(tenantId: string, ticketId: string): Promise<AiPolicyCheckResult>;
+
+  /**
+   * Atomically increments the current-period usage aggregate.
+   * Failures are logged and swallowed — usage recording must never roll back
+   * a successful summary writeback.
+   */
+  recordUsage(tenantId: string, usage: TokenUsage): Promise<void>;
+}
+
+// ---------------------------------------------------------------------------
+// Permissive default (tests / before WO-063 wiring)
+// ---------------------------------------------------------------------------
+
+/** Always allows; recordUsage is a no-op. */
 export class PermissiveAiPolicy implements AiPolicyPort {
-  async check(_tenantId: string, _ticketId: string): Promise<'allow' | 'skip'> {
-    return 'allow';
+  async check(_tenantId: string, _ticketId: string): Promise<AiPolicyCheckResult> {
+    return { decision: 'allow', reason: 'allowed' };
+  }
+
+  async recordUsage(_tenantId: string, _usage: TokenUsage): Promise<void> {
+    // no-op
   }
 }

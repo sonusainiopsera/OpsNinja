@@ -656,3 +656,19 @@ export type {
   AiSynthesisIdempotency,
   NewAiSynthesisIdempotency,
 } from './schema/ai-synthesis';
+
+// ---------------------------------------------------------------------------
+// AI policy tables (WO-063)
+// ---------------------------------------------------------------------------
+
+export {
+  tenantAiSettings,
+  tenantAiUsage,
+} from './schema/ai-policy';
+
+export type {
+  TenantAiSettings,
+  NewTenantAiSettings,
+  TenantAiUsage,
+  NewTenantAiUsage,
+} from './schema/ai-policy';
