@@ -447,3 +447,28 @@ export type {
   SlaCalendarHoliday,
   NewSlaCalendarHoliday,
 } from './schema/sla';
+
+// ---------------------------------------------------------------------------
+// Reporting module (WO-073)
+//
+// report_definitions: validated report definitions with filter ASTs,
+//   metric lists, group-by dimensions.
+// export_jobs: async CSV/XLSX/PDF export job tracking.
+// ---------------------------------------------------------------------------
+
+export { reportDefinitions } from './schema/report-definitions';
+
+export type {
+  ReportDefinition,
+  NewReportDefinition,
+  ReportSharingScope,
+} from './schema/report-definitions';
+
+export { exportJobs } from './schema/export-jobs';
+
+export type {
+  ExportJob,
+  NewExportJob,
+  ExportJobFormat,
+  ExportJobStatus,
+} from './schema/export-jobs';
