@@ -42,3 +42,10 @@
 - **Files:** 34 (+2620/-0)
 - **Duration:** 938ss
 - **Approach:** Created @opsninja/ui-kit from scratch as a React 19 + TypeScript strict package. Implemented the functional-core / imperative-shell pattern: computeRemaining is a pure clock-injected function with no side effects; SlaClockProvider owns the single shared 1s setInterval and aria-live region; all SlaCountdown instances subscribe via React context. Monotonic offset (performance.now captured on each server delta) corrects browser clock skew without trusting Date.now. SlaHint is a deliberately isolated file with no SlaCountdown import, enforced by a source-scan test. DataTable is a controlled headless grid with useGridKeyboardNavigation providing the full ARIA grid keyboard pattern as a separate hook.
+
+## WO-020: User Story: WO-020 - Implement Agent Workspace Application Shell
+- **Status:** completed
+- **Commit:** `01ddfab`
+- **Files:** 32 (+2649/-4)
+- **Duration:** 755ss
+- **Approach:** Built the Next.js 15 App Router AppShell for all authenticated agent routes. Navigation uses a pure declarative config (navConfig.ts) filtered by a side-effect-free RBAC helper (canFor.ts) that excludes unauthorized items from the DOM entirely. The Sidebar manages SSR-safe localStorage collapse persistence and an off-canvas mobile drawer with focus trap. Identity and org scope come from TanStack Query hooks (staleTime=30s) that degrade gracefully to skeletons then inline errors. LiveStatusPill reads a Zustand store with 2s debounce; the shell never opens the WebSocket. ExportMenu dispatches to a page-registered handler via React context. ShellErrorBoundary is a class component that surfaces traceId while suppressing stack traces.
