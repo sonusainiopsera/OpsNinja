@@ -24,6 +24,7 @@ import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { DashboardGateway } from './gateway/dashboard.gateway';
+import { startGatewayMetricsServer } from './observability/gateway.metrics';
 
 const PORT = parseInt(process.env['PORT'] ?? '8081', 10);
 const DRAIN_GRACE_MS = parseInt(process.env['DRAIN_GRACE_MS'] ?? '20000', 10);
@@ -48,8 +49,13 @@ async function bootstrap(): Promise<void> {
   const gateway = app.get(DashboardGateway);
   gateway.attachToHttpServer(httpServer);
 
+  // Start internal-only Prometheus /metrics listener (127.0.0.1 only — not
+  // reachable from the public internet or the ALB). AC1.
+  const stopMetrics = startGatewayMetricsServer();
+
   logger.log(`Realtime Gateway listening on port ${PORT}`);
   logger.log('Serving: GET /healthz, GET /readyz, WS /ws/v1/dashboard');
+  logger.log(`Internal /metrics on 127.0.0.1:${process.env['METRICS_PORT'] ?? '9464'}`);
 
   // ---------------------------------------------------------------------------
   // Graceful shutdown
@@ -62,6 +68,9 @@ async function bootstrap(): Promise<void> {
     } catch (err) {
       logger.error('Error during drain', { error: String(err) });
     }
+    // Stop metrics server after drain so final counter values are captured
+    // (metrics endpoint scraped during pod drain must still respond — AC constraint)
+    stopMetrics();
     await app.close();
     logger.log('Realtime Gateway shutdown complete');
     process.exit(0);

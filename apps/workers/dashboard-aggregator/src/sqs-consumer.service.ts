@@ -40,6 +40,11 @@ import {
   handleSlaBreached,
 } from './handlers/sla-events.handler';
 import { handleAiSynthesisCompleted } from './handlers/ai-events.handler';
+import {
+  incEventsConsumed,
+  incEventsDeduplicated,
+  observeEventLag,
+} from './observability/pipeline.metrics';
 
 const POLL_BATCH_SIZE = 10;
 const WAIT_TIME_SECONDS = 20;
@@ -148,10 +153,18 @@ export class SqsConsumerService implements OnModuleInit, OnModuleDestroy {
 
       const result = await this.store.applyEvent(tenantId, eventId, commands);
 
+      // Propagate traceId from the outbox event envelope through structured log (AC9)
+      const traceId = event.traceparent ?? undefined;
+
       if (!result.applied) {
-        this.logger.debug('Idempotent skip', { tenantId, eventId, eventType });
+        this.logger.debug('Idempotent skip', { tenantId, eventId, eventType, traceId, component: 'dashboard-aggregator' });
+        incEventsDeduplicated(eventType);
+        incEventsConsumed(eventType, 'deduplicated');
         this.emitMetric('dashboard_event_deduped', { tenantId, eventType });
       } else {
+        this.logger.debug('Event applied', { tenantId, eventId, eventType, traceId, component: 'dashboard-aggregator' });
+        incEventsConsumed(eventType, 'applied');
+        observeEventLag(event.occurredAt);
         this.emitMetric('dashboard_event_applied', { tenantId, eventType });
       }
 
@@ -160,8 +173,11 @@ export class SqsConsumerService implements OnModuleInit, OnModuleDestroy {
       // Redis failure — do NOT delete; SQS redelivers; dedup ensures safety
       this.logger.error('Failed to apply event', {
         tenantId, eventId, eventType,
+        traceId: event.traceparent ?? undefined,
+        component: 'dashboard-aggregator',
         error: (err as Error).message,
       });
+      incEventsConsumed(eventType, 'error');
       this.emitMetric('dashboard_event_error', { tenantId, eventType });
       // Leave message in-flight; SQS redelivers after visibility timeout
     }

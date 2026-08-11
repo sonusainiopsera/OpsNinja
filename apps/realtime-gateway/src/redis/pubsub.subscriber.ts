@@ -95,6 +95,14 @@ export class PubSubSubscriber implements OnModuleInit, OnModuleDestroy {
     return this.ready;
   }
 
+  /**
+   * Issue a Redis PING and return the response.
+   * Used by RedisPingIndicator in the readiness probe.
+   */
+  async ping(): Promise<string> {
+    return this.subscriber.ping();
+  }
+
   private handleMessage(channel: string, message: string): void {
     // channel is "dash:{tenantId}" (not sub-keys like dash:{tenant}:frames)
     const tenantId = channel.slice('dash:'.length);

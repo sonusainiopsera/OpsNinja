@@ -602,3 +602,10 @@
 - **Files:** 18 (+3267/-0)
 - **Duration:** 853ss
 - **Approach:** N/A
+
+## WO-071: User Story: WO-071 - Streaming Pipeline Observability, SLIs and Degradation Alerting
+- **Status:** completed
+- **Commit:** `b93dd02`
+- **Files:** 13 (+1068/-16)
+- **Duration:** 461ss
+- **Approach:** N/A

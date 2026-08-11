@@ -21,6 +21,7 @@ import type Redis from 'ioredis';
 import { tickets, slaTimers, csatSurveys } from '@opsninja/db';
 import { AggregateStore } from '../redis/aggregate.store';
 import { Keys } from '../redis/keys';
+import { setAggregateDrift, incReconcileCycles } from '../observability/pipeline.metrics';
 
 const RECONCILE_INTERVAL_MS = 60_000;
 const STATEMENT_TIMEOUT_MS = 5_000;
@@ -149,6 +150,8 @@ export class ReconcilerService implements OnModuleInit, OnModuleDestroy {
       for (const [counter, pgValue] of Object.entries(pgKpi)) {
         const redisValue = redisKpi[counter] ?? 0;
         const drift = Math.abs(redisValue - pgValue);
+        // Emit drift gauge via shared pipeline metrics (cardinality-bounded by tenant bucket)
+        setAggregateDrift(tenantId, counter, drift);
         if (drift > 0) {
           this.emitMetric('dashboard_aggregate_drift', { tenantId, counter, drift: String(drift) });
         }
