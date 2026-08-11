@@ -672,3 +672,19 @@ export type {
   TenantAiUsage,
   NewTenantAiUsage,
 } from './schema/ai-policy';
+
+// ---------------------------------------------------------------------------
+// Portal onboarding tables (WO-088)
+// ---------------------------------------------------------------------------
+
+export {
+  portalOnboardingStates,
+  organizationChangeRequests,
+} from './schema/portal-onboarding';
+
+export type {
+  PortalOnboardingState,
+  NewPortalOnboardingState,
+  OrganizationChangeRequest,
+  NewOrganizationChangeRequest,
+} from './schema/portal-onboarding';

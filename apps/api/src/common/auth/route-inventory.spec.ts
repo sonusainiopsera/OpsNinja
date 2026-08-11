@@ -38,6 +38,7 @@ import { AuditController } from '../../modules/audit/audit.controller';
 import { SubjectRequestsController } from '../../modules/privacy/subject-requests.controller';
 import { AiAdminController } from '../../modules/ai/ai-admin.controller';
 import { AiSynthesisAdminController } from '../../modules/ai/ai-synthesis-admin.controller';
+import { PortalOnboardingController } from '../../modules/identity/portal-onboarding/portal-onboarding.controller';
 
 // NestJS sets 'path' and 'method' metadata keys on route handler methods.
 const PATH_METADATA = 'path';
