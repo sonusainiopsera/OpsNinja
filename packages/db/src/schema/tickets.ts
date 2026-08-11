@@ -114,6 +114,13 @@ export const tickets = pgTable(
     affectedAreaTags: jsonb('affected_area_tags'),
 
     // ── Timestamps ─────────────────────────────────────────────────────────
+    /**
+     * Timestamp of the first public agent reply on this ticket.
+     * Set exactly once via conditional UPDATE ... WHERE first_response_at IS NULL.
+     * Used by the SLA module to measure time-to-first-response.
+     * NULL means no public agent reply has been posted yet. (WO-034)
+     */
+    firstResponseAt: timestamp('first_response_at', { withTimezone: true }),
     resolvedAt: timestamp('resolved_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

@@ -18,6 +18,8 @@ import { QueueRepository } from './queue/queue.repository';
 import { RedisCacheService } from '../../infra/cache/redis-cache';
 import { TicketsController } from './tickets.controller';
 import { TicketsService } from './tickets.service';
+import { CommentsController } from './comments/comments.controller';
+import { CommentsService } from './comments/comments.service';
 import { AuditWriter } from '../audit/audit-writer';
 
 @Module({
@@ -26,7 +28,8 @@ import { AuditWriter } from '../audit/audit-writer';
     PortalTicketsController,
     PortalAttachmentsController,
     QueueController,
-    TicketsController,  // WO-032: POST /tickets, GET /tickets/:id
+    TicketsController,      // WO-032: POST /tickets, GET /tickets/:id, PATCH /:id, POST /:id/resolve
+    CommentsController,     // WO-034: POST /tickets/:id/comments, GET /tickets/:id/comments
   ],
   providers: [
     TicketRepository,
@@ -40,10 +43,13 @@ import { AuditWriter } from '../audit/audit-writer';
     QueueService,
     QueueRepository,
     RedisCacheService,
-    // Ticket CRUD (WO-032)
+    // Ticket CRUD (WO-032) + lifecycle (WO-033)
     TicketsController,
     TicketsService,
     AuditWriter,
+    // Comments (WO-034)
+    CommentsController,
+    CommentsService,
   ],
   exports: [
     TicketRepository,
@@ -53,6 +59,7 @@ import { AuditWriter } from '../audit/audit-writer';
     AttachmentAccessService,
     QueueService,
     TicketsService,
+    CommentsService,
   ],
 })
 export class TicketsModule {}

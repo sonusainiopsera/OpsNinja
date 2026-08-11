@@ -29,6 +29,7 @@ import { JiraOAuthController } from '../../modules/jira/oauth/jira-oauth.control
 import { OrganizationsController } from '../../modules/organizations/organizations.controller';
 import { ContactsController } from '../../modules/organizations/contacts/contacts.controller';
 import { TicketsController } from '../../modules/tickets/tickets.controller';
+import { CommentsController } from '../../modules/tickets/comments/comments.controller';
 import { AuditController } from '../../modules/audit/audit.controller';
 import { SubjectRequestsController } from '../../modules/privacy/subject-requests.controller';
 
@@ -56,6 +57,7 @@ const CONTROLLERS: Function[] = [
   OrganizationsController,
   ContactsController,
   TicketsController,
+  CommentsController,
   AuditController,
   SubjectRequestsController,
 ];
