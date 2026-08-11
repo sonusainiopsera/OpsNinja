@@ -16,6 +16,13 @@ module.exports = {
     'test/e2e/ticket-lifecycle\\.spec\\.ts$',
     // WO-043: Suite helper unit tests (always run, DB-independent)
     'test/unit/suite-helpers\\.spec\\.ts$',
+    // WO-098: Cross-Tenant Isolation and RBAC Negative Test Suite
+    'test/isolation/rest-cross-tenant\\.spec\\.ts$',
+    'test/isolation/rls-raw-sql\\.spec\\.ts$',
+    'test/isolation/db-role-privileges\\.spec\\.ts$',
+    'test/isolation/saved-view-filter-injection\\.spec\\.ts$',
+    'test/isolation/jira-webhook-ownership\\.spec\\.ts$',
+    'test/isolation/outbound-webhook-ssrf\\.spec\\.ts$',
   ],
   transform: {
     '^.+\\.(t|j)s$': 'ts-jest',
