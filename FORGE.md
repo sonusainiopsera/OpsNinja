@@ -49,3 +49,10 @@
 - **Files:** 32 (+2649/-4)
 - **Duration:** 755ss
 - **Approach:** Built the Next.js 15 App Router AppShell for all authenticated agent routes. Navigation uses a pure declarative config (navConfig.ts) filtered by a side-effect-free RBAC helper (canFor.ts) that excludes unauthorized items from the DOM entirely. The Sidebar manages SSR-safe localStorage collapse persistence and an off-canvas mobile drawer with focus trap. Identity and org scope come from TanStack Query hooks (staleTime=30s) that degrade gracefully to skeletons then inline errors. LiveStatusPill reads a Zustand store with 2s debounce; the shell never opens the WebSocket. ExportMenu dispatches to a page-registered handler via React context. ShellErrorBoundary is a class component that surfaces traceId while suppressing stack traces.
+
+## WO-022: User Story: WO-022 - Build Isolated Customer Portal Shell Bundle
+- **Status:** completed
+- **Commit:** `1787715`
+- **Files:** 31 (+2109/-0)
+- **Duration:** 882ss
+- **Approach:** Built the customer portal application shell as a structurally distinct layout from the agent workspace. The shell is composed exclusively from the portal-safe @opsninja/ui-kit/portal entry point. Bundle isolation is enforced at two layers: an ESLint no-restricted-imports rule blocks the ui-kit root barrel and all agent-only paths at write time, and scripts/assert-bundle-isolation.ts scans production .next/ chunks for a deny-list of agent-only module identifiers at build time. PortalShell uses TanStack Query to fetch portal identity (401 not retried), renders skeletons while loading and a recoverable inline error on failure. PortalTabs derives active state purely from usePathname (URL-driven, not client state). CsatBanner uses a SSR-safe localStorage hook keyed by survey ID so dismissal persists per survey without hydration mismatch. PortalHeader shows org logo with accessible initials fallback, read-only OrgScopePill, HelpLink, theme toggle, and PortalUserMenu — no TenantSwitcher, GlobalSearch, LiveStatusPill, or ExportMenu anywhere in the portal.

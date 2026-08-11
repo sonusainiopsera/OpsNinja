@@ -1,0 +1,43 @@
+{
+  "name": "@opsninja/web-portal",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3001",
+    "build": "next build",
+    "build:check": "next build && npm run assert-bundle-isolation",
+    "start": "next start --port 3001",
+    "assert-bundle-isolation": "node --loader ts-node/esm scripts/assert-bundle-isolation.ts",
+    "lint": "eslint . --ext .ts,.tsx",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opsninja/ui-kit": "*",
+    "@tanstack/react-query": "^5.56.0",
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.9.1",
+    "@playwright/test": "^1.46.0",
+    "@testing-library/jest-dom": "^6.5.0",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "@vitest/coverage-v8": "^2.0.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-import": "^2.29.1",
+    "jsdom": "^25.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.0",
+    "vitest": "^2.0.0"
+  }
+}
