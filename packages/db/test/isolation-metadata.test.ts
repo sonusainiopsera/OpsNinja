@@ -71,6 +71,9 @@ const TENANT_SCOPED_TABLES: string[] = [
   'csat_surveys',
   // WO-084: Webhook delivery log (partitioned; parent table carries RLS)
   'webhook_deliveries',
+  'portal_signup_requests',
+  'portal_users',
+  'portal_verification_tokens',
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

@@ -93,6 +93,16 @@ export const ErrorCode = {
   /** Resource not found (also used for out-of-scope resources to mask existence). */
   RESOURCE_NOT_FOUND: 'RESOURCE_NOT_FOUND',
 
+  // ── Portal verification error codes ──────────────────────────────────────
+  /** Verification token signature or hash is invalid (potential tampering). */
+  VERIFICATION_TOKEN_INVALID: 'VERIFICATION_TOKEN_INVALID',
+  /** Verification token TTL has expired (24 hours). */
+  VERIFICATION_TOKEN_EXPIRED: 'VERIFICATION_TOKEN_EXPIRED',
+  /** Verification token was already consumed by a previous request. */
+  VERIFICATION_TOKEN_CONSUMED: 'VERIFICATION_TOKEN_CONSUMED',
+  /** Signup request's bound organization is inactive and cannot be activated. */
+  ORGANIZATION_INACTIVE: 'ORGANIZATION_INACTIVE',
+
   // ── CSAT error codes ─────────────────────────────────────────────────────
   /** CSAT token is unknown — no survey row exists for this hash. */
   CSAT_TOKEN_UNKNOWN: 'CSAT_TOKEN_UNKNOWN',

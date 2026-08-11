@@ -10,8 +10,10 @@ import { OrgScopeService } from './services/org-scope.service';
 import { AuthAuditEmitter } from './services/auth-audit.emitter';
 import { PrincipalContextProvider } from '../../common/auth/principal-context.provider';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
+import { PortalSignupModule } from './portal-signup/portal-signup.module';
 
 @Module({
+  imports: [PortalSignupModule],
   controllers: [AuthController, UserScopeController, AdminAuthController],
   providers: [
     TokenService,

@@ -17,3 +17,4 @@ export * from './jira-connections';
 export * from './report-definitions';
 export * from './csat';
 export * from './webhook-deliveries';
+export * from './portal-signup';
