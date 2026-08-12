@@ -37,6 +37,20 @@ export { createOpsninjaQueryClient } from './query/createOpsninjaQueryClient';
 export { queryKeys } from './query/queryKeys';
 export type { QueryContext } from './query/queryKeys';
 
+// Browser factory re-exported so Next.js SSR of 'use client' modules that
+// import from '@opsninja/api-client' (default → this file) still resolve.
+export {
+  createOpsninjaClient,
+  SessionManager,
+} from './index.browser';
+export type {
+  OpsninjaClient,
+  OpsninjaClientOptions,
+  SessionEvent,
+  SessionEventListener,
+  SessionManagerConfig,
+} from './index.browser';
+
 // ---------------------------------------------------------------------------
 // Server client factory — requires explicit cookie forwarding.
 // ---------------------------------------------------------------------------

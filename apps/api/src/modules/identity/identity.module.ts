@@ -28,7 +28,7 @@ import { PortalOnboardingController } from './portal-onboarding/portal-onboardin
 import { PortalOnboardingService } from './portal-onboarding/portal-onboarding.service';
 import { AdminPortalSignupsController } from './admin/admin-portal-signups.controller';
 import { AdminPortalSignupsService } from './admin/admin-portal-signups.service';
-import { SignupExpiryWorker } from '../../../workers/cleanup/signup-expiry.worker';
+import { SignupExpiryWorker } from '../../workers/cleanup/signup-expiry.worker';
 
 @Module({
   imports: [

@@ -44,8 +44,18 @@ const SECURITY_HEADERS = [
   },
 ];
 
+const API_PROXY_TARGET = process.env['API_PROXY_TARGET'] ?? 'http://localhost:8080';
+
 const nextConfig: NextConfig = {
-  transpilePackages: ['@opsninja/ui-kit'],
+  transpilePackages: ['@opsninja/ui-kit', '@opsninja/api-client'],
+  async rewrites() {
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: `${API_PROXY_TARGET}/api/v1/:path*`,
+      },
+    ];
+  },
   async headers() {
     return [
       {
