@@ -609,3 +609,52 @@
 - **Files:** 13 (+1068/-16)
 - **Duration:** 461ss
 - **Approach:** N/A
+
+## WO-029: User Story: WO-029 - Admin console Organizations page with detail drawer tabs
+- **Status:** completed
+- **Commit:** `c9efa0b`
+- **Files:** 10 (+3203/-0)
+- **Duration:** 844ss
+- **Approach:** Built the full Organizations management page for the Admin Console within the web-agent app (no separate admin-console bundle exists). Composed the page from: OrganizationsPage (filters + URL sync + table + modals), OrgDetailDrawer (focus-trapped slide-over with lazy-tab-loading), ProfilePanel (pessimistic save with 409/400 handling), ContactsPanel (optimistic portal-toggle with rollback), ScopingPanel (read-only agent scope list), AddCustomFieldModal (dynamic options section for select types), and DeactivateModal (name-match enforcement). All write controls are permission-gated via a canWrite prop derived from server-provided session data. Existing OrgTable and MetadataPanel (already scaffolded) are imported and reused.
+
+## WO-032: User Story: WO-032 - Ticket Creation And Retrieval API Endpoints
+- **Status:** completed
+- **Commit:** `d80fdd3`
+- **Files:** 1 (+551/-0)
+- **Duration:** 594ss
+- **Approach:** The WO-032 implementation (POST /api/v1/tickets and GET /api/v1/tickets/{id}) was already fully scaffolded in the branch from the blocker WO-031. All core files — tickets.controller.ts, tickets.service.ts, repositories/ticket.repository.ts, dto/create-ticket.dto.ts, dto/ticket-response.dto.ts, tickets.module.ts — were committed and complete. Unit tests (tickets.service.spec.ts) covering AC7 were also in place. The only gap was the supertest integration test (AC8) specifying create-then-read for agent/portal principals across two tenants with cross-tenant 404 assertions. Created apps/api/test/tickets.e2e-spec.ts following the organizations.api.spec.ts pattern: NestJS TestingModule with mocked TicketsService, TestContextInterceptor injecting PrincipalContext via x-test-principal header, supertest assertions for all acceptance criteria.
+
+## WO-033: User Story: WO-033 - Ticket Status Lifecycle And Concurrency-Safe Updates
+- **Status:** completed
+- **Commit:** `e8a1cee`
+- **Files:** 1 (+626/-0)
+- **Duration:** 348ss
+- **Approach:** All core WO-033 files were pre-committed in the branch from the blocker WO-031: lifecycle/transition-table.ts (declarative transition matrix), lifecycle/ticket-state-machine.ts (pure validateTransition/reachableStatuses), lifecycle/ticket-state-machine.spec.ts (table-driven unit tests), events/ticket-events.ts, dto/update-ticket.dto.ts (strict Zod + version field), dto/resolve-ticket.dto.ts (strict Zod + required resolution_note), tickets.service.ts update()/resolve() with version-guarded UPDATE, status history, outbox events, audit records, and tickets-lifecycle.service.spec.ts covering all AC7 items. The only gap was apps/api/test/ticket-lifecycle.e2e-spec.ts — the supertest integration test named in the work order. Created it following the organizations.api.spec.ts pattern: NestJS TestingModule + mocked TicketsService + TestContextInterceptor injecting PrincipalContext via x-test-principal header. No external DB required.
+
+## WO-034: User Story: WO-034 - Ticket Comment Thread With Visibility Enforcement
+- **Status:** completed
+- **Commit:** `346831e`
+- **Files:** 1 (+769/-0)
+- **Duration:** 443ss
+- **Approach:** All core WO-034 files were pre-committed in the branch from the blocker WO-031: comments/comments.controller.ts (POST/GET handlers with ZodValidationPipe, portal 403 at service, visibility enforcement in repository), comments/comments.service.ts (create with portal visibility forcing, first_response_at stamping, outbox event, audit; listPage with 404 guard and cursor/limit delegation), comments/create-comment.dto.ts (strict Zod schema, body 1-64000 chars, visibility enum public|internal default public, attachment_ids max 10), comment-response.dto.ts (CommentDto/CommentPageDto), comment-cursor.ts (encodeCommentCursor/decodeCommentCursor with 400 on malformed), repositories/comment.repository.ts, and comments.service.spec.ts (full unit tests). The only gap was apps/api/test/ticket-comments.e2e-spec.ts. Created it following the existing ticket-lifecycle.e2e-spec.ts pattern: NestJS TestingModule + mocked CommentsService + TestContextInterceptor injecting PrincipalContext via x-test-principal header. No external DB required.
+
+## WO-035: User Story: WO-035 - Attachment Upload Via Presigned S3 With MIME Verification
+- **Status:** completed
+- **Commit:** `a39939c`
+- **Files:** 1 (+927/-0)
+- **Duration:** 379ss
+- **Approach:** All core WO-035 files were pre-committed in the branch from the blocker WO-031: attachments/attachments.controller.ts (AttachmentsController + AttachmentDownloadController — presign/finalize/download handlers), attachments/attachments.service.ts (presign with server-generated key + SSE-KMS policy, finalize with headObject/magic-byte detection/extension cross-check/422 on mismatch + S3 delete, download with 60s TTL, reapOrphans), dto/presign-attachment.dto.ts (strict Zod: filename, mime_type, optional comment_id UUID), dto/finalize-attachment.dto.ts (strict Zod: attachment_id UUID), filename-sanitiser.ts (path traversal/null byte/leading dot stripping + truncation), mime/magic-bytes.ts (MAGIC_TABLE + ALLOWED_EXTENSIONS + validateMimeAndExtension), storage/object-store.port.ts (ObjectStorePort interface), storage/in-memory-object-store.ts (InMemoryObjectStore for tests), storage/s3-object-store.ts, repositories/attachment.repository.ts, filename-sanitiser.spec.ts and magic-bytes.spec.ts (unit tests). The only gap was apps/api/test/attachments.e2e-spec.ts. Created it following the existing ticket-lifecycle.e2e-spec.ts pattern: NestJS TestingModule + mocked AttachmentsService + TestContextInterceptor injecting PrincipalContext via x-test-principal header. Both AttachmentsController and AttachmentDownloadController registered in the TestingModule. No external DB or AWS credentials required.
+
+## WO-040: User Story: WO-040 - Cached Agent Queue Listing With Cursor Pagination
+- **Status:** completed
+- **Commit:** `3a73a19`
+- **Files:** 1 (+888/-0)
+- **Duration:** 348ss
+- **Approach:** All core WO-040 files were pre-committed in the branch from the blocker WOs: queue/queue.controller.ts (GET /tickets with ZodValidationPipe on QueueQuerySchema), queue/queue.service.ts (listTickets: sort resolution, filter compilation via ViewsService.compileViewForPrincipal, cursor decoding, org-scope predicate via buildRawScopePredicate, Redis page-one cache keyed by tenant+signature+userId+scopeHash+sortKey), queue/queue.repository.ts (single SQL query with LEFT JOIN org, lateral json_agg tags, compiled filter + scope predicate + cursor predicate rebased params, LIMIT n+1 hasMore detection, COUNT with 3s timeout fallback to pg_class.reltuples), queue/queue.dto.ts (QueueQuerySchema: view_id/filter mutually exclusive, limit hard-cap 100, QUEUE_SORTABLE_FIELDS), queue/cursor.ts (encodeCursor, decodeCursor with sort-spec validation, buildCursorPredicate SQL generation, buildOrderByClause), views/view-counts.service.ts (getCounts: compile+count per view, 30s cache keyed by tenant+userId+scopeHash), views/views.controller.ts (GET /views/counts route via ViewCountsService), infra/cache/redis-cache.ts (get/set/del/delPattern with graceful degradation). The only gap was apps/api/test/queue.e2e-spec.ts. Created it following the existing NestJS TestingModule + mocked service + TestContextInterceptor pattern. Both QueueController and ViewsController bootstrapped with mocked QueueService, ViewsService, and ViewCountsService. No DB or Redis required.
+
+## WO-045: User Story: WO-045 - Priority-based SLA target computation and dual timer creation
+- **Status:** completed
+- **Commit:** `d8cdbb3`
+- **Files:** 2 (+959/-0)
+- **Duration:** 995ss
+- **Approach:** All core WO-045 files were pre-committed in the branch from blocker WOs: domain/sla-target-calculator.ts (pure computeSlaTarget + computeNextFireAt using Intl.DateTimeFormat IANA-aware arithmetic, no getTimezoneOffset), sla-policy-resolver.service.ts (60s Redis cache, null-sentinel for negative hits, invalidateForPolicy for post-write cache busting), sla-timers.repository.ts (insertTimer with ON CONFLICT DO NOTHING, findByTicketId, updateTimer), sla.service.ts (createTimersForTicket + recomputeForPriorityChange with graceful policy-missing degradation and OpenTelemetry counter emission), packages/db/migrations/0028_sla_timers.sql (CREATE TABLE + RLS enable/force + tenant_isolation policy + unique clock index + partial running index), packages/db/src/schema/sla.ts (slaTimers table, SlaTimer, NewSlaTimer types). The only gaps were the two test files: apps/api/test/unit/sla-target-calculator.spec.ts and apps/api/test/integration/sla-timer-creation.spec.ts. Created both following the established Jest mock pattern (no real DB or Redis required).
