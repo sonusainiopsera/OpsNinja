@@ -826,3 +826,17 @@
 - **Files:** 1 (+79/-0)
 - **Duration:** 752ss
 - **Approach:** All WO-100 files were pre-committed on the branch. The implementation establishes a single typed event-type registry (packages/events/src/event-registry.ts) as the authoritative source for all 7 outbound webhook events (ticket.created, ticket.updated, ticket.closed, ticket.comment_added, ticket.sla_breached, ticket.assigned, webhook.ping), each with payloadSchema, examplePayload, trigger, orderingCaveat, dataClassification, and availability. Delivery configuration constants (MAX_WEBHOOK_DELIVERY_ATTEMPTS=6, WEBHOOK_BACKOFF_DELAYS_SECONDS=[1,2,4,8,60,900], SIGNATURE_REPLAY_WINDOW_SECONDS=300, WEBHOOK_CONSUMER_TIMEOUT_SECONDS=30) live in a single delivery-config.ts consumed by the webhook worker, the catalogue generator, and the portal config. The webhook worker's retry-classifier re-exports these constants so documentation and runtime cannot drift. SAMPLE_ENVELOPES in sample-payloads.ts are derived from the registry at module load time, ensuring sample payloads always match the current schema. The catalogue generator (docs/scripts/generate-webhook-catalogue.ts) renders index + per-event markdown pages from the registry and fails loudly on missing schemas. The redaction scanner (docs/scripts/redaction-scan.ts) scans built output against 6 deny-list patterns. Two complementary test suites gate the build: docs/test/portal-coverage.spec.ts (6 describe blocks, registry completeness + config parity via runtime constants + redaction + payload safety + front-matter) and test/docs/portal-coverage.spec.ts (7 describe blocks, includes cross-module parity check importing retry-classifier directly for structural verification).
+
+## WO-047: User Story: WO-047 - SLA clock pause, resume and auditable state reconstruction
+- **Status:** completed
+- **Commit:** `a63c8e5`
+- **Files:** 4 (+217/-6)
+- **Duration:** 317ss
+- **Approach:** N/A
+
+## WO-048: User Story: WO-048 - Idempotent SLA reminder emission and on-call escalation routing
+- **Status:** completed
+- **Commit:** `baa8191`
+- **Files:** 0 (+0/-0)
+- **Duration:** 377ss
+- **Approach:** All WO-048 source files were pre-committed on the branch. The implementation adds idempotent SLA reminder emission via a new sla_reminder_emissions table (migration 0039) with a UNIQUE INDEX on (timer_id, threshold_pct, channel) as the physical deduplication mechanism. The SlaReminderHandler processes sla.reminder_due and sla.breached events from a dedicated sla-notifications SQS queue (subscribed to the SNS topic with a filter policy) inside the existing notification worker deployable. The handler: (1) unwraps SNS envelopes and Zod-validates the event payload, (2) attempts INSERT INTO sla_reminder_emissions ON CONFLICT DO NOTHING RETURNING id — an empty result short-circuits as a no-op, (3) applies live-state guards re-reading timer.state/paused_at and ticket.status to suppress for cancelled/paused/terminal states, (4) resolves the recipient via a three-level fallback ladder (assignee email → assignment group member → SLA_ESCALATION_EMAIL env var → unroutable), (5) dispatches email via SesEmailSender (PII never logged) and outbound webhook with HMAC-SHA256 signing using signWebhookPayload(body, secret, timestampMs) over ${timestampMs}.${body}, with SSRF validation (HTTPS enforcement + IPv4/IPv6 CIDR deny-lists + DNS re-resolution). The Helm values.yaml declares the sla-notifications SQS queue with maxReceiveCount=5 redrive to a DLQ and two CloudWatch alarms (DLQ depth and sla_reminder_delivery_failed_total).

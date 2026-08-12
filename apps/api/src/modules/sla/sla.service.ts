@@ -1,18 +1,23 @@
 /**
- * SlaService — public entry point for SLA timer lifecycle (WO-045).
+ * SlaService — public entry point for SLA timer lifecycle (WO-045, WO-047).
  *
  * Public API (called by TicketsModule — no direct sla_timers / sla_policies
  * imports allowed outside this service):
  *
  *   createTimersForTicket(params)         — call during ticket create transaction
  *   recomputeForPriorityChange(params)    — call during ticket priority-change update
+ *   pauseForTicketStatus(params)          — WO-047: pause running timers on status transition
+ *   resumeForTicketStatus(params)         — WO-047: resume paused timers on status transition
+ *   completeForTicket(params)             — WO-047: close timers on ticket resolution/closure
  *
- * Both methods execute inside the caller's existing Drizzle transaction (shared
+ * All methods execute inside the caller's existing Drizzle transaction (shared
  * via AsyncLocalStorage — the caller never passes a connection object).
  *
- * Missing policy degrades gracefully: the ticket is still created, no timer is
- * inserted, sla_policy_missing_total increments, and a structured warning is
- * emitted. Any other exception propagates so the caller's transaction rolls back.
+ * Idempotency: pausing an already-paused timer is a no-op (logged at debug).
+ * Resuming a running timer is also a no-op. Terminal timers are never modified.
+ *
+ * target_at invariant: pause, resume and complete NEVER mutate target_at.
+ * Remaining time is always computed as target_at + paused_ms in calendar time.
  *
  * OpenTelemetry: spans and counters are emitted as structured log entries with
  * metric: prefix so the log pipeline can route them to the metrics backend.
@@ -22,6 +27,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { SlaPolicy, SlaTimer } from '@opsninja/db';
 import { SlaPolicyResolver } from './sla-policy-resolver.service';
 import { SlaTimersRepository } from './sla-timers.repository';
+import { SlaTimerEventsRepository } from './sla-timer-events.repository';
 import { SlaCalendarsRepository } from './sla-calendars.repository';
 import {
   computeSlaTarget,
@@ -29,6 +35,7 @@ import {
   SlaTargetError,
   type CalendarSpec,
 } from './domain/sla-target-calculator';
+import { computeWorkingMs } from './domain/sla-clock';
 
 // ---------------------------------------------------------------------------
 // Public parameter types
@@ -53,6 +60,38 @@ export interface RecomputeParams {
   /** Human-readable reason recorded in the audit log. */
   reason: string;
   actorId: string | null;
+}
+
+// WO-047 parameter types ─────────────────────────────────────────────────────
+
+export interface PauseForTicketStatusParams {
+  tenantId: string;
+  ticketId: string;
+  /** The new ticket status that triggered the pause (used as reason prefix). */
+  status: string;
+  actorId: string | null;
+  /** Override the current time (injectable for tests). */
+  now?: Date;
+}
+
+export interface ResumeForTicketStatusParams {
+  tenantId: string;
+  ticketId: string;
+  /** The new ticket status that triggered the resume (used as reason prefix). */
+  status: string;
+  actorId: string | null;
+  /** Override the current time (injectable for tests). */
+  now?: Date;
+}
+
+export interface CompleteForTicketParams {
+  tenantId: string;
+  ticketId: string;
+  /** 'met' when resolved within target, 'cancelled' when ticket closed/deleted. */
+  terminalState: 'met' | 'breached' | 'cancelled';
+  actorId: string | null;
+  /** Override the current time (injectable for tests). */
+  now?: Date;
 }
 
 // ---------------------------------------------------------------------------
