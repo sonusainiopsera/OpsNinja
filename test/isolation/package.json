@@ -1,0 +1,16 @@
+{
+  "name": "@opsninja/isolation-tests",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Cross-tenant isolation and RBAC adversarial test suite — WO-098",
+  "scripts": {
+    "test": "vitest run",
+    "test:isolation": "vitest run --reporter=verbose --reporter=json --outputFile=isolation-verdict.json",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.0.0"
+  }
+}
