@@ -97,11 +97,14 @@ export function SlaCountdown({
     return (
       <span
         className={className}
+        data-testid="sla-countdown"
+        role="img"
         aria-label="SLA status unknown"
+        data-sla-state="unknown"
         style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 4, background: 'var(--sla-paused-bg, #f3f4f6)', color: 'var(--sla-paused-fg, #374151)', fontSize: 12 }}
       >
         <Icon name="alert-triangle" size={12} />
-        <span>Unknown</span>
+        <span data-sla-label="true">Unknown</span>
       </span>
     );
   }
@@ -113,6 +116,11 @@ export function SlaCountdown({
     slaStateMeta[effectiveState] ? effectiveState : 'unknown',
     result.remainingMs,
   );
+
+  // Breached: show overdue as "+MM:SS" with a leading plus sign.
+  const displayTimeFormatted = result.isOverdue
+    ? `+${formatRemaining(Math.abs(result.remainingMs))}`
+    : displayTime;
 
   const pillStyle: React.CSSProperties = {
     display: 'inline-flex',
@@ -130,13 +138,19 @@ export function SlaCountdown({
   return (
     <span
       className={className}
+      data-testid="sla-countdown"
+      role="img"
       aria-label={ariaLabel}
       data-sla-state={slaStateMeta[effectiveState] ? effectiveState : 'unknown'}
       style={pillStyle}
     >
       <Icon name={meta.iconName} size={12} />
-      <span aria-hidden="true">{meta.label}</span>
-      <span style={{ marginLeft: 2 }}>{displayTime}</span>
+      {/* Label — visible text plus accessible state description */}
+      <span aria-hidden="true" data-sla-label="true">{meta.label}</span>
+      {/* Time display — aria-hidden so screen readers use the full aria-label */}
+      <span style={{ marginLeft: 2 }} aria-hidden="true" data-sla-time="true">
+        {displayTimeFormatted}
+      </span>
     </span>
   );
 }

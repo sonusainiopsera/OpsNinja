@@ -59,13 +59,29 @@ interface SlaClockProviderProps {
   clock?: MonotonicClock;
   /** Tick interval in ms (default 1000). Lower for tests. */
   intervalMs?: number;
+  /**
+   * Convenience alias for `clock.now` — accepts a plain function instead of
+   * a MonotonicClock object. Takes precedence over `clock` when provided.
+   */
+  getMonoMs?: () => number;
+  /**
+   * Convenience alias for `intervalMs` — matches the test fixture prop name.
+   * Takes precedence over `intervalMs` when provided.
+   */
+  tickIntervalMs?: number;
 }
 
 export function SlaClockProvider({
   children,
   clock = defaultClock,
   intervalMs = 1000,
+  getMonoMs,
+  tickIntervalMs,
 }: SlaClockProviderProps) {
+  // Resolve convenience aliases: getMonoMs wraps into a MonotonicClock,
+  // tickIntervalMs overrides intervalMs.
+  const resolvedClock: MonotonicClock = getMonoMs ? { now: getMonoMs } : clock;
+  const resolvedIntervalMs = tickIntervalMs ?? intervalMs;
   const subscribersRef = useRef<Set<TickSubscriber>>(new Set());
   const [announcement, setAnnouncement] = useState('');
   const announcedRef = useRef<Set<string>>(new Set());
@@ -92,13 +108,13 @@ export function SlaClockProvider({
 
   useEffect(() => {
     const id = setInterval(() => {
-      const tick: ClockTick = { currentMs: clock.now() };
+      const tick: ClockTick = { currentMs: resolvedClock.now() };
       subscribersRef.current.forEach((cb) => cb(tick));
-    }, intervalMs);
+    }, resolvedIntervalMs);
     return () => clearInterval(id);
-  }, [clock, intervalMs]);
+  }, [resolvedClock, resolvedIntervalMs]);
 
-  const value: SlaClockContextValue = { subscribe, announce, clock };
+  const value: SlaClockContextValue = { subscribe, announce, clock: resolvedClock };
 
   return (
     <SlaClockContext.Provider value={value}>
