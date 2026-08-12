@@ -11,6 +11,7 @@ import { ContactsController } from './contacts/contacts.controller';
 import { ContactsService } from './contacts/contacts.service';
 import { ContactsRepository } from './contacts/contacts.repository';
 import { ContactImportService } from './contacts/contact-import.service';
+import { CustomFieldDefsController } from './custom-fields/custom-field-defs.controller';
 import { CustomFieldDefsService } from './custom-fields/custom-field-defs.service';
 import { CustomFieldDefsRepository } from './custom-fields/custom-field-defs.repository';
 import { VerifiedDomainsService } from './verified-domains/verified-domains.service';
@@ -20,7 +21,7 @@ import { OrganizationChangeRequestsService } from './organization-change-request
 
 @Module({
   imports: [forwardRef(() => AuthModule), AuditModule],
-  controllers: [AgentScopesController, OrganizationsController, ContactsController],
+  controllers: [AgentScopesController, OrganizationsController, ContactsController, CustomFieldDefsController],
   providers: [
     AgentScopesService,
     OrganizationsService,

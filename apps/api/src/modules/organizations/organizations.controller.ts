@@ -22,6 +22,7 @@ import {
   Get,
   Post,
   Patch,
+  Put,
   Body,
   Param,
   Query,
@@ -56,6 +57,10 @@ import {
   ReactivateOrganizationSchema,
   type ReactivateOrganizationDto,
 } from './dto/reactivate-organization.dto';
+import {
+  PutCustomFieldValuesSchema,
+  type PutCustomFieldValuesDto,
+} from './custom-fields/dto/custom-field-def.dto';
 
 @Controller('organizations')
 export class OrganizationsController {
@@ -190,5 +195,30 @@ export class OrganizationsController {
       },
       traceId,
     };
+  }
+
+  // --------------------------------------------------------------------------
+  // PUT /api/v1/organizations/:id/custom-fields
+  //
+  // Replace the entire custom_field_values JSONB for an organization.
+  // Validated against active definitions — unknown keys are rejected (400),
+  // missing required fields are rejected (422), type violations are rejected
+  // (400 with per-field details).
+  // --------------------------------------------------------------------------
+
+  @Put(':id/custom-fields')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermission('org:update')
+  async putCustomFields(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(PutCustomFieldValuesSchema)) dto: PutCustomFieldValuesDto,
+    @Req() req: Request,
+  ) {
+    const { tenantId, userId } = getPrincipalContext();
+    const traceId = (req.headers['x-trace-id'] as string | undefined) ?? randomUUID();
+
+    const result = await this.service.putCustomFields(tenantId, id, dto, userId, traceId);
+
+    return { data: result, traceId };
   }
 }

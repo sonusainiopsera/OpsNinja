@@ -299,6 +299,148 @@ export class OrganizationsService {
   }
 
   // --------------------------------------------------------------------------
+  // putCustomFields — dedicated JSONB replace (WO-026)
+  // --------------------------------------------------------------------------
+
+  /**
+   * Replace the entire custom_field_values JSONB for an organization.
+   *
+   * Validation is strict allow-list:
+   *   - Unknown keys → 400 CUSTOM_FIELD_VALIDATION_FAILED
+   *   - Missing required fields → 422 CUSTOM_FIELD_VALIDATION_FAILED
+   *   - Type violations → 400 CUSTOM_FIELD_VALIDATION_FAILED with per-field details
+   *   - Version mismatch → 409 ORGANIZATION_VERSION_CONFLICT
+   *
+   * Returns the organisation row with normalised customFieldValues.
+   */
+  async putCustomFields(
+    tenantId: string,
+    id: string,
+    dto: PutCustomFieldValuesDto,
+    actorId: string,
+    traceId?: string,
+  ): Promise<{ id: string; customFieldValues: Record<string, unknown>; version: number }> {
+    // Load org
+    const current = await this.repo.findById(tenantId, id);
+    if (!current) {
+      throw new NotFoundException({
+        error: {
+          code: 'ORGANIZATION_NOT_FOUND',
+          message: `Organization ${id} not found.`,
+          details: [],
+        },
+      });
+    }
+
+    if (current.status === 'inactive') {
+      throw new UnprocessableEntityException({
+        error: {
+          code: 'ORGANIZATION_INACTIVE',
+          message: 'Inactive organizations cannot be edited. Reactivate first.',
+        },
+      });
+    }
+
+    // Validate values against active definitions
+    const cfValues = (dto.values ?? {}) as Record<string, unknown>;
+    const cfResult = await this.customFieldDefsService.validateValues(tenantId, cfValues);
+
+    if (!cfResult.valid) {
+      // Distinguish required-missing (422) from type/unknown-key (400)
+      const hasRequiredMissing = cfResult.errors.some((e) =>
+        e.reason.includes('Required field is missing'),
+      );
+      if (hasRequiredMissing) {
+        throw new UnprocessableEntityException({
+          error: {
+            code: 'CUSTOM_FIELD_VALIDATION_FAILED',
+            message: 'Required custom field values are missing.',
+            details: cfResult.errors,
+          },
+        });
+      }
+      throw new BadRequestException({
+        error: {
+          code: 'CUSTOM_FIELD_VALIDATION_FAILED',
+          message: 'One or more custom field values are invalid.',
+          details: cfResult.errors,
+        },
+      });
+    }
+
+    const normalized = (cfResult.normalized ?? cfValues) as Record<string, unknown>;
+
+    // Preserve orphan values from archived fields that are not in the submitted payload.
+    // Archived definitions are excluded from write validation but their stored values
+    // must remain intact for reporting (edge case: org contains orphan keys from
+    // a previously archived definition).
+    const defs = await this.customFieldDefsService.listAll(tenantId);
+    const archivedKeys = new Set(
+      defs
+        .filter((d) => d.archivedAt)
+        .map((d) => d.fieldKey),
+    );
+    const existingValues = (current as Record<string, unknown>)['customFieldValues'] as Record<string, unknown> ?? {};
+    const preserved: Record<string, unknown> = {};
+    for (const key of archivedKeys) {
+      if (key in existingValues) {
+        preserved[key] = existingValues[key];
+      }
+    }
+
+    const merged = { ...preserved, ...normalized };
+
+    const result = await this.repo.updateOrganization(
+      tenantId,
+      id,
+      dto.version,
+      { customFieldValues: merged },
+      traceId,
+    );
+
+    if (result === 'VERSION_CONFLICT') {
+      const fresh = await this.repo.findById(tenantId, id);
+      throw new ConflictException({
+        error: {
+          code: 'ORGANIZATION_VERSION_CONFLICT',
+          message: 'The organization was modified by another request. Fetch the latest version and retry.',
+          details: [{ currentVersion: fresh?.version ?? 'unknown' }],
+        },
+      });
+    }
+
+    // Audit: record custom-field replace inside the same transaction.
+    await this.auditWriter.append({
+      resourceType: 'organization',
+      resourceId:   id,
+      action:       'update',
+      beforeState: {
+        customFieldValues: existingValues,
+        version: current.version,
+      },
+      afterState: {
+        customFieldValues: merged,
+        version: result.version,
+      },
+      metadata: { operation: 'custom_fields_replace', actorId },
+    });
+
+    this.logger.log('Organization custom fields replaced', {
+      tenantId,
+      orgId: id,
+      actorId,
+      operation: 'organization.custom_fields_replace',
+      fieldCount: Object.keys(normalized).length,
+    });
+
+    return {
+      id: result.id,
+      customFieldValues: merged,
+      version: result.version,
+    };
+  }
+
+  // --------------------------------------------------------------------------
   // Lifecycle: isOrganizationActive (public interface for cross-module use)
   // --------------------------------------------------------------------------
 
