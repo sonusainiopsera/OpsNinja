@@ -146,3 +146,85 @@ export const ORG_SEED_CUSTOM_FIELD_DEFS: SeedCustomFieldDef[] = [
   { id: 'a0000004-0000-0000-0000-000000000007', tenantId: ORG_SEED_TENANT_B, fieldKey: 'region_list', label: 'Active Regions', dataType: 'multi_select', options: ['us-east-1', 'us-west-2', 'eu-west-1', 'ap-southeast-1'], required: false, appliesTo: 'organization', displayOrder: 3 },
   { id: 'a0000004-0000-0000-0000-000000000008', tenantId: ORG_SEED_TENANT_B, fieldKey: 'renewal_date', label: 'Contract Renewal Date', dataType: 'date', options: null, required: false, appliesTo: 'organization', displayOrder: 4 },
 ];
+
+// ---------------------------------------------------------------------------
+// Pagination-boundary tenant (Tenant D)
+//
+// A dedicated tenant with 105 organisations used to test cursor-pagination
+// behaviour at the page boundary (default limit=25, hard cap=100).
+//
+// Having 105 organisations means:
+//   - page 1 (limit=100): returns 100 rows + nextCursor
+//   - page 2 (limit=100): returns 5 rows + nextCursor=null
+//   - page 1 (limit=25): returns 25 rows + nextCursor
+//   - pages 2..4 (limit=25): returns 25, 25, 25 rows + nextCursor
+//   - page 5 (limit=25): returns 5 rows + nextCursor=null
+//
+// All orgs share the same slaTier / region mix so filter tests can isolate
+// a subset and verify cursor stability across filtered result sets.
+// ---------------------------------------------------------------------------
+
+/** Tenant D — used exclusively for pagination boundary testing. */
+export const ORG_SEED_TENANT_D = 'a0000001-0000-0000-0000-000000000004';
+
+export const ORG_SEED_PAGINATION_TENANTS = [
+  { id: ORG_SEED_TENANT_D, name: 'Delta Pagination Corp', slug: 'delta-pagination-corp' },
+];
+
+/** SLA tiers rotated across pagination orgs to support filter tests. */
+const PAGING_TIERS = ['standard', 'premium', 'enterprise'] as const;
+/** Regions rotated across pagination orgs. */
+const PAGING_REGIONS = ['us-east-1', 'us-west-2', 'eu-west-1', 'eu-central-1', 'ap-southeast-1'] as const;
+
+/**
+ * 105 organizations in Tenant D.
+ *
+ * IDs use the prefix a0000002-0000-0000-0001-{14-digit-zero-padded-seq}.
+ * createdAt is staggered 1 second apart (starting 2025-01-01T00:00:00Z)
+ * so keyset pagination produces a stable, deterministic ordering.
+ *
+ * Naming convention:
+ *   "Paging Org {N:001..105}"
+ * so prefix-search tests can match a subset (e.g. q="Paging Org 0" matches 009 orgs).
+ */
+function makePagingOrg(n: number): SeedOrganization {
+  const seq = String(n).padStart(3, '0');
+  const tier = PAGING_TIERS[(n - 1) % PAGING_TIERS.length]!;
+  const region = PAGING_REGIONS[(n - 1) % PAGING_REGIONS.length]!;
+  // IDs: a0000002-0000-0000-0001-0000000{seq} where seq is zero-padded to 6 digits
+  const seqPadded = String(n).padStart(6, '0');
+  return {
+    id: `a0000002-0000-0000-0001-000000${seqPadded}`,
+    tenantId: ORG_SEED_TENANT_D,
+    name: `Paging Org ${seq}`,
+    slug: `paging-org-${seq}`,
+    slaTier: tier,
+    region,
+    status: 'active',
+    customFieldValues: {},
+  };
+}
+
+/** All 105 pagination-boundary organizations for Tenant D. */
+export const ORG_SEED_PAGING_ORGS: SeedOrganization[] = Array.from(
+  { length: 105 },
+  (_, i) => makePagingOrg(i + 1),
+);
+
+/**
+ * Combined seed: all organizations across all tenants (A, B, C) plus the
+ * 105 pagination orgs in Tenant D.
+ *
+ * NOTE: Use ORG_SEED_ORGS when you only want the 12 small-fixture orgs,
+ * and ORG_SEED_PAGING_ORGS when you only want the Tenant D pagination set.
+ * Use ORG_SEED_ALL_ORGS when you need both populations loaded together.
+ */
+export const ORG_SEED_ALL_ORGS: SeedOrganization[] = [
+  ...ORG_SEED_ORGS,
+  ...ORG_SEED_PAGING_ORGS,
+];
+
+// Helpers for lookup
+export const ORG_SEED_PAGING_ORGS_STANDARD = ORG_SEED_PAGING_ORGS.filter((o) => o.slaTier === 'standard');
+export const ORG_SEED_PAGING_ORGS_PREMIUM  = ORG_SEED_PAGING_ORGS.filter((o) => o.slaTier === 'premium');
+export const ORG_SEED_PAGING_ORGS_ENTERPRISE = ORG_SEED_PAGING_ORGS.filter((o) => o.slaTier === 'enterprise');
