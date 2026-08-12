@@ -819,3 +819,10 @@
 - **Files:** 0 (+0/-0)
 - **Duration:** 254ss
 - **Approach:** N/A
+
+## WO-100: User Story: WO-100 - Publish Developer Portal and Outbound Webhook Catalogue
+- **Status:** completed
+- **Commit:** `472019c`
+- **Files:** 1 (+79/-0)
+- **Duration:** 752ss
+- **Approach:** All WO-100 files were pre-committed on the branch. The implementation establishes a single typed event-type registry (packages/events/src/event-registry.ts) as the authoritative source for all 7 outbound webhook events (ticket.created, ticket.updated, ticket.closed, ticket.comment_added, ticket.sla_breached, ticket.assigned, webhook.ping), each with payloadSchema, examplePayload, trigger, orderingCaveat, dataClassification, and availability. Delivery configuration constants (MAX_WEBHOOK_DELIVERY_ATTEMPTS=6, WEBHOOK_BACKOFF_DELAYS_SECONDS=[1,2,4,8,60,900], SIGNATURE_REPLAY_WINDOW_SECONDS=300, WEBHOOK_CONSUMER_TIMEOUT_SECONDS=30) live in a single delivery-config.ts consumed by the webhook worker, the catalogue generator, and the portal config. The webhook worker's retry-classifier re-exports these constants so documentation and runtime cannot drift. SAMPLE_ENVELOPES in sample-payloads.ts are derived from the registry at module load time, ensuring sample payloads always match the current schema. The catalogue generator (docs/scripts/generate-webhook-catalogue.ts) renders index + per-event markdown pages from the registry and fails loudly on missing schemas. The redaction scanner (docs/scripts/redaction-scan.ts) scans built output against 6 deny-list patterns. Two complementary test suites gate the build: docs/test/portal-coverage.spec.ts (6 describe blocks, registry completeness + config parity via runtime constants + redaction + payload safety + front-matter) and test/docs/portal-coverage.spec.ts (7 describe blocks, includes cross-module parity check importing retry-classifier directly for structural verification).
