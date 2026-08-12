@@ -104,6 +104,41 @@ export class OrgScopeService {
   }
 
   /**
+   * Bumps the scope_version counter for every agent that has orgId in their
+   * assigned scope, so their next request fails the staleness check and forces
+   * re-authentication. Called on org deactivation and reactivation.
+   *
+   * Best-effort: per-user errors are logged and swallowed; the operation is a
+   * cache-invalidation mechanism, not a security enforcement point.
+   */
+  async invalidateOrgScopes(tenantId: string, orgId: string): Promise<void> {
+    const rows = await db
+      .select({ userId: agentOrgScopes.userId })
+      .from(agentOrgScopes)
+      .where(
+        and(
+          eq(agentOrgScopes.tenantId, tenantId),
+          eq(agentOrgScopes.organizationId, orgId),
+        ),
+      );
+
+    if (rows.length === 0) return;
+
+    await Promise.all(
+      rows.map((r) =>
+        this.bumpScopeVersion(tenantId, r.userId).catch((err) => {
+          this.logger.warn('Failed to bump scope_version for agent after org transition', {
+            tenantId,
+            userId: r.userId,
+            orgId,
+            error: (err as Error).message,
+          });
+        }),
+      ),
+    );
+  }
+
+  /**
    * Atomically bumps the scope_version counter for a user in Redis.
    * Returns the new version number.
    */

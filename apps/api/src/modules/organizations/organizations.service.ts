@@ -20,6 +20,7 @@ import {
   ConflictException,
   UnprocessableEntityException,
   BadRequestException,
+  Optional,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { pool } from '@opsninja/db';
@@ -36,6 +37,7 @@ import { CustomFieldDefsService } from './custom-fields/custom-field-defs.servic
 import { VerifiedDomainsService } from './verified-domains/verified-domains.service';
 import { extractEmailDomain } from './verified-domains/domain-normalizer';
 import { AuditWriter } from '../audit/audit-writer';
+import { OrgScopeService } from '../../common/auth/org-scope.service';
 
 @Injectable()
 export class OrganizationsService {
@@ -46,6 +48,7 @@ export class OrganizationsService {
     private readonly customFieldDefsService: CustomFieldDefsService,
     private readonly verifiedDomainsService: VerifiedDomainsService,
     private readonly auditWriter: AuditWriter,
+    @Optional() private readonly orgScopeService?: OrgScopeService,
   ) {}
 
   // --------------------------------------------------------------------------
@@ -373,7 +376,18 @@ export class OrganizationsService {
       action:       'deactivate',
       beforeState:  { status: 'active',   version: org.version },
       afterState:   { status: 'inactive', version: result.version },
+      metadata:     { reason: dto.reason, actorId },
     });
+
+    // Bump Redis scope versions for all agents with this org in scope so stale
+    // tokens are detected on their next request and force re-authentication.
+    if (this.orgScopeService) {
+      await this.orgScopeService.invalidateOrgScopes(tenantId, id).catch((err) => {
+        this.logger.warn('Failed to invalidate org scope caches after deactivation', {
+          tenantId, orgId: id, error: (err as Error).message,
+        });
+      });
+    }
 
     this.logger.log('Organization deactivated', { tenantId, orgId: id, actorId, operation: 'organization.deactivate' });
     return result;
@@ -428,7 +442,17 @@ export class OrganizationsService {
       action:       'reactivate',
       beforeState:  { status: 'inactive', version: org.version },
       afterState:   { status: 'active',   version: result.version },
+      metadata:     { reason: dto.reason, actorId },
     });
+
+    // Bump Redis scope versions so agents see the restored org promptly.
+    if (this.orgScopeService) {
+      await this.orgScopeService.invalidateOrgScopes(tenantId, id).catch((err) => {
+        this.logger.warn('Failed to invalidate org scope caches after reactivation', {
+          tenantId, orgId: id, error: (err as Error).message,
+        });
+      });
+    }
 
     this.logger.log('Organization reactivated', { tenantId, orgId: id, actorId, operation: 'organization.reactivate' });
     return result;
