@@ -903,3 +903,10 @@
 - **Files:** 3 (+556/-0)
 - **Duration:** 496ss
 - **Approach:** N/A
+
+## WO-069: User Story: WO-069 - Five-Second Delta Publisher and Sequenced Reconnect Backfill
+- **Status:** completed
+- **Commit:** `38975e2`
+- **Files:** 3 (+1050/-0)
+- **Duration:** 486ss
+- **Approach:** All WO-069 source files (DeltaPublisherService, aggregate-diff.ts, publish-frame.lua, BackfillService, OutboundQueue, frame.types.ts) were pre-committed from blocker WOs, along with spec files for aggregate-diff and delta-publisher. The implementation gap was the missing unit and integration tests for BackfillService and OutboundQueue. Created three test files: (1) outbound-queue.spec.ts covering all queue operations, (2) backfill.spec.ts covering every handleSubscribe code path, and (3) backfill-reconnect.spec.ts providing mock-backed integration tests for the four reconnect scenarios plus replay idempotence.
