@@ -805,3 +805,17 @@
 - **Files:** 2 (+476/-0)
 - **Duration:** 465ss
 - **Approach:** All core WO-078 files were pre-committed from the initial scaffold (blocker WOs WO-074 and WO-076): ReportBuilderPage.tsx, BuilderPanel, SavedReportsRail, MetricPicker, GroupBySelect, VisualizationToggle, FilterStack, FilterRow, RowLimitNote, PreviewPanel, RunStatePill, ExportBar, ExportJobsCard, ScheduleModal, builder.reducer.ts (TOGGLE_METRIC/SET_GROUP_BY/ADD_FILTER/UPDATE_FILTER/REMOVE_FILTER/MARK_RUN/MARK_SAVED/LOAD_DEFINITION/MARK_CLEAN actions), buildFilterAst, canRun, canSave, TanStack Query hooks (useFieldCatalog 1h staleTime, useReportList, useRunReport with AbortController, useCreateReport, useUpdateReport, useDeleteReport), reporting types (FilterAst, ChartType, ReportScope, getErrorCopy), MSW handlers (MOCK_FIELD_CATALOG, MOCK_DEFINITIONS, MOCK_RUN_RESULT, MOCK_RUN_TRUNCATED, setRunBehaviour, resetReportingHandlers, reportingHandlers wired into browser worker), and Vitest unit tests (reporting.test.tsx — 50+ tests covering reducer, buildFilterAst golden output, FilterRow operator/type matrix, RunStatePill 6 states, RowLimitNote truncation/stale/replica, role gating, error copy mapping). The two implementation gaps: (1) BuilderPanelProps interface was missing onExportCsv/onExportPdf optional handlers that are passed at the usage site (ExportBar handles exports internally; parent passes them for optional override) — fixed by adding the optional props to the interface; (2) Playwright e2e test (AC-12) was absent — created e2e/report-builder.spec.ts with 9 tests covering the full build-run-save-reopen journey plus axe assertions in light and dark themes.
+
+## WO-081: User Story: WO-081 - Ticket Lifecycle Event Notification Rules and Preferences
+- **Status:** completed
+- **Commit:** `991d889`
+- **Files:** 1 (+687/-0)
+- **Duration:** 783ss
+- **Approach:** All WO-081 source files were pre-committed on the branch (event-catalogue.ts, notification-rule.resolver.ts, notification-preferences.service.ts, notification-preferences.controller.ts, dto/notification-preferences.dto.ts, notifications.module.ts, and all unit test files). The single gap was the integration test. Created apps/api/test/integration/notification-preferences.spec.ts following the NestJS TestingModule + supertest + mocked-service pattern established by organizations.api.spec.ts and portal-ticket-isolation.spec.ts. The file has two major sections: (1) HTTP API endpoint tests for AC-5 using TestContextInterceptor (reads x-test-principal header, binds requestContextStore) with PortalVisibilityGuard overridden to always pass; (2) rule resolver behaviour tests for AC-3/AC-9 using direct resolver instantiation with getTxHandle mocked via jest.mock. The resolver section mocks getTxHandle to return a Drizzle-shaped query stub for the two DB calls (ticket lookup + contacts query), allowing all short-circuit paths and full-pipeline paths to be exercised without a real database.
+
+## WO-086: User Story: WO-086 - Portal self-service signup with verified business email domains
+- **Status:** completed
+- **Commit:** `9f78a28`
+- **Files:** 0 (+0/-0)
+- **Duration:** 254ss
+- **Approach:** N/A
