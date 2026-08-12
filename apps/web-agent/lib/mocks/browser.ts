@@ -7,6 +7,8 @@ import { ticketDetailHandlers } from './handlers/ticket-detail';
 import { slaHandlers } from './handlers/sla';
 import { reportingHandlers } from './handlers/reporting.handlers';
 import { organizationHandlers } from './handlers/organizations';
+import { jiraHandlers } from './handlers/jira-integration';
+import { portalSignupHandlers } from './handlers/portal-signups.handlers';
 
 export const worker = setupWorker(
   ...queueHandlers,
@@ -14,4 +16,6 @@ export const worker = setupWorker(
   ...slaHandlers,
   ...reportingHandlers,
   ...organizationHandlers,
+  ...jiraHandlers,
+  ...portalSignupHandlers,
 );

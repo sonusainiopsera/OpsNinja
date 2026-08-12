@@ -195,6 +195,10 @@ export const slaTimers = pgTable(
     targetAt: timestamp('target_at', { withTimezone: true }).notNull(),
     /** Earliest of first-reminder, second-reminder and target_at — drives the scheduler scan. */
     nextFireAt: timestamp('next_fire_at', { withTimezone: true }),
+    /** Set when the timer is paused; null when running/terminal. Added by migration 0038. */
+    pausedAt: timestamp('paused_at', { withTimezone: true }),
+    /** Human-readable reason the timer was paused (e.g. 'status:pending_customer'). */
+    pauseReason: text('pause_reason'),
     lastStateChangeAt: timestamp('last_state_change_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

@@ -28,7 +28,7 @@ export const slaStateMeta = {
     colorVar: '--sla-running-fg',
     bgVar: '--sla-running-bg',
     iconName: 'clock',
-    label: 'On track',
+    label: 'On Track',
     announcement: '',
   },
   warning: {

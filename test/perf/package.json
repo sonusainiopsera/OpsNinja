@@ -16,6 +16,7 @@
     "stress:sla-contention": "ts-node stress/sla-scheduler-contention.ts",
     "stress:outbox-drain": "ts-node stress/outbox-drain-throughput.ts",
     "stress:export-memory": "ts-node stress/export-memory-envelope.ts",
+    "report:generate": "ts-node reporting/generate-report.ts",
     "report:compare": "ts-node reporting/compare-to-baseline.ts"
   },
   "dependencies": {

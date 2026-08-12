@@ -1,0 +1,98 @@
+# HELP dashboard_events_consumed_total Total outbox events consumed by the dashboard aggregator
+# TYPE dashboard_events_consumed_total counter
+dashboard_events_consumed_total{event_type="ticket.created",outcome="applied"} 1200
+dashboard_events_consumed_total{event_type="ticket.updated",outcome="applied"} 800
+dashboard_events_consumed_total{event_type="sla.breach",outcome="applied"} 45
+
+# HELP dashboard_events_deduplicated_total Total events skipped as duplicates
+# TYPE dashboard_events_deduplicated_total counter
+dashboard_events_deduplicated_total{event_type="ticket.created"} 12
+
+# HELP dashboard_event_lag_seconds Time between event occurredAt and aggregator processedAt
+# TYPE dashboard_event_lag_seconds histogram
+dashboard_event_lag_seconds_bucket{le="0.01"} 800
+dashboard_event_lag_seconds_bucket{le="0.05"} 1600
+dashboard_event_lag_seconds_bucket{le="0.1"} 1900
+dashboard_event_lag_seconds_bucket{le="0.25"} 1990
+dashboard_event_lag_seconds_bucket{le="0.5"} 2000
+dashboard_event_lag_seconds_bucket{le="1"} 2000
+dashboard_event_lag_seconds_bucket{le="2.5"} 2000
+dashboard_event_lag_seconds_bucket{le="5"} 2000
+dashboard_event_lag_seconds_bucket{le="10"} 2000
+dashboard_event_lag_seconds_bucket{le="+Inf"} 2000
+dashboard_event_lag_seconds_sum 45.2
+dashboard_event_lag_seconds_count 2000
+
+# HELP dashboard_aggregate_drift Absolute difference between Redis and Postgres counter values
+# TYPE dashboard_aggregate_drift gauge
+dashboard_aggregate_drift{counter="open_total",tenant_bucket="bucket_0"} 0
+dashboard_aggregate_drift{counter="open_total",tenant_bucket="bucket_1"} 0
+dashboard_aggregate_drift{counter="breach_count",tenant_bucket="bucket_0"} 0
+
+# HELP dashboard_publish_interval_lag_ms Milliseconds between scheduled publish interval and actual execution
+# TYPE dashboard_publish_interval_lag_ms gauge
+dashboard_publish_interval_lag_ms 12
+
+# HELP dashboard_snapshot_source_total Total snapshot aggregates loaded from cache vs database
+# TYPE dashboard_snapshot_source_total counter
+dashboard_snapshot_source_total{source="cache"} 9800
+dashboard_snapshot_source_total{source="database"} 3
+
+# HELP dashboard_reconcile_cycles_total Total reconciliation cycles completed
+# TYPE dashboard_reconcile_cycles_total counter
+dashboard_reconcile_cycles_total{outcome="success"} 480
+dashboard_reconcile_cycles_total{outcome="error"} 0
+
+# HELP dashboard_dlq_depth Current DLQ depth for dashboard-aggregates queue
+# TYPE dashboard_dlq_depth gauge
+dashboard_dlq_depth 0
+
+# HELP realtime_connections_active Number of active WebSocket connections on this pod
+# TYPE realtime_connections_active gauge
+realtime_connections_active{pod="gateway-0"} 412
+realtime_connections_active{pod="gateway-1"} 389
+
+# HELP realtime_connection_churn_total Total WebSocket connection close events
+# TYPE realtime_connection_churn_total counter
+realtime_connection_churn_total{reason="client_close",close_code="1000"} 230
+realtime_connection_churn_total{reason="heartbeat_timeout",close_code="4408"} 5
+
+# HELP realtime_authz_denied_total Total connection attempts denied at authorisation
+# TYPE realtime_authz_denied_total counter
+realtime_authz_denied_total{close_code="4401"} 2
+
+# HELP realtime_frames_delivered_total Total frames delivered to connected clients
+# TYPE realtime_frames_delivered_total counter
+realtime_frames_delivered_total{frame_type="delta"} 48000
+realtime_frames_delivered_total{frame_type="snapshot"} 820
+realtime_frames_delivered_total{frame_type="hello"} 801
+
+# HELP realtime_backfill_frames_total Total backfill frames sent on reconnect
+# TYPE realtime_backfill_frames_total counter
+realtime_backfill_frames_total 143
+
+# HELP realtime_snapshot_required_total Total times a snapshot frame was required instead of a delta
+# TYPE realtime_snapshot_required_total counter
+realtime_snapshot_required_total{reason="reconnect"} 8
+realtime_snapshot_required_total{reason="first_frame"} 801
+
+# HELP realtime_slow_consumer_drops_total Total frames dropped because the consumer outbound queue was full
+# TYPE realtime_slow_consumer_drops_total counter
+realtime_slow_consumer_drops_total 0
+
+# HELP realtime_frame_delivery_seconds Latency from frame generation to socket send (seconds)
+# TYPE realtime_frame_delivery_seconds histogram
+realtime_frame_delivery_seconds_bucket{frame_type="delta",le="0.005"} 42000
+realtime_frame_delivery_seconds_bucket{frame_type="delta",le="0.01"} 46000
+realtime_frame_delivery_seconds_bucket{frame_type="delta",le="0.025"} 47800
+realtime_frame_delivery_seconds_bucket{frame_type="delta",le="0.05"} 47990
+realtime_frame_delivery_seconds_bucket{frame_type="delta",le="0.1"} 48000
+realtime_frame_delivery_seconds_bucket{frame_type="delta",le="0.25"} 48000
+realtime_frame_delivery_seconds_bucket{frame_type="delta",le="0.5"} 48000
+realtime_frame_delivery_seconds_bucket{frame_type="delta",le="1"} 48000
+realtime_frame_delivery_seconds_bucket{frame_type="delta",le="2.5"} 48000
+realtime_frame_delivery_seconds_bucket{frame_type="delta",le="5"} 48000
+realtime_frame_delivery_seconds_bucket{frame_type="delta",le="10"} 48000
+realtime_frame_delivery_seconds_bucket{frame_type="delta",le="+Inf"} 48000
+realtime_frame_delivery_seconds_sum{frame_type="delta"} 192.0
+realtime_frame_delivery_seconds_count{frame_type="delta"} 48000

@@ -25,6 +25,15 @@ import { RedisCacheService } from '../../infra/cache/redis-cache';
 // WO-059: audit trail and observability
 import { JiraAuditController } from './audit/jira-audit.controller';
 import { JiraAuditRecorder } from './audit/jira-audit.recorder';
+// WO-056: DLQ inspection and replay
+import { JiraDlqController } from './dlq/jira-dlq.controller';
+import { JiraDlqService } from './dlq/jira-dlq.service';
+import { JiraDlqRepository } from './dlq/jira-dlq.repository';
+// WO-057: reconciliation run history and manual trigger
+import { JiraReconciliationController } from './reconciliation/jira-reconciliation.controller';
+import { JiraReconciliationService, SQS_CLIENT, JIRA_SYNC_QUEUE_URL } from './reconciliation/jira-reconciliation.service';
+import { JiraReconciliationRepository } from './reconciliation/jira-reconciliation.repository';
+import { SQSClient } from '@aws-sdk/client-sqs';
 
 @Module({
   imports: [AuditModule],
@@ -34,6 +43,8 @@ import { JiraAuditRecorder } from './audit/jira-audit.recorder';
     JiraLinksController,
     JiraHealthController,
     JiraAuditController,
+    JiraDlqController,
+    JiraReconciliationController,
   ],
   providers: [
     JiraConnectionsService,
@@ -67,6 +78,24 @@ import { JiraAuditRecorder } from './audit/jira-audit.recorder';
     RedisCacheService,
     // WO-059: audit recorder
     JiraAuditRecorder,
+    // WO-056: DLQ inspection and replay
+    JiraDlqController,
+    JiraDlqService,
+    JiraDlqRepository,
+    // WO-057: reconciliation run history and manual trigger
+    JiraReconciliationController,
+    JiraReconciliationService,
+    JiraReconciliationRepository,
+    {
+      provide: SQS_CLIENT,
+      useFactory: () =>
+        new SQSClient({ region: process.env['AWS_REGION'] ?? 'us-east-1' }),
+    },
+    {
+      provide: JIRA_SYNC_QUEUE_URL,
+      useFactory: () =>
+        process.env['JIRA_SYNC_QUEUE_URL'] ?? 'https://sqs.us-east-1.amazonaws.com/000000000000/jira-sync',
+    },
   ],
   exports: [JiraConnectionsService, JiraTokenProvider, JiraLinksService, JiraAuditRecorder],
 })

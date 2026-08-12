@@ -29,7 +29,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CUSTOM_CRON_MIN_INTERVAL_NOTE =
   'Custom cadences must have a minimum interval of 1 hour (e.g. 0 * * * *).';
 
-const scheduleSchema = z
+export const scheduleSchema = z
   .object({
     cadence: z.enum(['daily', 'weekly', 'monthly', 'custom'], {
       required_error: 'Cadence is required.',

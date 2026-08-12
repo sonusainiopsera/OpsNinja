@@ -658,3 +658,297 @@
 - **Files:** 2 (+959/-0)
 - **Duration:** 995ss
 - **Approach:** All core WO-045 files were pre-committed in the branch from blocker WOs: domain/sla-target-calculator.ts (pure computeSlaTarget + computeNextFireAt using Intl.DateTimeFormat IANA-aware arithmetic, no getTimezoneOffset), sla-policy-resolver.service.ts (60s Redis cache, null-sentinel for negative hits, invalidateForPolicy for post-write cache busting), sla-timers.repository.ts (insertTimer with ON CONFLICT DO NOTHING, findByTicketId, updateTimer), sla.service.ts (createTimersForTicket + recomputeForPriorityChange with graceful policy-missing degradation and OpenTelemetry counter emission), packages/db/migrations/0028_sla_timers.sql (CREATE TABLE + RLS enable/force + tenant_isolation policy + unique clock index + partial running index), packages/db/src/schema/sla.ts (slaTimers table, SlaTimer, NewSlaTimer types). The only gaps were the two test files: apps/api/test/unit/sla-target-calculator.spec.ts and apps/api/test/integration/sla-timer-creation.spec.ts. Created both following the established Jest mock pattern (no real DB or Redis required).
+
+## WO-049: User Story: WO-049 - SLA policy and escalation settings admin console page
+- **Status:** completed
+- **Commit:** `7b17f7a`
+- **Files:** 1 (+563/-0)
+- **Duration:** 893ss
+- **Approach:** All WO-049 core files were pre-committed from blocker WOs: SlaSettingsPage, PolicyEditor, TargetsPanel, CalendarPanel, RemindersPanel, PreviewPanel, StickyFooter, SchedulerHealthPill components; TanStack Query hooks (useSlaPolicies, useSlaPolicy, useSaveSlaPolicy, useSlaCalendars, useSchedulerHealth); Zod form schema (slaPolicyFormSchema with superRefine ordering rule); MSW handlers (slaHandlers, resetSlaHandlers); Playwright E2E spec (sla-settings.spec.ts). The only gap was the Vitest component test file. Created apps/web-agent/src/__tests__/sla-settings.test.tsx following the established Sidebar.test.tsx pattern (vi.mock, @testing-library/react, QueryClientProvider). Tests cover: slaPolicyFormSchema pure validation (7 cases), SchedulerHealthPill rendering (9 cases), TargetsPanel validation and read-only (6 cases), RemindersPanel threshold ordering and read-only (7 cases), PolicyEditor tab navigation and error handling (9 cases).
+
+## WO-052: User Story: WO-052 - Jira Project Scoping and Field Mapping Configuration
+- **Status:** completed
+- **Commit:** `4d90ef6`
+- **Files:** 2 (+1091/-0)
+- **Duration:** 636ss
+- **Approach:** All WO-052 core files were pre-committed from blocker WOs: DB migration (0019_jira_project_mappings.sql) with RLS + partial unique-default index; Drizzle schema (packages/db/src/schema/jira-project-mappings.ts); Zod validation schemas (jira-mapping.schema.ts — fieldMapEntrySchema, statusMapEntrySchema, CreateMappingSchema, UpdateMappingSchema, allow-listed MAPPING_SOURCES); JiraMappingRepository with clearDefault; JiraMappingService (required-field validation via JiraMetadataService, single-default exclusivity, CRUD); JiraMappingResolver (category > org > default precedence, MappingNotFoundError); JiraMetadataService (Redis 15-min cache with force-refresh, stale fallback, getMissingRequiredFields). The gaps were two test files: test/unit/jira-mapping-validator.spec.ts (pure Zod schema tests) and test/integration/jira-mapping.spec.ts (mocked resolver, metadata service, mapping service + AC11 fixtures + DB characterization).
+
+## WO-054: User Story: WO-054 - Signed Jira Webhook Receiver with Idempotent Ingest
+- **Status:** completed
+- **Commit:** `b417de3`
+- **Files:** 2 (+560/-0)
+- **Duration:** 546ss
+- **Approach:** All WO-054 core files were pre-committed from blocker WOs: apps/jira-webhook-receiver deployable (main.ts, app.module.ts, webhook.controller.ts, signature.verifier.ts, ingest.service.ts, redis.provider.ts, credential-vault.port.ts, package.json, tsconfig.json); unit tests (test/signature.verifier.spec.ts, test/ingest.service.spec.ts); packages/db/src/schema/jira-webhook-events.ts; packages/db/migrations/0020_jira_webhook_events.sql. The gaps were AC10 (integration test) and AC11 (fixtures + signing helper). Created test/fixtures.ts with six real-shape Jira webhook payloads (issue_updated, comment_created, issue_deleted, issue_created, comment_updated, comment_deleted) plus buildSignedHeaders helper and buildResolvedConnection helper. Created test/receiver.integration.spec.ts using NestJS TestingModule + supertest with a mocked IngestService, covering the full HTTP pipeline: all three real fixture payload types, duplicate delivery, unknown event type, missing signature, stale timestamp, tampered body, unknown tenant slug (non-disclosure), oversized payload 413, and 503 on ingest service failure.
+
+## WO-074: User Story: WO-074 - Report Run Preview API And Saved Definition Sharing
+- **Status:** completed
+- **Commit:** `24fab08`
+- **Files:** 5 (+1186/-1)
+- **Duration:** 578ss
+- **Approach:** All WO-074 service and DTO files were pre-committed from blocker WO-073: ReportRunService (viewer-scope substitution via viewerOrgScopeIds, preview cap, dataAsOf/stale from ReplicaLagProbe, StatementTimeoutError→504, filter-hash logging), ReportDefinitionService (cursor-paginated list with visibility filter, create, optimistic-concurrency update, soft-delete), SharingScopeResolver (private/team/tenant truth table, cross-tenant guard, filterVisible helper), RunReportSchema (exact-one-of definitionId/definition, strict mode), CreateReportDefinitionSchema/UpdateReportDefinitionSchema (version required for update). The gaps were: (1) reports.controller.ts was not pre-committed — created it with @RequirePermission('report:manage') on run/create/update/delete and @RequirePermission('report:read','report:manage') on list; (2) reporting.module.ts did not register the new services/controller — extended it; (3) unit test for SharingScopeResolver + ReportRunService + DTOs (AC9); (4) integration test for HTTP CRUD lifecycle + divergent viewer scope (AC10); (5) fixtures file for Lead/Agent/Manager principals with disjoint org scopes (AC11).
+
+## WO-076: User Story: WO-076 - Streaming CSV Export Worker To S3
+- **Status:** completed
+- **Commit:** `5c60c56`
+- **Files:** 7 (+1446/-1)
+- **Duration:** 736ss
+- **Approach:** Implemented the full streaming CSV export pipeline for WO-076. The ExportsController (POST /exports → 202 + Location header; GET /exports/:id → presigned URL on-demand) was created following the existing reports.controller.ts RBAC/ZodValidationPipe patterns. The CsvStreamSerializer is a Node.js Transform stream that never accumulates rows — it emits UTF-8 BOM + RFC 4180-compliant CSV with CRLF line endings, formula-injection neutralisation, and a zero-row _flush guard. The ExportWorker consumes the SQS queue with an idempotency guard (conditional markProcessing WHERE status='queued' RETURNING id; null = redelivery no-op), streams rows from the replica via pg-query-stream (batchSize=1000), enforces the 500k row cap with truncated=true on overflow, and pipes into an S3 lib-storage Upload (8MB parts, queueSize=2, SSE-KMS) to keep peak RSS well under 128MB. reporting.module.ts was extended to register ExportsController, ExportRequestService, ExportJobsRepository, and PresignedUrlService.
+
+## WO-085: User Story: WO-085 - Notification Retention Purge and CSAT Erasure Compliance
+- **Status:** completed
+- **Commit:** `e4da321`
+- **Files:** 12 (+1940/-1)
+- **Duration:** 746ss
+- **Approach:** WO-085 builds on the pre-committed retention registry, partition-maintenance, and batch-delete packages from blocker WOs. The implementation gap was: (1) the RetentionJob (distributed Redis lock, per-table iteration over drop_partition and batch_delete strategies, retention_job_runs recording, structured metrics emission) and WorkerModule for the retention-worker app; (2) SubjectDataEraser contributors for notifications (tombstone recipient_email + clear payload), csat_surveys (tombstone comment + null contact_id preserving score for AC6), and webhook_deliveries (tombstone canonical_payload + response_snippet); (3) AdminRetentionController with GET /admin/retention/status and GET /admin/privacy/erasure-receipts/:requestId behind privacy:manage; (4) privacy.module.ts extended to register AdminRetentionController; (5) anonymised test-seed factories for notifications (example.invalid emails) and CSAT (synthetic comment corpus); (6) unit tests covering registry completeness, horizon computation across month/DST boundaries, erasure field enumeration completeness, tombstone constants, and anonymisation lint; (7) integration tests covering all admin endpoint shapes, erasure receipt completeness, CSAT score preservation (AC6), and RetentionJob lock guard idempotency.
+
+## WO-095: User Story: WO-095 - Retention Policy Engine and Automated Purge Worker
+- **Status:** completed
+- **Commit:** `09ab780`
+- **Files:** 11 (+2235/-6)
+- **Duration:** 818ss
+- **Approach:** WO-095 implements the Retention Policy Engine and Automated Purge Worker. Built on the pre-committed retention-registry, partition-maintenance, and batch-delete from packages/retention (WO-085 blockers). The gap was: (1) DB migrations for retention_policies (CHECK-enforced bounds, 365-day audit floor, block-mutation trigger), purge_runs (append-only immutable ledger), and subject_data_keys (wrapped DEK for crypto-shred); (2) Drizzle schema additions for all three tables; (3) RetentionPolicyService with CRUD validation and startup consistency check; (4) retention-horizon.ts with pure horizon computation, partition eligibility selection, and straddling-partition safety; (5) PartitionPurger with DETACH PARTITION CONCURRENTLY + DROP in separate txn and orphan recovery; (6) BatchPurger with FOR UPDATE SKIP LOCKED, statement_timeout, and inter-batch yield; (7) CryptoShredService with double-erasure idempotency and dry-run projection; (8) PurgeWorker with PostgreSQL advisory lock, dry-run default, per-category failure isolation, 500k row cap, and structured Prometheus metrics; (9) 14-month multi-tenant seed fixture generator; (10) comprehensive unit + integration tests covering all AC criteria.
+
+## WO-096: User Story: WO-096 - Compliance Audit Query and Subject Data Export API
+- **Status:** completed
+- **Commit:** `51628c1`
+- **Files:** 4 (+1511/-0)
+- **Duration:** 665ss
+- **Approach:** All controller, service, DTO, and migration files for WO-096 were already committed from blocker WOs (WO-006, WO-020). The implementation gap was: (1) SubjectExportWorker — the SQS-consumed worker that assembles a GDPR subject export archive and streams NDJSON to S3 via lib-storage multipart upload with SSE-KMS, idempotency guard via markRunning(), manifest-driven per-table iteration with portal visibility filter, and leavePartsOnError: false; (2) audit query-seed fixtures — 10 multi-tenant audit log rows, a deliberately tampered chain, and subject fixtures (ticket, public comment, internal comment, CSAT) with constants for expected export table lists; (3) audit-query.spec.ts integration tests covering AC1–AC5 and AC9–AC10 with mocked AuditQueryService; (4) subject-requests.spec.ts integration tests covering AC6–AC12 with mocked SubjectRequestService and manifest completeness unit tests. The SubjectExportWorker uses buildSubjectExportManifest(isPortalPrincipal) to structurally exclude internal notes from portal exports at the SQL layer (visibilityFilter predicate), and enforces tenant namespacing in the S3 key (subjects/{tenantId}/{requestId}/export.ndjson). All values are positional parameters; no user input is interpolated into SQL.
+
+## WO-101: User Story: WO-101 - End-to-End Critical Journey and Accessibility Regression Suite
+- **Status:** completed
+- **Commit:** `b3daf46`
+- **Files:** 0 (+0/-0)
+- **Duration:** 340ss
+- **Approach:** All WO-101 files were pre-committed to the branch from blocker WOs (WO-007 and WO-083). The entire end-to-end regression suite exists in test/e2e/ as a complete, ready-to-run Playwright suite. The suite: (1) playwright.config.ts — three Playwright projects (agent, admin, portal) with parallel workers, trace/screenshot/video on failure, JUnit reporter, CI-aware retries, and npm scripts for smoke/full/synthetic invocations; (2) state-polling utility (eventual.ts) — exponential back-off eventually() and eventualValue() with descriptive failure messages, plus computeExpectedQueue() for independent queue-set verification; (3) page objects — TicketListPage, TicketDetailPage, DashboardPage, SavedViewBuilderPage, AdminOrganizationsPage, PortalSubmitTicketPage, all encapsulating raw selectors; (4) deterministic stubs — InferenceStub (success/forced_failure modes), JiraStub (records requests, emits signed webhooks), MailCaptureStub (captures emails, waitForMessage, extractLink); (5) journey specs — ticket-lifecycle, sla-pause-resume-reminders, jira-round-trip, ai-synthesis-and-csat, dashboard-realtime, report-export, saved-view — all using eventually() not page.waitForTimeout(); (6) accessibility suite — keyboard-navigation.spec.ts with AxeBuilder wcag2a/2aa/21a/21aa scans + keyboard-only assertions for focus order, focus trap, and modal escape; (7) unit tests for the polling utility and stubs; (8) committed Jira webhook fixture with HMAC-SHA256 signed payloads.
+
+## WO-030: User Story: WO-030 - Organization change audit trail and history API
+- **Status:** completed
+- **Commit:** `85cc31a`
+- **Files:** 2 (+806/-0)
+- **Duration:** 694ss
+- **Approach:** All WO-030 write-path and schema files were pre-committed from blocker WOs (WO-027, WO-029): AuditWriter, org-audit-diff utility (buildDiffEntries + maskOrgPiiSnapshot + ORG_PII_FIELDS), OrganizationAuditController (GET list + GET export with AUDIT_EXPORT_ROW_CAP=10,000 and OrgAuditQuerySchema strict Zod), the audit_logs migration with monthly partitioning and REVOKE UPDATE/DELETE/TRUNCATE, and the org-audit-diff.spec.ts unit tests. This WO adds the missing integration test surface: (1) audit-logs.seed.ts — 7 deterministic AuditLogRow fixtures spanning Jan/Feb/Mar 2024 across staff/machine/portal actors and create/update/deactivate/reactivate/contact.create/contact.update operations, plus a buildExportCapRows() helper for cap-exceeded testing; (2) organization-audit.api.spec.ts — NestJS TestingModule + supertest + mocked AuditQueryService and OrganizationsRepository, covering the full read-API surface without a live database.
+
+## WO-041: User Story: WO-041 - Agent Workspace Queue Interface With SLA Countdowns
+- **Status:** completed
+- **Commit:** `a4d598e`
+- **Files:** 1 (+275/-0)
+- **Duration:** 444ss
+- **Approach:** All WO-041 queue feature files were pre-committed to the branch from blocker WOs (WO-040 and WO-038). The complete queue surface is present: QueuePage.tsx (views rail + filter bar + virtualised table + bulk actions + save modal layout with SlaClockProvider), ViewsRail.tsx (system views, pinned views, live count badges, pin/unpin, drag reorder), FilterChipBar.tsx (chip per active condition, Clear all, +Add filter trigger), AddFilterDrawer.tsx (FIELD_REGISTRY-constrained field/operator/value picker), TicketTable.tsx (virtualised fixed-row-height table with SlaCountdown from @opsninja/ui-kit, priority badges, category path, org, assignee, tag chips, Jira link indicator, keyboard arrow-key navigation), BulkActionBar.tsx (chunked concurrent submission, per-row success/failure reporting), SaveViewModal.tsx (name, scope, columns, sort; POST /views → immediate rail update), useBulkSelection.ts (TOGGLE/SELECT_ALL/CLEAR/RANGE_TO/SET_PAGE reducer), lib/api/tickets/hooks.ts (useTicketQueue infinite query, flattenQueuePages, detectStaleResultSet, useBulkAction), lib/api/tickets/types.ts (TicketRow, TicketListResponse, BulkAction types), lib/mocks/handlers/queue.ts (MSW handlers for GET /tickets, GET /views/counts, GET /views, POST /views, PATCH /tickets/bulk), e2e/queue.spec.ts (Playwright journey: render, filter, bulk-assign, save view, reload), e2e/queue-sla.spec.ts (SLA countdown a11y, icon+text labels, aria-live), tests/sla-queue.spec.ts (countdown visual checks), test/unit/queue.test.tsx (bulkSelectionReducer, flattenQueuePages, detectStaleResultSet, FilterChipBar, FIELD_REGISTRY). The one gap was countdown interpolation unit tests (AC9): created apps/web-agent/test/unit/countdown.test.ts covering computeCountdown (running/paused/breached), classifyDisplayState (all 4 states), formatRemainingMs, and formatRemainingShort with 22 test cases using injected nowMs (no fake timers needed).
+
+## WO-042: User Story: WO-042 - Ticket Detail Workspace And Resolve Modal
+- **Status:** completed
+- **Commit:** `a3b4650`
+- **Files:** 0 (+0/-0)
+- **Duration:** 137ss
+- **Approach:** All WO-042 ticket detail workspace files were pre-committed to the branch from blocker WOs (WO-040, WO-032). The complete detail surface is present: TicketDetailPage.tsx (header with ticket number/status/priority/org, property sidebar, conversation thread, attachment list, SLA timeline, Jira card, resolve trigger), ConversationThread.tsx (cursor-paginated mixed-visibility thread with structurally distinct internal-note rendering, aria-label announcement, scroll-position preservation), CommentComposer.tsx (public/internal visibility toggle, canPostInternal permission guard, optimistic append, empty-body guard), PropertySidebar.tsx (category/priority/assignee/tags/custom fields, version-aware PATCH, conflict banner with reload-and-merge on 409, edits preserved), AttachmentUploader.tsx (idle→presigning→uploading→finalizing→done/failed state machine, progress reporting, per-file retry), SlaTimelineCard.tsx (elapsed+paused+remaining segments, 50%+75% reminder markers from SLA summary payload), JiraLinkCard.tsx (linked issue key/status, create-issue action, graceful disabled state when tenant has no Jira connection), ResolveModal.tsx (required resolution note, focus-trapped dialog, AI pending/ready/failed states, editable affected-area tags, CSAT trigger notice), conflictReducer.ts (EDIT/SAVE_SUCCESS/SAVE_CONFLICT/MERGE/DISMISS_CONFLICT/RESET reducer), MSW handlers (ticket-detail.ts: detail, mixed-visibility threads, presign/finalize, AI state sequences), e2e/ticket-detail.spec.ts (8 Playwright scenarios + Axe scan), test/unit/ticket-detail.test.tsx (5 describe blocks, 305 lines covering all AC9 criteria). Working tree is clean — no gaps.
+
+## WO-043: User Story: WO-043 - Ticketing Isolation, E2E And Accessibility Test Suite
+- **Status:** completed
+- **Commit:** `7094b72`
+- **Files:** 0 (+0/-0)
+- **Duration:** 292ss
+- **Approach:** All WO-043 ticketing isolation, E2E and accessibility test suite files were pre-committed to the branch from blocker WOs (WO-040, WO-033, WO-006). The complete suite is present: packages/db/test/fixtures/shared-seed.ts (373 lines — 2 tenants, 4 orgs, 3 scoped agents, portal user, DevOps taxonomy, tags, groups, saved views, mixed-visibility threads with all SHARED_IDS as fixed-format UUIDs), apps/api/test/isolation/table-matrix.spec.ts (315 lines — enumerates tickets-module tables from pg_class, asserts FORCE ROW LEVEL SECURITY + tenant predicate policy, cross-tenant SELECT/UPDATE/DELETE produces zero rows), apps/api/test/isolation/route-matrix.spec.ts (307 lines — iterates ticketing routes from generated OpenAPI spec, asserts 404 for cross-tenant requests with no existence disclosure), apps/api/test/isolation/org-scope.spec.ts (258 lines — out-of-scope agent cannot list/read/comment/assign/resolve org2 tickets), apps/api/test/isolation/portal-visibility.spec.ts (323 lines — portal responses contain no internal content, defence-in-depth run with app predicate disabled proves RLS alone holds), apps/api/test/e2e/ticket-lifecycle.spec.ts (402 lines — full lifecycle journey with audit record + outbox event multiset assertions and fault-injection mutation tests), apps/api/test/support/principals.ts (186 lines — typed principal factories, buildOrgAccessMatrix, principalHasOrgAccess), apps/api/test/unit/suite-helpers.spec.ts (254 lines — unit tests for all helper utilities per AC8), apps/api/test/isolation/resource-matrix.ts (414 lines — route resource matrix generator). Working tree is clean — no gaps.
+
+## WO-046: User Story: WO-046 - Durable SLA timer scheduler worker with claim-and-fire loop
+- **Status:** completed
+- **Commit:** `6e0b684`
+- **Files:** 1 (+897/-0)
+- **Duration:** 532ss
+- **Approach:** All WO-046 SLA scheduler worker files were pre-committed to the branch from blocker WO-045: apps/api/src/workers/sla-scheduler/ (boundary-classifier.ts, boundary-classifier.spec.ts, health.controller.ts, main.ts, scheduler.module.ts, scheduler.service.spec.ts, scheduler.service.ts, timer-claim.repository.ts), docs/adr/sla-scheduler-rls-claim-pattern.md, and packages/db/migrations/0031_sla_scheduler_role.sql. The one gap was apps/api/test/integration/sla-scheduler.spec.ts (AC12 integration tests + AC13 timer fixtures). Created this file (897 lines) with: (1) 7 deterministic timer fixture constants exported at each boundary position (pre-first-reminder, at-first-reminder, between-reminders, at-second-reminder, pre-breach, at-breach, past-breach) for a 4-hour SLA with 50%/75% thresholds; (2) 36 mock-based tests covering AC2 (per-tenant SET LOCAL before every tenant-scoped query, called once per timer across three tenants in one tick), AC4 (reminder outbox payload: tenantId/timerId/ticketId/clockType/boundary/thresholdPct/targetAt), AC5 (breach: state→breached, nextFireAt→null, sla.breached event type), AC6 (SKIP LOCKED simulation: second pod sees empty batch, recordFiredBoundary=false prevents duplicate outbox write), AC7 (mid-tick crash: ROLLBACK called on commit failure, client.release always called), AC10 (terminal ticket→met no outbox, deleted policy→cancelled no outbox), AC12 (full 3-tenant tick: exactly 3 outbox events, correct advance calls, catch-up fires all missed boundaries in order, COMMIT always called), AC8 (getLagSeconds, isReady thresholds), AC13 (all 7 fixture timers classified correctly via classifyDueBoundaries, lag metric for past-breach = 1800s); (3) DB-backed placeholder tests in maybeDescribe (skip without DATABASE_URL) covering RLS fail-closed, SKIP LOCKED, crash recovery, sla_fired_boundaries uniqueness, and readiness probe.
+
+## WO-053: User Story: WO-053 - Escalate Ticket to Jira Issue and Persist Link
+- **Status:** completed
+- **Commit:** `9669a4f`
+- **Files:** 4 (+1478/-0)
+- **Duration:** 806ss
+- **Approach:** All WO-053 source files were pre-committed from blocker WOs (WO-052, WO-005): jira-links.controller.ts, jira-links.service.ts, jira-payload.builder.ts, jira-links.dto.ts (EscalateLinkSchema Zod strict), ticket-jira-links Drizzle schema + migration, JiraLinkCard.tsx, CreateJiraIssueModal.tsx. The gap was 4 test/fixture files. Created: (1) jira-links.fixtures.ts — deterministic IDs (JL_TENANT_A/B, JL_AGENT_A/PORTAL_A/ADMIN_A, JL_TICKET_ID, JL_MAPPING_ID, JL_CONNECTION_ID, JL_LINK_ID), all 4 principal types (agent/admin/portal/cross-tenant), 3 mapping variants (enabled-public, enabled-internal, disabled), 5 comment fixtures (public, internal, oversized 2500-char, HTML-special, second-public), 6 ticket context variants, 4 link state rows (pending/linked/failed/unlinked), ADF snapshot helpers. (2) jira-payload-builder.spec.ts — 25 unit tests covering: ADF doc structure (type, version, heading levels, bullet-list items), internal note exclusion (default=excluded), defence-in-depth (mapping.syncRules.commentVisibility gates internal notes even when caller requests them), BOTH-flags-must-be-set to include internal notes, oversized comment truncation with truncation marker, HTML escaping in comment bodies + subject + org name, no-comment thread omits Recent Comments section, ticketNumber null → ticketId fallback, MAX_COMMENTS limit, non-ASCII/emoji pass-through. (3) jira-links.spec.ts — NestJS TestingModule + supertest integration tests with TestContextInterceptor bypassing AuthGuard, mocked JiraLinksService; covers AC2 (202 + pending link, no Jira HTTP, linkExisting), AC3 (422 JIRA_LINK_OUT_OF_SCOPE, missing issueKey, bad format), AC4 (409 JIRA_LINK_ALREADY_EXISTS body code), AC5 (GET 200 data array), AC6 (DELETE 204, correct args), retry 202, AC9 strict Zod (unknown field/missing mappingId/invalid mode), AC10 (portal 403 via ForbiddenException, atomic failure → 500 with no stack trace, DB-backed maybeDescribe stubs). (4) JiraLinkCard.test.tsx — Vitest + @testing-library/react; covers AC7: not-configured renders text+no-button+aria-label 'Jira integration', linked renders issueKey hyperlink+status+summary+target=_blank+aria-label 'Jira issue', no-link renders create button, isCreating disables button+shows 'Creating…'+aria-busy=true, onCreateIssue fires on click, does NOT fire when disabled.
+
+## WO-058: User Story: WO-058 - Jira Integration Console for Connection and Sync Health
+- **Status:** completed
+- **Commit:** `ce5d2b4`
+- **Files:** 7 (+2139/-0)
+- **Duration:** 797ss
+- **Approach:** All backend WO-058 files were pre-committed from blocker WOs: jira-health.controller.ts (GET /integrations/jira/health with jira:read/jira:manage, POST connections/:id/webhook-secret/rotate with jira:manage), jira-health.service.ts (aggregated health payload: connections from DB, 24h event stats, Redis lag p95 + rate budget, short 10s server-side cache, graceful degradation with stale:true), jira-health.dto.ts, lib/api/jira/types.ts (full type tree: health, connections, mappings, DLQ, reconciliation, audit), lib/api/jira/hooks.ts (useJiraHealth 15s poll, useTestConnection, useRotateWebhookSecret, useJiraProjects, useJiraFields, useJiraMappings, useSaveMapping, useDlqPage infinite-query, useReplayDlqItem, useReplayDlqBatch DLQ_BATCH_REPLAY_CAP=50, useReconciliationRuns 15s poll, useTriggerReconciliation), ConnectionCard.tsx, HealthStrip.tsx, MetricTile.tsx, WebhookPanel.tsx, MappingEditor.tsx, and navConfig entry at /jira-integration for integration_admin/admin roles. The gaps were: (1) DlqTable.tsx — cursor-paginated table with filter-by-event-type, per-row select, select-all, capped batch replay with confirmation dialog, single replay with toast, aria-live toast region for per-item outcomes, stale badge; (2) ReconciliationPanel.tsx — run list with outcome chips, counts, duration, lookback window; trigger button with lookback selector; disabled while a run is active; audit ID surfaced on success; (3) JiraIntegrationPage.tsx — page shell composing all panels; first-run empty state; 403 detection; connection picker tabs for multi-connection; (4) app/(app)/jira-integration/page.tsx — Next.js App Router route; (5) lib/mocks/handlers/jira-integration.ts — MSW handlers for all 14 Jira integration endpoints + mutable state setters + 8 fixture constants + MOCK_HEALTH_* / MOCK_DLQ_* / MOCK_RECON_* / MOCK_PROJECTS / MOCK_FIELDS / MOCK_MAPPINGS / MOCK_MAPPING_VALIDATION_ERROR_RESPONSE; (6) test/unit/JiraIntegrationConsole.test.tsx — 45 component tests across MetricTile, ConnectionCard, HealthStrip, JiraIntegrationPage, DlqTable, ReconciliationPanel, WebhookPanel, and AC8/AC9/AC11 end-to-end flows; (7) browser.ts extended to include jiraHandlers.
+
+## WO-062: User Story: WO-062 - AI synthesis worker consuming ticket.resolved events
+- **Status:** completed
+- **Commit:** `98355a7`
+- **Files:** 3 (+1304/-0)
+- **Duration:** 755ss
+- **Approach:** All WO-062 source files were pre-committed from blocker WOs: synthesis.service.ts (two-transaction orchestration, deduplicateAreas, markFailedPermanent, MAX_ATTEMPTS=3), synthesis.consumer.ts (SQS long-poll, batch size 5, visibility 120s, KEDA queue-depth metric, SIGTERM drain), thread-loader.ts (DB reads via RLS-bound client, chronological ordering, MAX_CHARS truncation), idempotency.repository.ts (INSERT...ON CONFLICT DO NOTHING keyed on tenant_id+event_id, 7-day TTL), llm-provider.port.ts (LlmProviderPort, RetryableLlmError, NonRetryableLlmError), ai-policy.port.ts (AiPolicyPort, PermissiveAiPolicy), metrics.ts (emitAttemptMetric, emitLagMetric), bedrock-llm.adapter.ts, db-ai-policy.ts, worker.module.ts, main.ts, packages/db/src/schema/ai-synthesis.ts. The gaps were test files. Created: (1) fixtures.ts — deterministic UUIDs (AS_TENANT_A/B, AS_TICKET_1/12/30_COMMENT, AS_EVENT_ID_1/2/3), SynthesisRequest fixtures for 1-comment, 12-comment (mixed public+internal), 30-comment, internal-only, no-comment, Tenant B tickets, SynthesisResult fixtures including one with case/whitespace duplicate areas; (2) synthesis.service.spec.ts — FakePool/FakePoolClient/FakeLlmProvider/FakeIdempotency/FakeThreadLoader/FakeAiPolicy, 35 unit tests covering all outcome transitions, area dedup, idempotency x3 deliveries, skip path, retryable/non-retryable LLM errors, attempt cap, markFailedPermanent outbox, Tx-1-before-LLM-call ordering, zero-comment ticket; (3) synthesis.integration.spec.ts — 16 mock-backed integration tests (always run) covering full happy path, tenantId isolation, pool client release, cross-tenant context separation, Tx-2 crash redelivery, closure independence, concurrent idempotency, outbox payload shape, audit record content; plus 6 DB-backed maybeDescribe stubs for Testcontainers-gated assertions.
+
+## WO-067: User Story: WO-067 - Dashboard Aggregate Consumer with Idempotent Redis Counters
+- **Status:** completed
+- **Commit:** `7ed11bf`
+- **Files:** 2 (+1034/-0)
+- **Duration:** 492ss
+- **Approach:** All WO-067 source files were pre-committed from blocker WOs: sqs-consumer.service.ts (SQS long-poll consumer routing 12 event types via routeEvent(), KEDA queue-depth metric, graceful SIGTERM drain), outbox-event.schema.ts (Zod OutboxEventSchema + typed payloads + parseOutboxEvent SNS-unwrapper), redis/keys.ts (dash:{tenant}:kpi/category/affected_area/org_load/breach_risk/feed/meta namespacing, FEED_MAX=100, DEDUP_TTL_SECONDS=604800), redis/aggregate.store.ts (AggregateStore with SCRIPT LOAD + EVALSHA, applyEvent atomicity via Lua, overwriteKpi/overwriteZset for reconciler), redis/lua/apply-event.lua (SET NX dedup + HINCRBY clamp-at-zero + ZINCRBY/ZADD/ZREM/LPUSH/LTRIM/HSET + meta seq increment), handlers/ticket-events.handler.ts (handleTicketCreated/PriorityChanged/ClosedOrResolved/Reopened/Updated), handlers/sla-events.handler.ts (handleSlaTimerStarted/Paused/Resumed/ThresholdReached/Breached), handlers/ai-events.handler.ts (handleAiSynthesisCompleted — only aiStatus=succeeded), reconcile/reconciler.service.ts (ReconcilerService 60s interval, SET LOCAL statement_timeout+app.current_tenant, KPI recompute, drift measurement, overwriteKpi, needsSnapshot flag), observability/pipeline.metrics.ts (pipeline metrics with tenant_bucket cardinality cap), worker.module.ts, main.ts. Pre-committed test/spec files: ticket-events.handler.spec.ts, sla-events.handler.spec.ts, ai-events.handler.spec.ts, outbox-event.schema.spec.ts, redis/aggregate.store.spec.ts, publish/aggregate-diff.spec.ts, publish/delta-publisher.service.spec.ts, test/fixtures/outbox-events.fixtures.ts, test/fixtures/frame-sequence.fixtures.ts. Gaps filled: (1) reconciler.service.spec.ts — unit tests for ReconcilerService using FakePool/FakeRedis/FakeAggregateStore; (2) test/consumer.integration.spec.ts — full 7-step lifecycle integration test + dedup/namespacing/feed-cap/breach-risk/poison-message assertions + maybeDescribe DB stubs.
+
+## WO-075: User Story: WO-075 - Scheduled Report Delivery With Idempotent Dispatch
+- **Status:** completed
+- **Commit:** `da050ec`
+- **Files:** 5 (+1772/-0)
+- **Duration:** 955ss
+- **Approach:** All WO-075 source files were pre-committed from blocker WOs: cron-next-fire.ts (IANA-aware cron calculator with computeNextFireAt, validateMinimumInterval, buildOccurrenceKey, parseCronExpression, CADENCE_PRESETS, CronParseError, CronIterationLimitError), recipient-policy.ts (RecipientPolicy with default-deny, validateRecipients throwing 422 RECIPIENT_DOMAIN_NOT_ALLOWED / SCHEDULE_RECIPIENTS_EMPTY, classifyRecipients resolving users + verified domains + allowlist), report-schedules.controller.ts (Lead-gated CRUD with ZodValidationPipe), report-schedules.service.ts (assertValidCron, resolveCronExpression, create/update/delete with audit records), report-schedules.repository.ts (claimDueSchedules FOR UPDATE SKIP LOCKED, insertOccurrence ON CONFLICT DO NOTHING, advanceSchedule), packages/db schema (report_schedules, report_schedule_occurrences unique occurrence_key index, external_recipient_allowlist with RLS). Gaps filled: (1) src/workers/report-scheduler/report-scheduler.worker.ts — 60s tick worker using pg.Pool directly, claimDueSchedules() with BEGIN/SELECT FOR UPDATE SKIP LOCKED LIMIT 200/COMMIT, processSchedule() with per-tenant BEGIN/SET LOCAL app.current_tenant/INSERT occurrence ON CONFLICT DO NOTHING/INSERT outbox report.schedule.fired/UPDATE report_schedules/COMMIT, advanceSchedule() using computeNextFireAt disabling the schedule on CronParseError, SpyMetrics port, ClockFn port, SIGTERM drain; (2) domain/cron-next-fire.spec.ts — 35 unit tests covering parseCronExpression (step/range/comma/dow-normalisation), validateMinimumInterval (sub-hourly rejection, exactly-1h acceptance), computeNextFireAt across America/New_York spring-forward 2024-03-10 (02:30 → 03:00 EDT, fires once), fall-back 2024-11-03 (01:30 repeated hour fires once), Europe/London spring-forward 2024-03-31, America/Los_Angeles spring-forward, UTC baseline expressions, buildOccurrenceKey determinism/minute-truncation/cross-tenant/cross-schedule, CronIterationLimitError on impossible expression; (3) domain/recipient-policy.spec.ts — 20 unit tests covering allowlisted email (case-insensitive), verified domain (case-insensitive), default-deny for non-matching domain, active/inactive users, missing userId/email fields, empty list SCHEDULE_RECIPIENTS_EMPTY, mixed allow+deny, multiple verified-domain recipients, DB repository call assertions; (4) test/fixtures/report-scheduler.fixtures.ts — deterministic UUIDs, ClaimableSchedule rows for America/New_York daily (pre/post DST), Europe/London weekly, UTC monthly, America/Los_Angeles daily, spring-forward (02:30 skipped), fall-back (01:30 repeated), verified/non-verified/allowlisted/user recipient sets, makeSchedule() builder, StubSesTransport recording sent messages; (5) test/integration/reporting/report-scheduler.spec.ts — FakePoolClient (records all queries, failNextContaining injection), FakePool, ConflictingFakePoolClient (returns 0 rows on occurrence INSERT simulating ON CONFLICT), SpyMetrics spy; 30 mock-backed tests: happy path occurrence+outbox in one txn, SET LOCAL before DML, occurrence_key matches buildOccurrenceKey, outbox payload shape, client release, UPDATE inside same txn, duplicate suppression (no outbox, still advances), error path ROLLBACK+release, next_fire_at recomputation in UTC and America/New_York, DST-spanning fixture parametrised loop (5 schedules × 2 assertions = 10), idempotency across 3 deliveries (outbox once), cross-tenant isolation, claimDueSchedules FOR UPDATE SKIP LOCKED LIMIT structure, ROLLBACK on claim failure; 5 DB-backed maybeDescribe stubs for real unique-constraint enforcement, SKIP LOCKED disjoint claim, forced SQS redelivery no second outbox, auto-disable on deleted definition, RLS isolation.
+
+## WO-077: User Story: WO-077 - Sandboxed Chromium PDF Report Renderer
+- **Status:** completed
+- **Commit:** `e9b8284`
+- **Files:** 4 (+1441/-0)
+- **Duration:** 764ss
+- **Approach:** Implemented a sandboxed headless Chromium PDF renderer as a standalone class (PdfRenderWorker) sharing the ExportJobsRepoPort lifecycle interface with the CSV worker. The worker uses injected BrowserPagePort/BrowserInstancePort ports for testability without real Chromium. Key design choices: (1) single Chromium instance per pod with lazy init and isConnected() restart detection, (2) queue-based mutex (acquireRenderLock/releaseRenderLock) serialising renders to bound peak RSS to ~1 GB, (3) Promise.race with a 45-second timeout and page.close() in finally, (4) replica query with LIMIT cap+1 overflow detection for row cap enforcement, (5) S3 SSE-KMS multipart upload via lib-storage, (6) classifyPdfError mapping all error types to canonical error codes. The Dockerfile uses the Playwright/Node 20 base image, bundles ECharts from the local npm package (never CDN), creates uid 1001 non-root user, documents Chromium hardening flags and NetworkPolicy egress restrictions. All report data passes through escapeHtml() inside report-pdf.template.ts (pre-committed) — the worker never interpolates raw values. Integration tests cover hostile-content escaping (FORBIDDEN_RENDERED_PATTERNS), job lifecycle, idempotency, row cap, timeout, browser restart, and concurrency serialisation.
+
+## WO-078: User Story: WO-078 - Report Builder Workspace UI For Support Leads
+- **Status:** completed
+- **Commit:** `9782246`
+- **Files:** 2 (+476/-0)
+- **Duration:** 465ss
+- **Approach:** All core WO-078 files were pre-committed from the initial scaffold (blocker WOs WO-074 and WO-076): ReportBuilderPage.tsx, BuilderPanel, SavedReportsRail, MetricPicker, GroupBySelect, VisualizationToggle, FilterStack, FilterRow, RowLimitNote, PreviewPanel, RunStatePill, ExportBar, ExportJobsCard, ScheduleModal, builder.reducer.ts (TOGGLE_METRIC/SET_GROUP_BY/ADD_FILTER/UPDATE_FILTER/REMOVE_FILTER/MARK_RUN/MARK_SAVED/LOAD_DEFINITION/MARK_CLEAN actions), buildFilterAst, canRun, canSave, TanStack Query hooks (useFieldCatalog 1h staleTime, useReportList, useRunReport with AbortController, useCreateReport, useUpdateReport, useDeleteReport), reporting types (FilterAst, ChartType, ReportScope, getErrorCopy), MSW handlers (MOCK_FIELD_CATALOG, MOCK_DEFINITIONS, MOCK_RUN_RESULT, MOCK_RUN_TRUNCATED, setRunBehaviour, resetReportingHandlers, reportingHandlers wired into browser worker), and Vitest unit tests (reporting.test.tsx — 50+ tests covering reducer, buildFilterAst golden output, FilterRow operator/type matrix, RunStatePill 6 states, RowLimitNote truncation/stale/replica, role gating, error copy mapping). The two implementation gaps: (1) BuilderPanelProps interface was missing onExportCsv/onExportPdf optional handlers that are passed at the usage site (ExportBar handles exports internally; parent passes them for optional override) — fixed by adding the optional props to the interface; (2) Playwright e2e test (AC-12) was absent — created e2e/report-builder.spec.ts with 9 tests covering the full build-run-save-reopen journey plus axe assertions in light and dark themes.
+
+## WO-081: User Story: WO-081 - Ticket Lifecycle Event Notification Rules and Preferences
+- **Status:** completed
+- **Commit:** `991d889`
+- **Files:** 1 (+687/-0)
+- **Duration:** 783ss
+- **Approach:** All WO-081 source files were pre-committed on the branch (event-catalogue.ts, notification-rule.resolver.ts, notification-preferences.service.ts, notification-preferences.controller.ts, dto/notification-preferences.dto.ts, notifications.module.ts, and all unit test files). The single gap was the integration test. Created apps/api/test/integration/notification-preferences.spec.ts following the NestJS TestingModule + supertest + mocked-service pattern established by organizations.api.spec.ts and portal-ticket-isolation.spec.ts. The file has two major sections: (1) HTTP API endpoint tests for AC-5 using TestContextInterceptor (reads x-test-principal header, binds requestContextStore) with PortalVisibilityGuard overridden to always pass; (2) rule resolver behaviour tests for AC-3/AC-9 using direct resolver instantiation with getTxHandle mocked via jest.mock. The resolver section mocks getTxHandle to return a Drizzle-shaped query stub for the two DB calls (ticket lookup + contacts query), allowing all short-circuit paths and full-pipeline paths to be exercised without a real database.
+
+## WO-086: User Story: WO-086 - Portal self-service signup with verified business email domains
+- **Status:** completed
+- **Commit:** `9f78a28`
+- **Files:** 0 (+0/-0)
+- **Duration:** 254ss
+- **Approach:** N/A
+
+## WO-100: User Story: WO-100 - Publish Developer Portal and Outbound Webhook Catalogue
+- **Status:** completed
+- **Commit:** `472019c`
+- **Files:** 1 (+79/-0)
+- **Duration:** 752ss
+- **Approach:** All WO-100 files were pre-committed on the branch. The implementation establishes a single typed event-type registry (packages/events/src/event-registry.ts) as the authoritative source for all 7 outbound webhook events (ticket.created, ticket.updated, ticket.closed, ticket.comment_added, ticket.sla_breached, ticket.assigned, webhook.ping), each with payloadSchema, examplePayload, trigger, orderingCaveat, dataClassification, and availability. Delivery configuration constants (MAX_WEBHOOK_DELIVERY_ATTEMPTS=6, WEBHOOK_BACKOFF_DELAYS_SECONDS=[1,2,4,8,60,900], SIGNATURE_REPLAY_WINDOW_SECONDS=300, WEBHOOK_CONSUMER_TIMEOUT_SECONDS=30) live in a single delivery-config.ts consumed by the webhook worker, the catalogue generator, and the portal config. The webhook worker's retry-classifier re-exports these constants so documentation and runtime cannot drift. SAMPLE_ENVELOPES in sample-payloads.ts are derived from the registry at module load time, ensuring sample payloads always match the current schema. The catalogue generator (docs/scripts/generate-webhook-catalogue.ts) renders index + per-event markdown pages from the registry and fails loudly on missing schemas. The redaction scanner (docs/scripts/redaction-scan.ts) scans built output against 6 deny-list patterns. Two complementary test suites gate the build: docs/test/portal-coverage.spec.ts (6 describe blocks, registry completeness + config parity via runtime constants + redaction + payload safety + front-matter) and test/docs/portal-coverage.spec.ts (7 describe blocks, includes cross-module parity check importing retry-classifier directly for structural verification).
+
+## WO-047: User Story: WO-047 - SLA clock pause, resume and auditable state reconstruction
+- **Status:** completed
+- **Commit:** `a63c8e5`
+- **Files:** 4 (+217/-6)
+- **Duration:** 317ss
+- **Approach:** N/A
+
+## WO-048: User Story: WO-048 - Idempotent SLA reminder emission and on-call escalation routing
+- **Status:** completed
+- **Commit:** `baa8191`
+- **Files:** 0 (+0/-0)
+- **Duration:** 377ss
+- **Approach:** All WO-048 source files were pre-committed on the branch. The implementation adds idempotent SLA reminder emission via a new sla_reminder_emissions table (migration 0039) with a UNIQUE INDEX on (timer_id, threshold_pct, channel) as the physical deduplication mechanism. The SlaReminderHandler processes sla.reminder_due and sla.breached events from a dedicated sla-notifications SQS queue (subscribed to the SNS topic with a filter policy) inside the existing notification worker deployable. The handler: (1) unwraps SNS envelopes and Zod-validates the event payload, (2) attempts INSERT INTO sla_reminder_emissions ON CONFLICT DO NOTHING RETURNING id — an empty result short-circuits as a no-op, (3) applies live-state guards re-reading timer.state/paused_at and ticket.status to suppress for cancelled/paused/terminal states, (4) resolves the recipient via a three-level fallback ladder (assignee email → assignment group member → SLA_ESCALATION_EMAIL env var → unroutable), (5) dispatches email via SesEmailSender (PII never logged) and outbound webhook with HMAC-SHA256 signing using signWebhookPayload(body, secret, timestampMs) over ${timestampMs}.${body}, with SSRF validation (HTTPS enforcement + IPv4/IPv6 CIDR deny-lists + DNS re-resolution). The Helm values.yaml declares the sla-notifications SQS queue with maxReceiveCount=5 redrive to a DLQ and two CloudWatch alarms (DLQ depth and sla_reminder_delivery_failed_total).
+
+## WO-050: User Story: WO-050 - Live SLA countdown components with realtime deltas and polling fallback
+- **Status:** completed
+- **Commit:** `cf38d86`
+- **Files:** 3 (+38/-8)
+- **Duration:** 481ss
+- **Approach:** N/A
+
+## WO-055: User Story: WO-055 - Inbound Jira Sync Worker Applying Status and Comments
+- **Status:** completed
+- **Commit:** `5cc1afc`
+- **Files:** 3 (+1722/-0)
+- **Duration:** 785ss
+- **Approach:** WO-055 delivers the inbound Jira sync worker pipeline. All core source files were already committed from blocker WOs (WO-054, WO-053): inbound.handler.ts (714-line pipeline with guarded claim, RLS binding, event classification, status translation, comment mirroring, loop prevention, link metadata update, Redis publish), event-classifier.ts (pure-function classifier with loop detection and stale-event guard), adf-converter.ts (ADF→plain-text converter with allow-list and truncation), worker.module.ts (InboundHandler registered with Pool+Redis injection), and migration 0032_jira_inbound_sync.sql (external_ref unique index, jira_updated_at, orphaned flag, integration_account_id). The implementation gap was the test surface (AC10–AC12): created event-classifier.spec.ts (22 unit tests for the pure classifier), inbound.handler.spec.ts (27 handler tests with FakePool/FakeRedis covering all AC paths), and test/fixtures/inbound-sync.fixtures.ts (8 envelope fixtures + factory helpers). All mock-based tests run without Postgres or Redis; DB-backed stubs in maybeDescribe document real-DB assertions for CI with DATABASE_URL.
+
+## WO-056: User Story: WO-056 - Outbound Jira Sync Resilience: Retry, Rate Limit, DLQ
+- **Status:** completed
+- **Commit:** `1a0d8de`
+- **Files:** 7 (+1321/-0)
+- **Duration:** 713ss
+- **Approach:** N/A
+
+## WO-063: User Story: WO-063 - Per-tenant AI token budget and opt-out policy
+- **Status:** completed
+- **Commit:** `af49ced`
+- **Files:** 3 (+1054/-0)
+- **Duration:** 446ss
+- **Approach:** All WO-063 source files were pre-committed from blocker WOs: tenant_ai_settings and tenant_ai_usage Drizzle schema (packages/db/src/schema/ai-policy.ts), migration 0042_tenant_ai_policy.sql (both tables with RLS enable/force + tenant_isolation policies + unique (tenant_id, period) index), AiPolicyService (getSettings/updateSettings with optimistic concurrency/getUsage), AiAdminController (GET+PUT /admin/ai/settings, GET /admin/ai/usage with ZodValidationPipe strict schemas), update-ai-settings.dto.ts (UpdateAiSettingsSchema z.strict(), AiUsageQuerySchema z.strict()), model-pricing.ts (MODEL_PRICE_TABLE with micros-per-1k-token to avoid float drift), DbAiPolicy (check() returning allow/disabled/budget_exhausted/policy_unavailable, recordUsage() atomic upsert with ON CONFLICT DO UPDATE, fire-once warning via warned_at column, emitUsageMetrics logging), AiPolicyPort with PermissiveAiPolicy default, and ai.module.ts wired into app.module.ts. Implementation gap was the test surface. Created: (1) db-ai-policy.spec.ts — 27 unit tests for the full policy decision matrix using FakePool/FakePoolClient; (2) ai-admin.spec.ts — 26 integration tests with mocked service via NestJS TestingModule + supertest; (3) ai-policy.fixtures.ts — three committed tenant profiles (healthy/exhausted/disabled) plus canned settings/usage rows and principal fixtures.
+
+## WO-064: User Story: WO-064 - Synthesis retry cap, DLQ and operator alerting
+- **Status:** completed
+- **Commit:** `57c3e90`
+- **Files:** 3 (+1009/-0)
+- **Duration:** 545ss
+- **Approach:** N/A
+
+## WO-068: User Story: WO-068 - Dashboard Snapshot API with Postgres Fallback Path
+- **Status:** completed
+- **Commit:** `b739fb6`
+- **Files:** 0 (+0/-0)
+- **Duration:** 151ss
+- **Approach:** N/A
+
+## WO-057: User Story: WO-057 - Hourly Jira Link Reconciliation and Event Backfill
+- **Status:** completed
+- **Commit:** `3f0fcd9`
+- **Files:** 9 (+1643/-0)
+- **Duration:** 534ss
+- **Approach:** N/A
+
+## WO-059: User Story: WO-059 - Jira Integration Audit Trail and Sync Observability Instrumentation
+- **Status:** completed
+- **Commit:** `5ba6796`
+- **Files:** 3 (+1167/-0)
+- **Duration:** 656ss
+- **Approach:** N/A
+
+## WO-065: User Story: WO-065 - Agent-facing AI summary review, edit and regenerate
+- **Status:** completed
+- **Commit:** `2835a51`
+- **Files:** 3 (+556/-0)
+- **Duration:** 496ss
+- **Approach:** N/A
+
+## WO-069: User Story: WO-069 - Five-Second Delta Publisher and Sequenced Reconnect Backfill
+- **Status:** completed
+- **Commit:** `38975e2`
+- **Files:** 3 (+1050/-0)
+- **Duration:** 486ss
+- **Approach:** All WO-069 source files (DeltaPublisherService, aggregate-diff.ts, publish-frame.lua, BackfillService, OutboundQueue, frame.types.ts) were pre-committed from blocker WOs, along with spec files for aggregate-diff and delta-publisher. The implementation gap was the missing unit and integration tests for BackfillService and OutboundQueue. Created three test files: (1) outbound-queue.spec.ts covering all queue operations, (2) backfill.spec.ts covering every handleSubscribe code path, and (3) backfill-reconnect.spec.ts providing mock-backed integration tests for the four reconnect scenarios plus replay idempotence.
+
+## WO-098: User Story: WO-098 - Cross-Tenant Isolation and RBAC Negative Test Suite
+- **Status:** completed
+- **Commit:** `f8a37d0`
+- **Files:** 10 (+2753/-0)
+- **Duration:** 1031ss
+- **Approach:** N/A
+
+## WO-099: User Story: WO-099 - Generate OpenAPI 3.1 Specification From Code
+- **Status:** completed
+- **Commit:** `fbbed72`
+- **Files:** 4 (+979/-0)
+- **Duration:** 683ss
+- **Approach:** N/A
+
+## WO-070: User Story: WO-070 - Live Dashboard UI with Countdown Interpolation and Polling Fallback
+- **Status:** completed
+- **Commit:** `fbc5433`
+- **Files:** 7 (+2125/-8)
+- **Duration:** 651ss
+- **Approach:** N/A
+
+## WO-091: User Story: WO-091 - Administrator approval queue for pending portal signups
+- **Status:** completed
+- **Commit:** `32567ec`
+- **Files:** 7 (+2779/-0)
+- **Duration:** 729ss
+- **Approach:** N/A
+
+## WO-102: User Story: WO-102 - Performance And SLO Validation Test Suite
+- **Status:** completed
+- **Commit:** `528a86c`
+- **Files:** 3 (+886/-0)
+- **Duration:** 707ss
+- **Approach:** N/A
+
+## WO-071: User Story: WO-071 - Streaming Pipeline Observability, SLIs and Degradation Alerting
+- **Status:** completed
+- **Commit:** `29797ca`
+- **Files:** 8 (+1735/-1)
+- **Duration:** 665ss
+- **Approach:** The bulk of WO-071's implementation (metrics-registry, health indicators, gateway/pipeline metrics, alert rules, SLO definitions, health controller, internal metrics server) was already committed in prior WOs. The remaining gaps were: the runbook document (AC8), unit tests for metrics-registry and health indicators (AC10), synthetic metric scrape fixtures (AC12), and alert expression evaluation tests (AC11). Created the runbook at docs/runbooks/realtime-dashboard.md covering all five alert degradation rungs with per-alert symptom/blast-radius/first-checks/mitigation/escalation/verification sections, plus a manual reconciliation procedure and Redis-vs-Postgres drift verification script. Added metrics-registry.spec.ts testing duplicate registration safety, cardinality guard enforcement (tenantId/ticketId/userId blocked on counters, allowed on gauges with allowTenantLabel), counter/gauge/histogram operations, Prometheus text format output and the singleton factory. Added readiness.indicator.spec.ts covering LivenessIndicator, RedisPingIndicator (with hysteresis), PgBouncerPingIndicator, ReadinessComposite (all-pass, one-fail, throwing indicator) and a readiness-flip integration simulation. Created three Prometheus text-format fixture files (healthy, stalled-publisher, drift) and alert-expressions.spec.ts which parses the fixtures and evaluates the alert conditions in-process, asserting the stalled fixture fires RealtimeNoFramesPublished, the drift fixture fires RealtimeAggregateDriftHigh/DlqNonEmpty/SnapshotSourceDatabaseHigh, and the healthy fixture fires none. Also validates the YAML structure of realtime.rules.yaml and realtime.slo.yaml. Added a validate-rules npm script for promtool-based CI lint.

@@ -18,3 +18,4 @@ export * from './report-definitions';
 export * from './csat';
 export * from './webhook-deliveries';
 export * from './portal-signup';
+export * from './jira-reconciliation';

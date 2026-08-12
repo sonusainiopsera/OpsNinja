@@ -89,6 +89,8 @@ interface BuilderPanelProps {
   catalog:        ReturnType<typeof useFieldCatalog>['data'];
   onRun:          () => void;
   onSave:         () => void;
+  onExportCsv?:   () => void;
+  onExportPdf?:   () => void;
   isRunning:      boolean;
   isSaving:       boolean;
   retiredFields:  Set<string>;

@@ -7,6 +7,7 @@
  * Covers (per AC):
  *   AC1  — strict Zod DTO: unknown fields → 400
  *   AC2  — email normalisation (uppercase, plus-addressing)
+ *   AC3  — SSO path: matched domain with SSO → 202 authMode=sso + ssoRedirectUrl
  *   AC4  — matched domain without SSO → email_verification
  *   AC5  — unmatched domain → pending_approval (indistinguishable shape)
  *   AC6  — blocklisted domain → 422 SIGNUP_DOMAIN_NOT_BUSINESS
@@ -194,6 +195,84 @@ describe('POST /api/v1/portal/signup', () => {
       .post('/api/v1/portal/signup')
       .send({ email: 'not-an-email' });
     expect(res.status).toBe(HttpStatus.BAD_REQUEST);
+  });
+
+  // ── AC2: Email normalisation ──────────────────────────────────────────────
+
+  it('AC2 — normalises plus-addressed email to base address before domain lookup', async () => {
+    const findMock = jest.fn().mockResolvedValue([
+      { tenantId: TENANT_ID, organizationId: ORG_ID, hasSsoConnection: false },
+    ]);
+    app = await buildApp({ findByVerifiedDomain: findMock });
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/portal/signup')
+      .send({ email: 'alice+test@acmecorp.com', fullName: 'Alice Tester' });
+    expect(res.status).toBe(HttpStatus.ACCEPTED);
+    expect(res.body.authMode).toBe('email_verification');
+    // Domain resolver is called with the normalized domain
+    const calledWithDomain = findMock.mock.calls[0]?.[0];
+    expect(calledWithDomain).toBe('acmecorp.com');
+  });
+
+  it('AC2 — normalises uppercase email to lowercase before domain lookup', async () => {
+    const findMock = jest.fn().mockResolvedValue([
+      { tenantId: TENANT_ID, organizationId: ORG_ID, hasSsoConnection: false },
+    ]);
+    app = await buildApp({ findByVerifiedDomain: findMock });
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/portal/signup')
+      .send({ email: 'ALICE@ACMECORP.COM', fullName: 'Alice Tester' });
+    expect(res.status).toBe(HttpStatus.ACCEPTED);
+    const calledWithDomain = findMock.mock.calls[0]?.[0];
+    expect(calledWithDomain).toBe('acmecorp.com');
+  });
+
+  // ── AC3: SSO path → 202 with ssoRedirectUrl ───────────────────────────────
+
+  it('AC3 — returns 202 authMode=sso with ssoRedirectUrl when org has SSO connection', async () => {
+    app = await buildApp({
+      findByVerifiedDomain: jest.fn().mockResolvedValue([
+        { tenantId: TENANT_ID, organizationId: ORG_ID, hasSsoConnection: true },
+      ]),
+    });
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/portal/signup')
+      .send({ email: 'alice@sso-corp.com', fullName: 'Alice SSO' });
+    expect(res.status).toBe(HttpStatus.ACCEPTED);
+    expect(res.body.status).toBe('accepted');
+    expect(res.body.authMode).toBe('sso');
+    expect(typeof res.body.ssoRedirectUrl).toBe('string');
+    expect(res.body.ssoRedirectUrl.length).toBeGreaterThan(0);
+    expect(res.body.traceId).toBeDefined();
+  });
+
+  it('AC3 — SSO response shape is non-disclosing (same top-level keys as email_verification plus ssoRedirectUrl)', async () => {
+    // SSO response
+    app = await buildApp({
+      findByVerifiedDomain: jest.fn().mockResolvedValue([
+        { tenantId: TENANT_ID, organizationId: ORG_ID, hasSsoConnection: true },
+      ]),
+    });
+    const ssoRes = await request(app.getHttpServer())
+      .post('/api/v1/portal/signup')
+      .send({ email: 'alice@sso-corp.com' });
+    await app.close();
+
+    // Non-SSO for comparison
+    jest.clearAllMocks();
+    app = await buildApp({
+      findByVerifiedDomain: jest.fn().mockResolvedValue([
+        { tenantId: TENANT_ID, organizationId: ORG_ID, hasSsoConnection: false },
+      ]),
+    });
+    const emailRes = await request(app.getHttpServer())
+      .post('/api/v1/portal/signup')
+      .send({ email: 'alice@acmecorp.com' });
+
+    // SSO adds ssoRedirectUrl; base keys (status, authMode, traceId) are identical
+    const baseKeys = Object.keys(emailRes.body).sort();
+    const ssoKeys = Object.keys(ssoRes.body).filter((k) => k !== 'ssoRedirectUrl').sort();
+    expect(ssoKeys).toEqual(baseKeys);
   });
 
   // ── AC4: Single domain match → email_verification ─────────────────────────
