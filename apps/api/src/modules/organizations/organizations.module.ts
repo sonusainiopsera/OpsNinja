@@ -14,14 +14,18 @@ import { ContactImportService } from './contacts/contact-import.service';
 import { CustomFieldDefsController } from './custom-fields/custom-field-defs.controller';
 import { CustomFieldDefsService } from './custom-fields/custom-field-defs.service';
 import { CustomFieldDefsRepository } from './custom-fields/custom-field-defs.repository';
+import { VerifiedDomainsController } from './verified-domains/verified-domains.controller';
 import { VerifiedDomainsService } from './verified-domains/verified-domains.service';
 import { VerifiedDomainsRepository } from './verified-domains/verified-domains.repository';
-import { DomainOwnershipVerifier } from './verified-domains/domain-ownership.verifier';
+import {
+  DomainOwnershipVerifier,
+  DnsDomainOwnershipVerifier,
+} from './verified-domains/domain-ownership.verifier';
 import { OrganizationChangeRequestsService } from './organization-change-requests.service';
 
 @Module({
   imports: [forwardRef(() => AuthModule), AuditModule],
-  controllers: [AgentScopesController, OrganizationsController, ContactsController, CustomFieldDefsController],
+  controllers: [AgentScopesController, OrganizationsController, ContactsController, CustomFieldDefsController, VerifiedDomainsController],
   providers: [
     AgentScopesService,
     OrganizationsService,
@@ -33,7 +37,10 @@ import { OrganizationChangeRequestsService } from './organization-change-request
     CustomFieldDefsRepository,
     VerifiedDomainsService,
     VerifiedDomainsRepository,
-    DomainOwnershipVerifier,
+    {
+      provide: DomainOwnershipVerifier,
+      useClass: DnsDomainOwnershipVerifier,
+    },
     OrganizationChangeRequestsService,
   ],
   exports: [

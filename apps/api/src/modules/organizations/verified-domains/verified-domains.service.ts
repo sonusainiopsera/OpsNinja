@@ -36,10 +36,9 @@ import {
   isPublicSuffix,
   isSubdomainOf,
 } from './domain-normalizer';
-import { isDeniedDomain } from '../../identity/portal-signup/free-mail-domains.data';
+import { isDeniedDomain } from './free-mail-denylist';
 import type { RegisterDomainDto, AdminOverrideDto } from './dto/verified-domain.dto';
 import type { OrganizationVerifiedDomain } from '@opsninja/db';
-import { AuditWriter } from '../../audit/audit-writer';
 
 export interface DomainRegistrationResult {
   domain: OrganizationVerifiedDomain;
