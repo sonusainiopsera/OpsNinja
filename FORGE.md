@@ -609,3 +609,10 @@
 - **Files:** 13 (+1068/-16)
 - **Duration:** 461ss
 - **Approach:** N/A
+
+## WO-029: User Story: WO-029 - Admin console Organizations page with detail drawer tabs
+- **Status:** completed
+- **Commit:** `c9efa0b`
+- **Files:** 10 (+3203/-0)
+- **Duration:** 844ss
+- **Approach:** Built the full Organizations management page for the Admin Console within the web-agent app (no separate admin-console bundle exists). Composed the page from: OrganizationsPage (filters + URL sync + table + modals), OrgDetailDrawer (focus-trapped slide-over with lazy-tab-loading), ProfilePanel (pessimistic save with 409/400 handling), ContactsPanel (optimistic portal-toggle with rollback), ScopingPanel (read-only agent scope list), AddCustomFieldModal (dynamic options section for select types), and DeactivateModal (name-match enforcement). All write controls are permission-gated via a canWrite prop derived from server-provided session data. Existing OrgTable and MetadataPanel (already scaffolded) are imported and reused.
