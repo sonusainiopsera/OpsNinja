@@ -11,11 +11,12 @@
 import { Module } from '@nestjs/common';
 import { SubjectRequestsController } from './subject-requests.controller';
 import { SubjectRequestService } from './subject-request.service';
+import { AdminRetentionController } from './admin-retention.controller';
 import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [AuditModule],
-  controllers: [SubjectRequestsController],
+  controllers: [SubjectRequestsController, AdminRetentionController],
   providers: [SubjectRequestService],
   exports: [SubjectRequestService],
 })
