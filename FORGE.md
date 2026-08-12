@@ -917,3 +917,10 @@
 - **Files:** 10 (+2753/-0)
 - **Duration:** 1031ss
 - **Approach:** N/A
+
+## WO-099: User Story: WO-099 - Generate OpenAPI 3.1 Specification From Code
+- **Status:** completed
+- **Commit:** `fbbed72`
+- **Files:** 4 (+979/-0)
+- **Duration:** 683ss
+- **Approach:** N/A
