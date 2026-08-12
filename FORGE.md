@@ -665,3 +665,10 @@
 - **Files:** 1 (+563/-0)
 - **Duration:** 893ss
 - **Approach:** All WO-049 core files were pre-committed from blocker WOs: SlaSettingsPage, PolicyEditor, TargetsPanel, CalendarPanel, RemindersPanel, PreviewPanel, StickyFooter, SchedulerHealthPill components; TanStack Query hooks (useSlaPolicies, useSlaPolicy, useSaveSlaPolicy, useSlaCalendars, useSchedulerHealth); Zod form schema (slaPolicyFormSchema with superRefine ordering rule); MSW handlers (slaHandlers, resetSlaHandlers); Playwright E2E spec (sla-settings.spec.ts). The only gap was the Vitest component test file. Created apps/web-agent/src/__tests__/sla-settings.test.tsx following the established Sidebar.test.tsx pattern (vi.mock, @testing-library/react, QueryClientProvider). Tests cover: slaPolicyFormSchema pure validation (7 cases), SchedulerHealthPill rendering (9 cases), TargetsPanel validation and read-only (6 cases), RemindersPanel threshold ordering and read-only (7 cases), PolicyEditor tab navigation and error handling (9 cases).
+
+## WO-052: User Story: WO-052 - Jira Project Scoping and Field Mapping Configuration
+- **Status:** completed
+- **Commit:** `4d90ef6`
+- **Files:** 2 (+1091/-0)
+- **Duration:** 636ss
+- **Approach:** All WO-052 core files were pre-committed from blocker WOs: DB migration (0019_jira_project_mappings.sql) with RLS + partial unique-default index; Drizzle schema (packages/db/src/schema/jira-project-mappings.ts); Zod validation schemas (jira-mapping.schema.ts — fieldMapEntrySchema, statusMapEntrySchema, CreateMappingSchema, UpdateMappingSchema, allow-listed MAPPING_SOURCES); JiraMappingRepository with clearDefault; JiraMappingService (required-field validation via JiraMetadataService, single-default exclusivity, CRUD); JiraMappingResolver (category > org > default precedence, MappingNotFoundError); JiraMetadataService (Redis 15-min cache with force-refresh, stale fallback, getMissingRequiredFields). The gaps were two test files: test/unit/jira-mapping-validator.spec.ts (pure Zod schema tests) and test/integration/jira-mapping.spec.ts (mocked resolver, metadata service, mapping service + AC11 fixtures + DB characterization).
