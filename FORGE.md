@@ -896,3 +896,10 @@
 - **Files:** 3 (+1167/-0)
 - **Duration:** 656ss
 - **Approach:** N/A
+
+## WO-065: User Story: WO-065 - Agent-facing AI summary review, edit and regenerate
+- **Status:** completed
+- **Commit:** `2835a51`
+- **Files:** 3 (+556/-0)
+- **Duration:** 496ss
+- **Approach:** N/A
