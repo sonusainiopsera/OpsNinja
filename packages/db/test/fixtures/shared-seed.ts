@@ -200,28 +200,11 @@ export async function seedSharedFixture(client: PoolClient): Promise<void> {
     SHARED_IDS.TENANT_B_ORG2,                          // $12
   ]);
 
-  // ── Categories — DevOps taxonomy ─────────────────────────────────────────
-  await client.query(`
-    INSERT INTO ticket_categories (id, tenant_id, name, parent_id)
-    VALUES
-      ($1, $6, 'DevOps',          NULL),
-      ($2, $6, 'Infrastructure',  $1),
-      ($3, $6, 'Database',        $2),
-      ($4, $6, 'Network',         $2),
-      ($5, $6, 'CI/CD',           $1)
-    ON CONFLICT (id) DO NOTHING
-  `, [
-    SHARED_IDS.CAT_ROOT,
-    SHARED_IDS.CAT_INFRA,
-    SHARED_IDS.CAT_DB,
-    SHARED_IDS.CAT_NETWORK,
-    SHARED_IDS.CAT_CICD,
-    SHARED_IDS.TENANT_A,
-  ]);
-
   // ── Tags ─────────────────────────────────────────────────────────────────
+  // tag definitions live in the `tags` table (id, tenant_id, name, color);
+  // ticket_tags is the join table (tenant_id, ticket_id, tag_id).
   await client.query(`
-    INSERT INTO ticket_tags (id, tenant_id, name, color)
+    INSERT INTO tags (id, tenant_id, name, color)
     VALUES
       ($1, $5, 'customer-impact', '#ef4444'),
       ($2, $5, 'database',        '#3b82f6'),
@@ -250,12 +233,14 @@ export async function seedSharedFixture(client: PoolClient): Promise<void> {
   ]);
 
   // ── Saved views ───────────────────────────────────────────────────────────
+  // Column mapping: owner_user_id (not owner_id), filter_ast (not filter_spec),
+  // scope 'shared'|'private' (not pinned boolean).
   await client.query(`
-    INSERT INTO saved_views (id, tenant_id, owner_id, name, filter_spec, pinned)
+    INSERT INTO saved_views (id, tenant_id, owner_user_id, name, filter_ast, scope)
     VALUES
-      ($1, $4, $5, 'All Open',    '{"status":["open","new"]}'::jsonb,                  true),
-      ($2, $4, $5, 'My Tickets',  '{"assigneeId":"__current_user__"}'::jsonb,           true),
-      ($3, $4, $5, 'P1 Open',     '{"priority":["P1"],"status":["open","new"]}'::jsonb, false)
+      ($1, $4, $5, 'All Open',   '{"status":["open","new"]}'::jsonb,                  'shared'),
+      ($2, $4, $5, 'My Tickets', '{"assigneeId":"__current_user__"}'::jsonb,           'private'),
+      ($3, $4, $5, 'P1 Open',    '{"priority":["P1"],"status":["open","new"]}'::jsonb, 'private')
     ON CONFLICT (id) DO NOTHING
   `, [
     SHARED_IDS.VIEW_ALL_OPEN,
@@ -286,8 +271,9 @@ export async function seedSharedFixture(client: PoolClient): Promise<void> {
   }
 
   // ── Ticket tag associations ────────────────────────────────────────────────
+  // ticket_tags is the join table (tenant_id, ticket_id, tag_id).
   await client.query(`
-    INSERT INTO ticket_tag_assignments (tenant_id, ticket_id, tag_id)
+    INSERT INTO ticket_tags (tenant_id, ticket_id, tag_id)
     VALUES
       ($1, $3, $5),
       ($1, $3, $6),
@@ -329,12 +315,14 @@ export async function seedSharedFixture(client: PoolClient): Promise<void> {
   ]);
 
   // ── Attachments (one on public comment, one on internal) ─────────────────
+  // Column mapping: mime_type (not content_type), file_size_bytes (not size_bytes),
+  // s3_key (not storage_key). No visibility column — attachments use is_finalized flag.
   await client.query(`
     INSERT INTO ticket_attachments
-      (id, tenant_id, ticket_id, comment_id, organization_id, filename, content_type, size_bytes, storage_key, visibility)
+      (id, tenant_id, ticket_id, comment_id, organization_id, filename, mime_type, file_size_bytes, s3_key, is_finalized)
     VALUES
-      ($1, $3, $5, $7, $9,  'db-metrics.png',     'image/png',       48230, 'tickets/a1/db-metrics.png',     'public'),
-      ($2, $3, $5, $8, $9,  'query-trace.txt',    'text/plain',      1024,  'tickets/a1/query-trace.txt',    'internal')
+      ($1, $3, $5, $7, $9,  'db-metrics.png',   'image/png',  48230, 'tickets/a1/db-metrics.png',  true),
+      ($2, $3, $5, $8, $9,  'query-trace.txt',  'text/plain', 1024,  'tickets/a1/query-trace.txt', true)
     ON CONFLICT (id) DO NOTHING
   `, [
     SHARED_IDS.ATTACH_A1_PUB,     // $1
@@ -359,14 +347,17 @@ export async function seedSharedFixture(client: PoolClient): Promise<void> {
  */
 export async function teardownSharedFixture(client: PoolClient): Promise<void> {
   const tenantIds = [SHARED_IDS.TENANT_A, SHARED_IDS.TENANT_B];
+  // Delete in FK-safe reverse order:
   await client.query('DELETE FROM ticket_attachments        WHERE tenant_id = ANY($1)', [tenantIds]);
   await client.query('DELETE FROM ticket_comments           WHERE tenant_id = ANY($1)', [tenantIds]);
-  await client.query('DELETE FROM ticket_tag_assignments    WHERE tenant_id = ANY($1)', [tenantIds]);
+  await client.query('DELETE FROM ticket_status_history     WHERE tenant_id = ANY($1)', [tenantIds]);
+  // ticket_tags is the join table; tags holds the tag definitions.
+  await client.query('DELETE FROM ticket_tags               WHERE tenant_id = ANY($1)', [tenantIds]);
+  await client.query('DELETE FROM tags                      WHERE tenant_id = ANY($1)', [tenantIds]);
   await client.query('DELETE FROM tickets                   WHERE tenant_id = ANY($1)', [tenantIds]);
+  await client.query('DELETE FROM tenant_sequences          WHERE tenant_id = ANY($1)', [tenantIds]);
   await client.query('DELETE FROM saved_views               WHERE tenant_id = ANY($1)', [tenantIds]);
   await client.query('DELETE FROM assignment_groups         WHERE tenant_id = ANY($1)', [tenantIds]);
-  await client.query('DELETE FROM ticket_tags               WHERE tenant_id = ANY($1)', [tenantIds]);
-  await client.query('DELETE FROM ticket_categories         WHERE tenant_id = ANY($1)', [tenantIds]);
   await client.query('DELETE FROM agent_org_scopes          WHERE tenant_id = ANY($1)', [tenantIds]);
   await client.query('DELETE FROM users                     WHERE tenant_id = ANY($1)', [tenantIds]);
   await client.query('DELETE FROM organizations             WHERE tenant_id = ANY($1)', [tenantIds]);

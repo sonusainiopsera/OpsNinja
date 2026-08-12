@@ -117,8 +117,14 @@ describe('ticket_attachments schema', () => {
     expect(t['tenantId']?.notNull).toBe(true);
   });
 
-  it('has ticket_id not null', () => {
-    expect(t['ticketId']?.notNull).toBe(true);
+  it('has ticket_id nullable (supports presign before ticket association — WO-089)', () => {
+    // ticket_id is intentionally nullable: portal attachments are presigned
+    // before a ticket exists; the column is set on ticket finalization.
+    expect(t['ticketId']?.notNull).toBeFalsy();
+  });
+
+  it('has organization_id not null', () => {
+    expect(t['organizationId']?.notNull).toBe(true);
   });
 
   it('has filename not null', () => {
@@ -127,6 +133,11 @@ describe('ticket_attachments schema', () => {
 
   it('has s3_key not null', () => {
     expect(t['s3Key']?.notNull).toBe(true);
+  });
+
+  it('has is_finalized not null with default false', () => {
+    expect(t['isFinalized']?.notNull).toBe(true);
+    expect(t['isFinalized']?.hasDefault).toBe(true);
   });
 });
 

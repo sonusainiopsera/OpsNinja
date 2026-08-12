@@ -32,23 +32,27 @@ const SKIP = !process.env['DATABASE_URL'];
 const maybeDescribe = SKIP ? describe.skip : describe;
 
 // ---------------------------------------------------------------------------
-// Manifest of expected tickets-module tables.
+// Manifest of expected tickets-module tables (WO-031 schema).
 // Adding a table here that has no RLS policy → test fails.
 // Adding a DB table without updating this list → test fails.
+//
+// Table name reference:
+//   tags              — tag definitions (id, tenant_id, name, color)
+//   ticket_tags       — join table (tenant_id, ticket_id, tag_id)
+//   ticket_status_history — append-only status audit trail
+//   tenant_sequences  — per-tenant atomic counters for ticket numbering
 // ---------------------------------------------------------------------------
 
 export const TICKETS_MODULE_TABLES: ReadonlyArray<string> = [
   'tickets',
   'ticket_comments',
   'ticket_attachments',
+  'tags',
   'ticket_tags',
-  'ticket_tag_assignments',
-  'ticket_categories',
   'assignment_groups',
   'assignment_group_members',
-  'saved_views',
-  'outbox_events',
-  'audit_logs',
+  'ticket_status_history',
+  'tenant_sequences',
 ] as const;
 
 // Columns that hold the tenant identifier per table (for cross-tenant DML test)
@@ -56,14 +60,12 @@ const TENANT_COLUMN_BY_TABLE: Record<string, string> = {
   tickets:                   'tenant_id',
   ticket_comments:           'tenant_id',
   ticket_attachments:        'tenant_id',
+  tags:                      'tenant_id',
   ticket_tags:               'tenant_id',
-  ticket_tag_assignments:    'tenant_id',
-  ticket_categories:         'tenant_id',
   assignment_groups:         'tenant_id',
   assignment_group_members:  'tenant_id',
-  saved_views:               'tenant_id',
-  outbox_events:             'tenant_id',
-  audit_logs:                'tenant_id',
+  ticket_status_history:     'tenant_id',
+  tenant_sequences:          'tenant_id',
 };
 
 // ---------------------------------------------------------------------------
