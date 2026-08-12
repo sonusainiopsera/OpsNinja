@@ -25,6 +25,7 @@ import * as request from 'supertest';
 
 import { PortalSignupController } from '../../src/modules/identity/portal-signup/portal-signup.controller';
 import { PortalSignupService } from '../../src/modules/identity/portal-signup/portal-signup.service';
+import { PortalVerificationService } from '../../src/modules/identity/portal-signup/portal-verification.service';
 import { SignupThrottleGuard } from '../../src/modules/identity/guards/signup-throttle.guard';
 import { OrganizationsService } from '../../src/modules/organizations/organizations.service';
 import { REDIS_CLIENT } from '../../src/common/redis/redis.provider';
@@ -129,7 +130,9 @@ async function buildApp(
             findByVerifiedDomain: jest.fn().mockResolvedValue([]),
             ...orgsServiceOverrides,
           } as unknown as OrganizationsService;
-          const svc = new PortalSignupService(orgsService);
+          const verSvc = { issue: jest.fn().mockResolvedValue(undefined) } as unknown as PortalVerificationService;
+          const configSvc = { get: (_k: string, def?: string) => def ?? '' } as never;
+          const svc = new PortalSignupService(orgsService, verSvc, configSvc);
           // Pre-populate blocklist cache to avoid DB call unless testing cache behaviour
           (svc as unknown as { blockedDomainsCache: { domains: Set<string>; refreshedAt: number } }).blockedDomainsCache = {
             domains: new Set(poolClientOverrides?.hasBlockedDomain ? ['gmail.com'] : []),

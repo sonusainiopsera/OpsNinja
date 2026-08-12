@@ -18,7 +18,9 @@
  */
 
 import { BadRequestException, UnprocessableEntityException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PortalSignupService } from './portal-signup.service';
+import { PortalVerificationService } from './portal-verification.service';
 import { OrganizationsService } from '../../organizations/organizations.service';
 
 // ---------------------------------------------------------------------------
@@ -66,6 +68,18 @@ function makeOrgsService(
   } as unknown as OrganizationsService;
 }
 
+function makeVerificationService(): PortalVerificationService {
+  return {
+    issue: jest.fn().mockResolvedValue(undefined),
+  } as unknown as PortalVerificationService;
+}
+
+function makeConfig(overrides: Record<string, string> = {}): ConfigService {
+  return {
+    get: (key: string, def?: string) => overrides[key] ?? def ?? '',
+  } as unknown as ConfigService;
+}
+
 /** Make the pool client behave: no blocked domains, no existing user, INSERT OK */
 function setupSuccessfulPool(hasExistingUser = false) {
   mockPoolClient.query.mockImplementation((sql: string) => {
@@ -95,14 +109,14 @@ describe('PortalSignupService.handleSignup', () => {
   // ── Email format validation ──────────────────────────────────────────────
 
   it('throws 400 for malformed email', async () => {
-    const service = new PortalSignupService(makeOrgsService());
+    const service = new PortalSignupService(makeOrgsService(), makeVerificationService(), makeConfig());
     await expect(
       service.handleSignup({ ...BASE_PARAMS, email: 'not-an-email' }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('throws 400 for email over 320 chars', async () => {
-    const service = new PortalSignupService(makeOrgsService());
+    const service = new PortalSignupService(makeOrgsService(), makeVerificationService(), makeConfig());
     const longEmail = 'a'.repeat(310) + '@acmecorp.com';
     await expect(
       service.handleSignup({ ...BASE_PARAMS, email: longEmail }),
@@ -112,7 +126,7 @@ describe('PortalSignupService.handleSignup', () => {
   // ── Blocklist ────────────────────────────────────────────────────────────
 
   it('throws 422 SIGNUP_DOMAIN_NOT_BUSINESS for gmail.com (blocklisted)', async () => {
-    const service = new PortalSignupService(makeOrgsService());
+    const service = new PortalSignupService(makeOrgsService(), makeVerificationService(), makeConfig());
     // Force cache with gmail.com in it (bypass 5-min TTL by setting refreshedAt=0)
     (service as unknown as { blockedDomainsCache: { domains: Set<string>; refreshedAt: number } }).blockedDomainsCache = {
       domains: new Set(['gmail.com', 'yahoo.com']),
@@ -126,7 +140,7 @@ describe('PortalSignupService.handleSignup', () => {
   });
 
   it('throws 422 for disposable domain (mailinator.com)', async () => {
-    const service = new PortalSignupService(makeOrgsService());
+    const service = new PortalSignupService(makeOrgsService(), makeVerificationService(), makeConfig());
     (service as unknown as { blockedDomainsCache: { domains: Set<string>; refreshedAt: number } }).blockedDomainsCache = {
       domains: new Set(['mailinator.com']),
       refreshedAt: Date.now(),
@@ -141,7 +155,7 @@ describe('PortalSignupService.handleSignup', () => {
   it('normalises uppercase email and strips plus-addressing', async () => {
     const service = new PortalSignupService(makeOrgsService([
       { tenantId: TENANT_ID, organizationId: ORG_ID, hasSsoConnection: false },
-    ]));
+    ]), makeVerificationService(), makeConfig());
     // Inject empty blocklist
     (service as unknown as { blockedDomainsCache: { domains: Set<string>; refreshedAt: number } }).blockedDomainsCache = {
       domains: new Set(),
@@ -166,7 +180,7 @@ describe('PortalSignupService.handleSignup', () => {
   it('returns email_verification authMode for matched domain without SSO', async () => {
     const service = new PortalSignupService(makeOrgsService([
       { tenantId: TENANT_ID, organizationId: ORG_ID, hasSsoConnection: false },
-    ]));
+    ]), makeVerificationService(), makeConfig());
     (service as unknown as { blockedDomainsCache: { domains: Set<string>; refreshedAt: number } }).blockedDomainsCache = {
       domains: new Set(),
       refreshedAt: Date.now(),
@@ -183,7 +197,7 @@ describe('PortalSignupService.handleSignup', () => {
   it('creates portal_signup_requests row with status pending_verification for single match', async () => {
     const service = new PortalSignupService(makeOrgsService([
       { tenantId: TENANT_ID, organizationId: ORG_ID, hasSsoConnection: false },
-    ]));
+    ]), makeVerificationService(), makeConfig());
     (service as unknown as { blockedDomainsCache: { domains: Set<string>; refreshedAt: number } }).blockedDomainsCache = {
       domains: new Set(),
       refreshedAt: Date.now(),
@@ -204,10 +218,64 @@ describe('PortalSignupService.handleSignup', () => {
     expect(insertArgs[1]).toBe(TENANT_ID);
   });
 
+  it('calls PortalVerificationService.issue() for the email_verification path', async () => {
+    const verificationService = makeVerificationService();
+    const service = new PortalSignupService(makeOrgsService([
+      { tenantId: TENANT_ID, organizationId: ORG_ID, hasSsoConnection: false },
+    ]), verificationService, makeConfig());
+    (service as unknown as { blockedDomainsCache: { domains: Set<string>; refreshedAt: number } }).blockedDomainsCache = {
+      domains: new Set(),
+      refreshedAt: Date.now(),
+    };
+    setupSuccessfulPool();
+
+    await service.handleSignup(BASE_PARAMS);
+
+    expect(verificationService.issue).toHaveBeenCalledTimes(1);
+    const issuedArgs = (verificationService.issue as jest.Mock).mock.calls[0] as unknown[];
+    // Second arg is the normalised email
+    expect(issuedArgs[1]).toBe('alice@acmecorp.com');
+    // Third arg is the tenant id
+    expect(issuedArgs[2]).toBe(TENANT_ID);
+  });
+
+  it('does NOT call PortalVerificationService.issue() for the pending_approval path', async () => {
+    const verificationService = makeVerificationService();
+    const service = new PortalSignupService(makeOrgsService([]), verificationService, makeConfig());
+    (service as unknown as { blockedDomainsCache: { domains: Set<string>; refreshedAt: number } }).blockedDomainsCache = {
+      domains: new Set(),
+      refreshedAt: Date.now(),
+    };
+    setupSuccessfulPool();
+
+    await service.handleSignup({ ...BASE_PARAMS, email: 'alice@unknowncorp.com' });
+
+    expect(verificationService.issue).not.toHaveBeenCalled();
+  });
+
+  it('handles PortalVerificationService.issue() failure non-fatally (email_verification path still returns 202)', async () => {
+    const verificationService = {
+      issue: jest.fn().mockRejectedValue(new Error('SES unavailable')),
+    } as unknown as PortalVerificationService;
+    const service = new PortalSignupService(makeOrgsService([
+      { tenantId: TENANT_ID, organizationId: ORG_ID, hasSsoConnection: false },
+    ]), verificationService, makeConfig());
+    (service as unknown as { blockedDomainsCache: { domains: Set<string>; refreshedAt: number } }).blockedDomainsCache = {
+      domains: new Set(),
+      refreshedAt: Date.now(),
+    };
+    setupSuccessfulPool();
+
+    // Should not throw — delivery failure is non-fatal
+    const result = await service.handleSignup(BASE_PARAMS);
+    expect(result.status).toBe('accepted');
+    expect(result.authMode).toBe('email_verification');
+  });
+
   // ── Zero-match → pending_approval ────────────────────────────────────────
 
   it('returns pending_approval authMode for unmatched domain', async () => {
-    const service = new PortalSignupService(makeOrgsService([])); // no matches
+    const service = new PortalSignupService(makeOrgsService([]), makeVerificationService(), makeConfig()); // no matches
     (service as unknown as { blockedDomainsCache: { domains: Set<string>; refreshedAt: number } }).blockedDomainsCache = {
       domains: new Set(),
       refreshedAt: Date.now(),
@@ -221,7 +289,7 @@ describe('PortalSignupService.handleSignup', () => {
   });
 
   it('creates portal_signup_requests row with status pending_admin_approval for unmatched domain', async () => {
-    const service = new PortalSignupService(makeOrgsService([]));
+    const service = new PortalSignupService(makeOrgsService([]), makeVerificationService(), makeConfig());
     (service as unknown as { blockedDomainsCache: { domains: Set<string>; refreshedAt: number } }).blockedDomainsCache = {
       domains: new Set(),
       refreshedAt: Date.now(),
@@ -245,7 +313,7 @@ describe('PortalSignupService.handleSignup', () => {
     const service = new PortalSignupService(makeOrgsService([
       { tenantId: TENANT_ID, organizationId: ORG_ID, hasSsoConnection: false },
       { tenantId: '10000000-0000-0000-0000-000000000002', organizationId: '20000000-0000-0000-0000-000000000002', hasSsoConnection: false },
-    ]));
+    ]), makeVerificationService(), makeConfig());
     (service as unknown as { blockedDomainsCache: { domains: Set<string>; refreshedAt: number } }).blockedDomainsCache = {
       domains: new Set(),
       refreshedAt: Date.now(),
@@ -261,7 +329,7 @@ describe('PortalSignupService.handleSignup', () => {
   it('returns authMode sso with ssoRedirectUrl for SSO-enabled match', async () => {
     const service = new PortalSignupService(makeOrgsService([
       { tenantId: TENANT_ID, organizationId: ORG_ID, hasSsoConnection: true },
-    ]));
+    ]), makeVerificationService(), makeConfig());
     (service as unknown as { blockedDomainsCache: { domains: Set<string>; refreshedAt: number } }).blockedDomainsCache = {
       domains: new Set(),
       refreshedAt: Date.now(),
@@ -279,7 +347,7 @@ describe('PortalSignupService.handleSignup', () => {
   it('returns generic email_verification 202 for existing portal user (no new row)', async () => {
     const service = new PortalSignupService(makeOrgsService([
       { tenantId: TENANT_ID, organizationId: ORG_ID, hasSsoConnection: false },
-    ]));
+    ]), makeVerificationService(), makeConfig());
     (service as unknown as { blockedDomainsCache: { domains: Set<string>; refreshedAt: number } }).blockedDomainsCache = {
       domains: new Set(),
       refreshedAt: Date.now(),
@@ -303,7 +371,7 @@ describe('PortalSignupService.handleSignup', () => {
     // email_verification case
     const serviceMatched = new PortalSignupService(makeOrgsService([
       { tenantId: TENANT_ID, organizationId: ORG_ID, hasSsoConnection: false },
-    ]));
+    ]), makeVerificationService(), makeConfig());
     (serviceMatched as unknown as { blockedDomainsCache: { domains: Set<string>; refreshedAt: number } }).blockedDomainsCache = {
       domains: new Set(), refreshedAt: Date.now(),
     };
@@ -312,7 +380,7 @@ describe('PortalSignupService.handleSignup', () => {
 
     // pending_approval case
     jest.clearAllMocks();
-    const serviceUnmatched = new PortalSignupService(makeOrgsService([]));
+    const serviceUnmatched = new PortalSignupService(makeOrgsService([]), makeVerificationService(), makeConfig());
     (serviceUnmatched as unknown as { blockedDomainsCache: { domains: Set<string>; refreshedAt: number } }).blockedDomainsCache = {
       domains: new Set(), refreshedAt: Date.now(),
     };
@@ -332,7 +400,7 @@ describe('PortalSignupService.handleDiscovery', () => {
   it('returns email_verification for matched domain', async () => {
     const service = new PortalSignupService(makeOrgsService([
       { tenantId: TENANT_ID, organizationId: ORG_ID, hasSsoConnection: false },
-    ]));
+    ]), makeVerificationService(), makeConfig());
     (service as unknown as { blockedDomainsCache: { domains: Set<string>; refreshedAt: number } }).blockedDomainsCache = {
       domains: new Set(), refreshedAt: Date.now(),
     };
@@ -342,7 +410,7 @@ describe('PortalSignupService.handleDiscovery', () => {
   });
 
   it('returns pending_approval for unmatched domain', async () => {
-    const service = new PortalSignupService(makeOrgsService([]));
+    const service = new PortalSignupService(makeOrgsService([]), makeVerificationService(), makeConfig());
     (service as unknown as { blockedDomainsCache: { domains: Set<string>; refreshedAt: number } }).blockedDomainsCache = {
       domains: new Set(), refreshedAt: Date.now(),
     };
@@ -354,7 +422,7 @@ describe('PortalSignupService.handleDiscovery', () => {
   it('returns sso for SSO-enabled domain', async () => {
     const service = new PortalSignupService(makeOrgsService([
       { tenantId: TENANT_ID, organizationId: ORG_ID, hasSsoConnection: true },
-    ]));
+    ]), makeVerificationService(), makeConfig());
     (service as unknown as { blockedDomainsCache: { domains: Set<string>; refreshedAt: number } }).blockedDomainsCache = {
       domains: new Set(), refreshedAt: Date.now(),
     };
@@ -364,7 +432,7 @@ describe('PortalSignupService.handleDiscovery', () => {
   });
 
   it('throws 422 for blocklisted domain on discovery', async () => {
-    const service = new PortalSignupService(makeOrgsService([]));
+    const service = new PortalSignupService(makeOrgsService([]), makeVerificationService(), makeConfig());
     (service as unknown as { blockedDomainsCache: { domains: Set<string>; refreshedAt: number } }).blockedDomainsCache = {
       domains: new Set(['gmail.com']),
       refreshedAt: Date.now(),
@@ -376,7 +444,7 @@ describe('PortalSignupService.handleDiscovery', () => {
   });
 
   it('throws 400 for malformed email on discovery', async () => {
-    const service = new PortalSignupService(makeOrgsService([]));
+    const service = new PortalSignupService(makeOrgsService([]), makeVerificationService(), makeConfig());
     (service as unknown as { blockedDomainsCache: { domains: Set<string>; refreshedAt: number } }).blockedDomainsCache = {
       domains: new Set(), refreshedAt: Date.now(),
     };
@@ -393,7 +461,7 @@ describe('PortalSignupService.handleDiscovery', () => {
 
 describe('PortalSignupService blocked-domains cache', () => {
   it('queries signup_blocked_domains when cache is stale (refreshedAt=0)', async () => {
-    const service = new PortalSignupService(makeOrgsService([]));
+    const service = new PortalSignupService(makeOrgsService([]), makeVerificationService(), makeConfig());
     // Cache starts with refreshedAt=0, triggering a refresh
 
     mockPoolClient.query.mockImplementation((sql: string) => {
@@ -415,7 +483,7 @@ describe('PortalSignupService blocked-domains cache', () => {
   });
 
   it('does NOT re-query DB when cache is fresh', async () => {
-    const service = new PortalSignupService(makeOrgsService([]));
+    const service = new PortalSignupService(makeOrgsService([]), makeVerificationService(), makeConfig());
     (service as unknown as { blockedDomainsCache: { domains: Set<string>; refreshedAt: number } }).blockedDomainsCache = {
       domains: new Set(['gmail.com']),
       refreshedAt: Date.now(), // fresh

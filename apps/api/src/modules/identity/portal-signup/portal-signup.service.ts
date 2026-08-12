@@ -7,12 +7,19 @@
  *   3. Tenant resolution via OrganizationsService.findByVerifiedDomain (cross-module)
  *   4. Existing-user short-circuit (enumeration-safe — returns generic success)
  *   5. Signup request persistence + audit log in a single DB transaction
- *   6. Structured metric logging (portal_signup_attempts_total, portal_signup_domain_match_total)
+ *   6. Verification token issuance for matched-domain signups (email_verification path)
+ *   7. Structured metric logging (portal_signup_attempts_total, portal_signup_domain_match_total)
  *
  * Non-disclosing design:
  *   - email_verification and pending_approval paths produce identical response shapes.
  *   - Existing-account path returns the same 202 body without creating a new row.
  *   - Raw email NEVER logged; domain and SHA-256 of local part only.
+ *
+ * Token issuance:
+ *   For matched-domain (email_verification) paths a single-use 24-hour verification
+ *   token is issued through PortalVerificationService.issue() immediately after the
+ *   signup request is persisted. Email delivery failures are non-fatal: the user can
+ *   trigger a resend via POST /api/v1/portal/signup/resend.
  *
  * Framework-free by design: no NestJS HTTP exceptions thrown here except for
  * the two explicit rejection paths (blocklist → 422, validation → 400).
@@ -25,11 +32,13 @@ import {
   UnprocessableEntityException,
   BadRequestException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { createHash, randomUUID } from 'crypto';
 import { pool } from '@opsninja/db';
 
 import { validateSignupEmail } from './email-validator';
 import { OrganizationsService } from '../../organizations/organizations.service';
+import { PortalVerificationService } from './portal-verification.service';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -81,6 +90,8 @@ export class PortalSignupService {
 
   constructor(
     private readonly organizationsService: OrganizationsService,
+    private readonly verificationService: PortalVerificationService,
+    private readonly config: ConfigService,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -148,7 +159,7 @@ export class PortalSignupService {
       ? 'pending_verification'
       : 'pending_admin_approval';
 
-    await this.persistSignupRequest({
+    const signupRequestId = await this.persistSignupRequest({
       emailNormalised: normalised,
       emailHash,
       fullName: fullName ?? null,
@@ -159,6 +170,35 @@ export class PortalSignupService {
       userAgent,
       traceId,
     });
+
+    // Issue verification token for matched-domain signups (email_verification path).
+    // Delivery failures are non-fatal — the user can request a resend via /signup/resend.
+    // The raw token is never persisted; only its SHA-256 hash is stored in the DB.
+    if (resolution.kind === 'email_verification') {
+      const baseUrl = this.config.get<string>(
+        'PORTAL_VERIFY_BASE_URL',
+        'https://portal.opsninja.io/verify',
+      );
+      try {
+        await this.verificationService.issue(
+          signupRequestId,
+          normalised,
+          tenantId,
+          fullName ?? normalised.split('@')[0] ?? 'User',
+          null, // org name — falls back to 'OpsNinja' in the email template
+          baseUrl,
+        );
+      } catch (err) {
+        // Non-fatal: token issue failure must not surface as a 500 or reveal delivery state.
+        // The operator metric allows alerting on persistent delivery failures.
+        this.logger.warn('[signup] Verification token issuance failed — user can request resend', {
+          domain,
+          traceId,
+          error: (err as Error).message,
+        });
+        this.emitMetric('portal_signup_token_issue_failed_total', { reason: 'issue_error' });
+      }
+    }
 
     const authMode: SignupAuthMode = (resolution.kind === 'email_verification')
       ? 'email_verification'
@@ -296,6 +336,14 @@ export class PortalSignupService {
     }
   }
 
+  /**
+   * Persist a new portal signup request or update an existing pending one.
+   *
+   * Returns the signup request ID so the caller can issue a verification token.
+   * Idempotent: if a pending request already exists for the email, its metadata
+   * is updated and the existing ID is returned — this prevents duplicate rows
+   * when the same email submits the signup form multiple times.
+   */
   private async persistSignupRequest(params: {
     emailNormalised: string;
     emailHash: string;
@@ -306,7 +354,7 @@ export class PortalSignupService {
     sourceIp: string;
     userAgent: string;
     traceId: string;
-  }): Promise<void> {
+  }): Promise<string> {
     const {
       emailNormalised, emailHash, fullName, tenantId, organizationId,
       status, sourceIp, userAgent, traceId,
@@ -384,6 +432,7 @@ export class PortalSignupService {
       );
 
       await client.query('COMMIT');
+      return signupRequestId;
     } catch (err) {
       await client.query('ROLLBACK').catch(() => undefined);
       this.logger.error('[signup] Failed to persist signup request', {
