@@ -623,3 +623,10 @@
 - **Files:** 1 (+551/-0)
 - **Duration:** 594ss
 - **Approach:** The WO-032 implementation (POST /api/v1/tickets and GET /api/v1/tickets/{id}) was already fully scaffolded in the branch from the blocker WO-031. All core files — tickets.controller.ts, tickets.service.ts, repositories/ticket.repository.ts, dto/create-ticket.dto.ts, dto/ticket-response.dto.ts, tickets.module.ts — were committed and complete. Unit tests (tickets.service.spec.ts) covering AC7 were also in place. The only gap was the supertest integration test (AC8) specifying create-then-read for agent/portal principals across two tenants with cross-tenant 404 assertions. Created apps/api/test/tickets.e2e-spec.ts following the organizations.api.spec.ts pattern: NestJS TestingModule with mocked TicketsService, TestContextInterceptor injecting PrincipalContext via x-test-principal header, supertest assertions for all acceptance criteria.
+
+## WO-033: User Story: WO-033 - Ticket Status Lifecycle And Concurrency-Safe Updates
+- **Status:** completed
+- **Commit:** `e8a1cee`
+- **Files:** 1 (+626/-0)
+- **Duration:** 348ss
+- **Approach:** All core WO-033 files were pre-committed in the branch from the blocker WO-031: lifecycle/transition-table.ts (declarative transition matrix), lifecycle/ticket-state-machine.ts (pure validateTransition/reachableStatuses), lifecycle/ticket-state-machine.spec.ts (table-driven unit tests), events/ticket-events.ts, dto/update-ticket.dto.ts (strict Zod + version field), dto/resolve-ticket.dto.ts (strict Zod + required resolution_note), tickets.service.ts update()/resolve() with version-guarded UPDATE, status history, outbox events, audit records, and tickets-lifecycle.service.spec.ts covering all AC7 items. The only gap was apps/api/test/ticket-lifecycle.e2e-spec.ts — the supertest integration test named in the work order. Created it following the organizations.api.spec.ts pattern: NestJS TestingModule + mocked TicketsService + TestContextInterceptor injecting PrincipalContext via x-test-principal header. No external DB required.
