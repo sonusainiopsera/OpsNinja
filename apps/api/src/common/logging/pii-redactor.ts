@@ -24,6 +24,13 @@ const HASH_KEYS = new Set([
   'rawip',
   'remoteaddress',
   'clientip',
+  // Contact PII fields — registered per WO-027 compliance requirement
+  'fullname',
+  'full_name',
+  'firstname',
+  'first_name',
+  'lastname',
+  'last_name',
 ]);
 
 /** Keys whose values are replaced with '[REDACTED]'. */
