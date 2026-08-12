@@ -868,3 +868,17 @@
 - **Files:** 3 (+1054/-0)
 - **Duration:** 446ss
 - **Approach:** All WO-063 source files were pre-committed from blocker WOs: tenant_ai_settings and tenant_ai_usage Drizzle schema (packages/db/src/schema/ai-policy.ts), migration 0042_tenant_ai_policy.sql (both tables with RLS enable/force + tenant_isolation policies + unique (tenant_id, period) index), AiPolicyService (getSettings/updateSettings with optimistic concurrency/getUsage), AiAdminController (GET+PUT /admin/ai/settings, GET /admin/ai/usage with ZodValidationPipe strict schemas), update-ai-settings.dto.ts (UpdateAiSettingsSchema z.strict(), AiUsageQuerySchema z.strict()), model-pricing.ts (MODEL_PRICE_TABLE with micros-per-1k-token to avoid float drift), DbAiPolicy (check() returning allow/disabled/budget_exhausted/policy_unavailable, recordUsage() atomic upsert with ON CONFLICT DO UPDATE, fire-once warning via warned_at column, emitUsageMetrics logging), AiPolicyPort with PermissiveAiPolicy default, and ai.module.ts wired into app.module.ts. Implementation gap was the test surface. Created: (1) db-ai-policy.spec.ts — 27 unit tests for the full policy decision matrix using FakePool/FakePoolClient; (2) ai-admin.spec.ts — 26 integration tests with mocked service via NestJS TestingModule + supertest; (3) ai-policy.fixtures.ts — three committed tenant profiles (healthy/exhausted/disabled) plus canned settings/usage rows and principal fixtures.
+
+## WO-064: User Story: WO-064 - Synthesis retry cap, DLQ and operator alerting
+- **Status:** completed
+- **Commit:** `57c3e90`
+- **Files:** 3 (+1009/-0)
+- **Duration:** 545ss
+- **Approach:** N/A
+
+## WO-068: User Story: WO-068 - Dashboard Snapshot API with Postgres Fallback Path
+- **Status:** completed
+- **Commit:** `b739fb6`
+- **Files:** 0 (+0/-0)
+- **Duration:** 151ss
+- **Approach:** N/A
