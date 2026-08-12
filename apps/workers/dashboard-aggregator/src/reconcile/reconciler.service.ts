@@ -21,6 +21,7 @@ import type Redis from 'ioredis';
 import { tickets, slaTimers, csatSurveys } from '@opsninja/db';
 import { AggregateStore } from '../redis/aggregate.store';
 import { Keys } from '../redis/keys';
+import { setAggregateDrift, incReconcileCycles } from '../observability/pipeline.metrics';
 
 const RECONCILE_INTERVAL_MS = 60_000;
 const STATEMENT_TIMEOUT_MS = 5_000;
@@ -149,12 +150,18 @@ export class ReconcilerService implements OnModuleInit, OnModuleDestroy {
       for (const [counter, pgValue] of Object.entries(pgKpi)) {
         const redisValue = redisKpi[counter] ?? 0;
         const drift = Math.abs(redisValue - pgValue);
+        // Emit drift gauge via shared pipeline metrics (cardinality-bounded by tenant bucket)
+        setAggregateDrift(tenantId, counter, drift);
         if (drift > 0) {
           this.emitMetric('dashboard_aggregate_drift', { tenantId, counter, drift: String(drift) });
         }
       }
 
       // ── Overwrite Redis with authoritative values ─────────────────────────
+      const hasDrift = Object.entries(pgKpi).some(
+        ([counter, pgValue]) => (redisKpi[counter] ?? 0) !== pgValue,
+      );
+
       await this.store.overwriteKpi(tenantId, pgKpi);
 
       // Overwrite org_load hash
@@ -163,6 +170,17 @@ export class ReconcilerService implements OnModuleInit, OnModuleDestroy {
       for (const [orgId, count] of Object.entries(orgLoad)) {
         if (count > 0) pipeline.hset(Keys.orgLoad(tenantId), orgId, count);
       }
+
+      // WO-069: if reconciler corrected drift, flag the tenant so the next
+      // delta-publisher interval emits a full snapshot frame instead of a delta.
+      // Clients that applied the drifted values will re-sync from the snapshot.
+      if (hasDrift) {
+        pipeline.set(Keys.needsSnapshot(tenantId), '1');
+        this.logger.log('Drift corrected — snapshot frame will be emitted on next interval', {
+          tenantId,
+        });
+      }
+
       await pipeline.exec();
 
       this.logger.debug('Reconcile complete', { tenantId, openTotal, activeP1, runningSlas });

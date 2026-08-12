@@ -656,3 +656,35 @@ export type {
   AiSynthesisIdempotency,
   NewAiSynthesisIdempotency,
 } from './schema/ai-synthesis';
+
+// ---------------------------------------------------------------------------
+// AI policy tables (WO-063)
+// ---------------------------------------------------------------------------
+
+export {
+  tenantAiSettings,
+  tenantAiUsage,
+} from './schema/ai-policy';
+
+export type {
+  TenantAiSettings,
+  NewTenantAiSettings,
+  TenantAiUsage,
+  NewTenantAiUsage,
+} from './schema/ai-policy';
+
+// ---------------------------------------------------------------------------
+// Portal onboarding tables (WO-088)
+// ---------------------------------------------------------------------------
+
+export {
+  portalOnboardingStates,
+  organizationChangeRequests,
+} from './schema/portal-onboarding';
+
+export type {
+  PortalOnboardingState,
+  NewPortalOnboardingState,
+  OrganizationChangeRequest,
+  NewOrganizationChangeRequest,
+} from './schema/portal-onboarding';

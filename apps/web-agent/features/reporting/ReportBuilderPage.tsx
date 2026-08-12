@@ -12,7 +12,7 @@
  * State: useReducer(builderReducer) — never uses auto-run; the user must click Run.
  * Run: useMutation(useRunReport) with AbortController; debounced to 400ms.
  * Save: useCreateReport / useUpdateReport with scope picker.
- * Export: useRequestExport posts to /api/v1/exports.
+ * Export: ExportBar + ExportJobsCard via shared ExportJobsProvider (WO-079).
  */
 
 import React, { useReducer, useCallback, useRef, useState } from 'react';
@@ -32,6 +32,8 @@ import { VisualizationToggle } from './components/VisualizationToggle';
 import { FilterStack } from './components/FilterStack';
 import { RowLimitNote } from './components/RowLimitNote';
 import { PreviewPanel } from './components/PreviewPanel';
+import { ExportBar } from './components/ExportBar';
+import { ExportJobsCard } from './components/ExportJobsCard';
 import type { RunState } from './components/RunStatePill';
 import {
   useFieldCatalog,
@@ -87,15 +89,13 @@ interface BuilderPanelProps {
   catalog:        ReturnType<typeof useFieldCatalog>['data'];
   onRun:          () => void;
   onSave:         () => void;
-  onExportCsv:    () => void;
-  onExportPdf:    () => void;
   isRunning:      boolean;
   isSaving:       boolean;
   retiredFields:  Set<string>;
 }
 
 function BuilderPanel({
-  state, dispatch, catalog, onRun, onSave, onExportCsv, onExportPdf,
+  state, dispatch, catalog, onRun, onSave,
   isRunning, isSaving, retiredFields,
 }: BuilderPanelProps) {
   const metrics    = catalog?.metrics ?? [];
@@ -249,17 +249,16 @@ function BuilderPanel({
         </button>
       </div>
 
-      {/* Export buttons */}
-      {state.hasRun && (
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button type="button" onClick={onExportCsv} style={{ flex: 1, padding: '0.375rem', borderRadius: 'var(--radius-md, 6px)', border: '1px solid var(--color-border)', background: 'var(--color-surface)', cursor: 'pointer', fontSize: '0.8125rem' }}>
-            ↓ Export CSV
-          </button>
-          <button type="button" onClick={onExportPdf} style={{ flex: 1, padding: '0.375rem', borderRadius: 'var(--radius-md, 6px)', border: '1px solid var(--color-border)', background: 'var(--color-surface)', cursor: 'pointer', fontSize: '0.8125rem' }}>
-            ↓ Export PDF
-          </button>
-        </div>
-      )}
+      {/* Export bar — WO-079 AC-1/AC-2 */}
+      <ExportBar
+        hasPreview={state.hasRun}
+        definition={{
+          metrics: state.metrics,
+          groupBy: state.groupBy ? [state.groupBy] : [],
+          filterAst: undefined,
+        }}
+        definitionId={state.savedId ?? undefined}
+      />
     </section>
   );
 }

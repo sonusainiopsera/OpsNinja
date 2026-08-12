@@ -20,13 +20,31 @@ import { PortalVerificationController } from './portal-signup/portal-verificatio
 import { PortalVerificationService } from './portal-signup/portal-verification.service';
 import { TokenCodec } from './portal-signup/token.codec';
 import { OrganizationsModule } from '../organizations/organizations.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { PortalSignupController } from './portal-signup/portal-signup.controller';
 import { PortalSignupService } from './portal-signup/portal-signup.service';
 import { SignupThrottleGuard } from './guards/signup-throttle.guard';
+import { PortalOnboardingController } from './portal-onboarding/portal-onboarding.controller';
+import { PortalOnboardingService } from './portal-onboarding/portal-onboarding.service';
+import { AdminPortalSignupsController } from './admin/admin-portal-signups.controller';
+import { AdminPortalSignupsService } from './admin/admin-portal-signups.service';
+import { SignupExpiryWorker } from '../../../workers/cleanup/signup-expiry.worker';
 
 @Module({
-  imports: [ConfigModule, SecurityModule, forwardRef(() => OrganizationsModule)],
-  controllers: [AuthController, AdminAuthController, PortalVerificationController, PortalSignupController],
+  imports: [
+    ConfigModule,
+    SecurityModule,
+    forwardRef(() => OrganizationsModule),
+    NotificationsModule,
+  ],
+  controllers: [
+    AuthController,
+    AdminAuthController,
+    PortalVerificationController,
+    PortalSignupController,
+    PortalOnboardingController,
+    AdminPortalSignupsController,
+  ],
   providers: [
     TokenService,
     SessionService,
@@ -36,11 +54,14 @@ import { SignupThrottleGuard } from './guards/signup-throttle.guard';
     TokenCodec,
     PortalSignupService,
     SignupThrottleGuard,
+    PortalOnboardingService,
+    AdminPortalSignupsService,
+    SignupExpiryWorker,
     {
       provide: 'REFRESH_SESSION_REPOSITORY',
       useClass: RefreshSessionRepository,
     },
   ],
-  exports: [TokenService, SessionService, AuditService, AuthAuditEmitter],
+  exports: [TokenService, SessionService, AuditService, AuthAuditEmitter, SignupExpiryWorker],
 })
 export class IdentityModule {}

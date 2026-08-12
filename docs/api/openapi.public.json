@@ -1,0 +1,1321 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "OpsNinja API",
+    "version": "1.0.0",
+    "description": "OpsNinja is a multi-tenant SaaS support and incident-management platform. This document describes the versioned, publicly supported tenant-facing REST surface. Internal endpoints (health, auth, admin, Jira integration) are excluded from this document.",
+    "contact": {
+      "name": "OpsNinja API Support",
+      "url": "https://docs.opsninja.io",
+      "email": "api-support@opsninja.io"
+    },
+    "license": {
+      "name": "Proprietary",
+      "url": "https://opsninja.io/terms"
+    }
+  },
+  "servers": [
+    { "url": "https://api.opsninja.io", "description": "Production" },
+    { "url": "https://api.staging.opsninja.io", "description": "Staging" },
+    { "url": "http://localhost:8080", "description": "Local development" }
+  ],
+  "tags": [
+    { "name": "portal-tickets", "description": "Customer portal — ticket read, comment and file operations." },
+    { "name": "portal-attachments", "description": "Customer portal — attachment upload/download." },
+    { "name": "agent-tickets", "description": "Agent workspace — ticket CRUD and lifecycle operations." },
+    { "name": "agent-comments", "description": "Agent workspace — comment management." },
+    { "name": "agent-attachments", "description": "Agent workspace — attachment management." },
+    { "name": "organizations", "description": "Customer organisation management." },
+    { "name": "contacts", "description": "Organisation contact management." },
+    { "name": "users", "description": "User and role management." },
+    { "name": "sla-policies", "description": "SLA policy and calendar management, timer state." },
+    { "name": "sla-calendars", "description": "Business-hours calendar management." },
+    { "name": "views", "description": "Saved ticket-queue filter views." },
+    { "name": "reporting", "description": "Report builder and export operations." },
+    { "name": "audit", "description": "Immutable audit log access." },
+    { "name": "jira", "description": "Jira integration management (internal)." },
+    { "name": "notifications", "description": "Notification subscription management." },
+    { "name": "webhooks", "description": "Outbound webhook subscription management." },
+    { "name": "privacy", "description": "Data-subject access and erasure requests." },
+    { "name": "ai", "description": "AI summary and synthesis administration (internal)." },
+    { "name": "auth", "description": "Authentication and session management (internal)." },
+    { "name": "health", "description": "Service health probes (internal)." },
+    { "name": "admin", "description": "Platform-admin tenant management (internal)." }
+  ],
+  "security": [{ "StaffBearer": [] }],
+  "paths": {
+    "/api/v1/portal/tickets": {
+      "get": {
+        "operationId": "listPortalTickets",
+        "summary": "List portal tickets with cursor pagination",
+        "tags": ["portal-tickets"],
+        "security": [{ "PortalBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/CursorParam" },
+          { "$ref": "#/components/parameters/LimitParam" },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "Filter by ticket status.",
+            "schema": { "type": "string", "enum": ["open", "in_progress", "resolved", "closed"] }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Full-text search term (max 200 characters).",
+            "schema": { "type": "string", "maxLength": 200 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of tickets belonging to the caller's organisation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "nextCursor"],
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/PortalTicketListItem" } },
+                    "nextCursor": { "type": ["string", "null"] }
+                  }
+                },
+                "example": {
+                  "data": [{
+                    "id": "aa000000-0000-0003-0000-000000000001",
+                    "reference": "TKT-0001",
+                    "subject": "Login issue on mobile app",
+                    "status": "open",
+                    "priority": "P2",
+                    "categoryPath": null,
+                    "createdAt": "2026-01-15T10:00:00Z",
+                    "updatedAt": "2026-01-15T10:00:00Z",
+                    "sla": {
+                      "firstResponseTargetAt": "2026-01-15T14:00:00Z",
+                      "resolutionTargetAt": "2026-01-17T10:00:00Z",
+                      "state": "running"
+                    }
+                  }],
+                  "nextCursor": null
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      },
+      "post": {
+        "operationId": "createPortalTicket",
+        "summary": "Submit a new support request from the portal",
+        "tags": ["portal-tickets"],
+        "security": [{ "PortalBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreatePortalTicketRequest" },
+              "example": {
+                "subject": "Login issue on mobile app",
+                "description": "Cannot login after updating the app to v4.2.1.",
+                "requestedPriority": "P2"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ticket created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "traceId"],
+                  "properties": {
+                    "data": { "$ref": "#/components/schemas/PortalTicketDetail" },
+                    "traceId": { "$ref": "#/components/schemas/TraceId" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "422": { "$ref": "#/components/responses/UnprocessableEntity" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/v1/portal/tickets/{id}": {
+      "get": {
+        "operationId": "getPortalTicket",
+        "summary": "Get portal ticket detail with public comments and SLA projection",
+        "tags": ["portal-tickets"],
+        "security": [{ "PortalBearer": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "description": "Ticket UUID.", "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket detail with public comments, SLA projection and status history.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/PortalTicketDetail" } }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/v1/portal/tickets/{id}/comments": {
+      "post": {
+        "operationId": "addPortalComment",
+        "summary": "Add a public comment to a portal ticket",
+        "description": "Visibility is always forced to `public`. Supplying a `visibility` field returns 400. Replies to closed tickets return 422 TICKET_CLOSED unless the tenant policy permits re-open.",
+        "tags": ["portal-tickets"],
+        "security": [{ "PortalBearer": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "description": "Ticket UUID.", "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AddPortalCommentRequest" },
+              "example": { "body": "I tried restarting — still broken." }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Comment added successfully.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/PortalComment" } }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "422": { "$ref": "#/components/responses/UnprocessableEntity" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/v1/portal/attachments/{id}/download": {
+      "get": {
+        "operationId": "downloadPortalAttachment",
+        "summary": "Get a pre-signed download URL for a portal attachment",
+        "tags": ["portal-attachments"],
+        "security": [{ "PortalBearer": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pre-signed download URL valid for 5 minutes.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AttachmentDownload" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/v1/portal/attachments/presign": {
+      "post": {
+        "operationId": "presignPortalAttachment",
+        "summary": "Obtain a pre-signed S3 POST URL for portal attachment upload",
+        "description": "Returns a pre-signed S3 POST URL and form fields. The client POSTs the file directly to S3 (multipart/form-data), then calls the confirm endpoint. The OpsNinja API never receives the file body.",
+        "tags": ["portal-attachments"],
+        "security": [{ "PortalBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PresignAttachmentRequest" },
+              "example": { "filename": "screenshot.png", "mimeType": "image/png", "sizeBytes": 204800 }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Pre-signed upload URL and attachment record.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PresignAttachmentResponse" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/v1/portal/attachments/{id}/confirm": {
+      "post": {
+        "operationId": "confirmPortalAttachment",
+        "summary": "Mark a portal attachment upload as complete",
+        "tags": ["portal-attachments"],
+        "security": [{ "PortalBearer": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Attachment confirmed and ready to be linked to a ticket.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PortalAttachmentMeta" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/v1/tickets": {
+      "post": {
+        "operationId": "createTicket",
+        "summary": "Create a new ticket (agent)",
+        "tags": ["agent-tickets"],
+        "security": [{ "StaffBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateTicketRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Ticket created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "traceId"],
+                  "properties": {
+                    "data": { "$ref": "#/components/schemas/Ticket" },
+                    "traceId": { "$ref": "#/components/schemas/TraceId" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "422": { "$ref": "#/components/responses/UnprocessableEntity" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      },
+      "get": {
+        "operationId": "listTickets",
+        "summary": "List / queue tickets with saved-view filtering and cursor pagination",
+        "tags": ["agent-tickets"],
+        "security": [{ "StaffBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/CursorParam" },
+          { "$ref": "#/components/parameters/LimitParam" },
+          { "name": "viewId", "in": "query", "required": false, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "status", "in": "query", "required": false, "schema": { "type": "string", "enum": ["open", "in_progress", "resolved", "closed"] } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated ticket list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "nextCursor"],
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Ticket" } },
+                    "nextCursor": { "type": ["string", "null"] }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/v1/tickets/{id}": {
+      "get": {
+        "operationId": "getTicket",
+        "summary": "Get a ticket by ID",
+        "tags": ["agent-tickets"],
+        "security": [{ "StaffBearer": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket detail.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data"],
+                  "properties": { "data": { "$ref": "#/components/schemas/Ticket" } }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      },
+      "patch": {
+        "operationId": "updateTicket",
+        "summary": "Update ticket fields (partial update)",
+        "description": "Optimistic concurrency: include the current `version` from a prior GET in the `If-Match` header or `version` body field. Returns 409 on stale version.",
+        "tags": ["agent-tickets"],
+        "security": [{ "StaffBearer": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateTicketRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data"],
+                  "properties": { "data": { "$ref": "#/components/schemas/Ticket" } }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "422": { "$ref": "#/components/responses/UnprocessableEntity" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/v1/tickets/{id}/resolve": {
+      "post": {
+        "operationId": "resolveTicket",
+        "summary": "Resolve a ticket",
+        "tags": ["agent-tickets"],
+        "security": [{ "StaffBearer": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ResolveTicketRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket resolved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data"],
+                  "properties": { "data": { "$ref": "#/components/schemas/Ticket" } }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "422": { "$ref": "#/components/responses/UnprocessableEntity" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/v1/tickets/{id}/comments": {
+      "post": {
+        "operationId": "addComment",
+        "summary": "Add a comment to a ticket",
+        "tags": ["agent-comments"],
+        "security": [{ "StaffBearer": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AddCommentRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Comment added.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Comment" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "422": { "$ref": "#/components/responses/UnprocessableEntity" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      },
+      "get": {
+        "operationId": "listComments",
+        "summary": "List comments on a ticket",
+        "tags": ["agent-comments"],
+        "security": [{ "StaffBearer": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "$ref": "#/components/parameters/CursorParam" },
+          { "$ref": "#/components/parameters/LimitParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated comment list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "nextCursor"],
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Comment" } },
+                    "nextCursor": { "type": ["string", "null"] }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/v1/tickets/{id}/attachments/presign": {
+      "post": {
+        "operationId": "presignAttachment",
+        "summary": "Obtain a pre-signed S3 POST URL for an agent attachment upload",
+        "description": "Returns a pre-signed URL and form fields for direct S3 upload. The API server never receives the file body (AC: file upload contract).",
+        "tags": ["agent-attachments"],
+        "security": [{ "StaffBearer": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PresignAttachmentRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Pre-signed upload URL.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PresignAttachmentResponse" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/v1/tickets/{id}/attachments/finalize": {
+      "post": {
+        "operationId": "finalizeAttachment",
+        "summary": "Finalize an agent attachment after S3 upload",
+        "tags": ["agent-attachments"],
+        "security": [{ "StaffBearer": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FinalizeAttachmentRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Attachment finalized.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AttachmentMeta" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/v1/attachments/{id}/download": {
+      "get": {
+        "operationId": "downloadAttachment",
+        "summary": "Get a pre-signed download URL for an agent attachment",
+        "tags": ["agent-attachments"],
+        "security": [{ "StaffBearer": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pre-signed download URL valid for 5 minutes.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AttachmentDownload" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/v1/tickets/{id}/sla": {
+      "get": {
+        "operationId": "getTicketSla",
+        "summary": "Get SLA timer state for a ticket",
+        "tags": ["sla-policies"],
+        "security": [{ "StaffBearer": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "SLA timer state including all active clocks.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TicketSlaResult" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/v1/sla/policies": {
+      "get": {
+        "operationId": "listSlaPolicies",
+        "summary": "List SLA policies for the tenant",
+        "tags": ["sla-policies"],
+        "security": [{ "StaffBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/CursorParam" },
+          { "$ref": "#/components/parameters/LimitParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated SLA policy list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "nextCursor"],
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/SlaPolicy" } },
+                    "nextCursor": { "type": ["string", "null"] }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/v1/organizations": {
+      "post": {
+        "operationId": "createOrganization",
+        "summary": "Create a customer organisation",
+        "tags": ["organizations"],
+        "security": [{ "StaffBearer": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateOrganizationRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Organisation created.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Organization" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "422": { "$ref": "#/components/responses/UnprocessableEntity" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/v1/organizations/{id}": {
+      "get": {
+        "operationId": "getOrganization",
+        "summary": "Get a customer organisation by ID",
+        "tags": ["organizations"],
+        "security": [{ "StaffBearer": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Organisation detail.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Organization" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      },
+      "patch": {
+        "operationId": "updateOrganization",
+        "summary": "Update an organisation",
+        "tags": ["organizations"],
+        "security": [{ "StaffBearer": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateOrganizationRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Organisation updated.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Organization" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "422": { "$ref": "#/components/responses/UnprocessableEntity" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/v1/views": {
+      "get": {
+        "operationId": "listViews",
+        "summary": "List saved views for the authenticated user",
+        "tags": ["views"],
+        "security": [{ "StaffBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/CursorParam" },
+          { "$ref": "#/components/parameters/LimitParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated saved-view list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "nextCursor"],
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/SavedView" } },
+                    "nextCursor": { "type": ["string", "null"] }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "operationId": "listUsers",
+        "summary": "List users in the tenant",
+        "tags": ["users"],
+        "security": [{ "StaffBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/CursorParam" },
+          { "$ref": "#/components/parameters/LimitParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated user list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "nextCursor"],
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/User" } },
+                    "nextCursor": { "type": ["string", "null"] }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/v1/audit/logs": {
+      "get": {
+        "operationId": "listAuditLogs",
+        "summary": "List immutable audit log entries",
+        "tags": ["audit"],
+        "security": [{ "StaffBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/CursorParam" },
+          { "$ref": "#/components/parameters/LimitParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated audit log entries.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "nextCursor"],
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/AuditLog" } },
+                    "nextCursor": { "type": ["string", "null"] }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    },
+    "/api/v1/webhooks": {
+      "get": {
+        "operationId": "listWebhooks",
+        "summary": "List outbound webhook subscriptions",
+        "tags": ["webhooks"],
+        "security": [{ "StaffBearer": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/CursorParam" },
+          { "$ref": "#/components/parameters/LimitParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated webhook list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "nextCursor"],
+                  "properties": {
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Webhook" } },
+                    "nextCursor": { "type": ["string", "null"] }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/TooManyRequests" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ErrorDetail": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Field-level or context detail item.",
+        "example": { "field": "subject", "issue": "String must contain at least 1 character(s)" }
+      },
+      "ErrorBody": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": { "type": "string", "description": "Machine-readable error code.", "example": "VALIDATION_ERROR" },
+          "message": { "type": "string", "description": "Human-readable error description.", "example": "Validation failed" },
+          "details": { "type": "array", "items": { "$ref": "#/components/schemas/ErrorDetail" } },
+          "traceId": { "type": "string", "example": "01HV2MXPQ3Y5HRGZTBJE8DKNN4" }
+        }
+      },
+      "ErrorEnvelope": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": { "$ref": "#/components/schemas/ErrorBody" }
+        },
+        "example": {
+          "error": {
+            "code": "NOT_FOUND",
+            "message": "Ticket not found.",
+            "details": [],
+            "traceId": "01HV2MXPQ3Y5HRGZTBJE8DKNN4"
+          }
+        }
+      },
+      "TraceId": {
+        "type": "string",
+        "description": "Correlation ID echoed from X-Trace-ID request header.",
+        "example": "01HV2MXPQ3Y5HRGZTBJE8DKNN4"
+      },
+      "CursorPage": {
+        "type": "object",
+        "required": ["data", "nextCursor"],
+        "properties": {
+          "data": { "type": "array", "items": {}, "description": "Items on this page." },
+          "nextCursor": { "type": ["string", "null"], "description": "Continuation token. Null when no further pages exist." },
+          "traceId": { "type": "string" }
+        }
+      },
+      "TicketStatus": { "type": "string", "enum": ["open", "in_progress", "resolved", "closed"], "description": "Ticket lifecycle status." },
+      "TicketPriority": { "type": "string", "enum": ["P1", "P2", "P3", "P4"], "description": "SLA priority (P1 = critical, P4 = low)." },
+      "CommentVisibility": { "type": "string", "enum": ["public", "internal"], "description": "Comment visibility (public = visible to customer portal)." },
+      "SlaTimerState": { "type": "string", "enum": ["running", "paused", "met", "breached"], "description": "SLA clock state." },
+      "Ticket": {
+        "type": "object",
+        "required": ["id", "tenantId", "organizationId", "subject", "status", "priority", "version", "createdAt", "updatedAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "tenantId": { "type": "string", "format": "uuid" },
+          "organizationId": { "type": "string", "format": "uuid" },
+          "reference": { "type": ["string", "null"] },
+          "subject": { "type": "string", "maxLength": 255 },
+          "description": { "type": ["string", "null"] },
+          "status": { "$ref": "#/components/schemas/TicketStatus" },
+          "priority": { "$ref": "#/components/schemas/TicketPriority" },
+          "version": { "type": "integer" },
+          "assigneeId": { "type": ["string", "null"], "format": "uuid" },
+          "categoryId": { "type": ["string", "null"], "format": "uuid" },
+          "requesterContactId": { "type": ["string", "null"], "format": "uuid" },
+          "firstResponseAt": { "type": ["string", "null"], "format": "date-time" },
+          "resolvedAt": { "type": ["string", "null"], "format": "date-time" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateTicketRequest": {
+        "type": "object",
+        "required": ["subject", "organization_id"],
+        "additionalProperties": false,
+        "properties": {
+          "subject": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "description": { "type": "string", "maxLength": 100000 },
+          "priority": { "$ref": "#/components/schemas/TicketPriority" },
+          "organization_id": { "type": "string", "format": "uuid" },
+          "requester_contact_id": { "type": "string", "format": "uuid" },
+          "category_id": { "type": "string", "format": "uuid" }
+        }
+      },
+      "UpdateTicketRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subject": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "priority": { "$ref": "#/components/schemas/TicketPriority" },
+          "status": { "$ref": "#/components/schemas/TicketStatus" },
+          "assigneeId": { "type": "string", "format": "uuid" },
+          "version": { "type": "integer" }
+        }
+      },
+      "ResolveTicketRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "resolution": { "type": "string", "maxLength": 10000 },
+          "version": { "type": "integer" }
+        }
+      },
+      "PortalSlaProjection": {
+        "type": "object",
+        "required": ["firstResponseTargetAt", "resolutionTargetAt", "state"],
+        "description": "Customer-safe SLA projection.",
+        "properties": {
+          "firstResponseTargetAt": { "type": ["string", "null"], "format": "date-time" },
+          "resolutionTargetAt": { "type": ["string", "null"], "format": "date-time" },
+          "state": { "$ref": "#/components/schemas/SlaTimerState" }
+        }
+      },
+      "PortalTicketListItem": {
+        "type": "object",
+        "required": ["id", "subject", "status", "priority", "createdAt", "updatedAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "reference": { "type": ["string", "null"] },
+          "subject": { "type": "string" },
+          "status": { "$ref": "#/components/schemas/TicketStatus" },
+          "priority": { "$ref": "#/components/schemas/TicketPriority" },
+          "categoryPath": { "type": ["string", "null"] },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "sla": { "oneOf": [{ "$ref": "#/components/schemas/PortalSlaProjection" }, { "type": "null" }] }
+        }
+      },
+      "PortalStatusHistoryEntry": {
+        "type": "object",
+        "required": ["from", "to", "at"],
+        "properties": {
+          "from": { "type": ["string", "null"] },
+          "to": { "$ref": "#/components/schemas/TicketStatus" },
+          "at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "PortalAttachmentMeta": {
+        "type": "object",
+        "required": ["id", "displayName", "mimeType", "sizeBytes"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "displayName": { "type": "string" },
+          "mimeType": { "type": "string" },
+          "sizeBytes": { "type": "integer" }
+        }
+      },
+      "PortalComment": {
+        "type": "object",
+        "required": ["id", "body", "authorDisplayName", "authorType", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "body": { "type": "string" },
+          "authorDisplayName": { "type": "string" },
+          "authorType": { "type": "string", "enum": ["customer", "agent"] },
+          "attachments": { "type": "array", "items": { "$ref": "#/components/schemas/PortalAttachmentMeta" } },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "PortalTicketDetail": {
+        "type": "object",
+        "required": ["id", "subject", "status", "priority", "createdAt", "updatedAt", "comments", "statusHistory"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "reference": { "type": ["string", "null"] },
+          "subject": { "type": "string" },
+          "status": { "$ref": "#/components/schemas/TicketStatus" },
+          "priority": { "$ref": "#/components/schemas/TicketPriority" },
+          "categoryPath": { "type": ["string", "null"] },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "sla": { "oneOf": [{ "$ref": "#/components/schemas/PortalSlaProjection" }, { "type": "null" }] },
+          "aiSummary": { "type": "string" },
+          "comments": { "type": "array", "items": { "$ref": "#/components/schemas/PortalComment" } },
+          "statusHistory": { "type": "array", "items": { "$ref": "#/components/schemas/PortalStatusHistoryEntry" } }
+        }
+      },
+      "CreatePortalTicketRequest": {
+        "type": "object",
+        "required": ["subject", "description"],
+        "additionalProperties": false,
+        "properties": {
+          "subject": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "description": { "type": "string", "minLength": 1, "maxLength": 20000 },
+          "categoryId": { "type": "string", "format": "uuid" },
+          "requestedPriority": { "$ref": "#/components/schemas/TicketPriority" },
+          "attachmentIds": { "type": "array", "items": { "type": "string", "format": "uuid" }, "maxItems": 10 }
+        }
+      },
+      "AddPortalCommentRequest": {
+        "type": "object",
+        "required": ["body"],
+        "additionalProperties": false,
+        "description": "visibility field MUST NOT be present.",
+        "properties": {
+          "body": { "type": "string", "minLength": 1, "maxLength": 20000 },
+          "attachmentIds": { "type": "array", "items": { "type": "string", "format": "uuid" }, "maxItems": 10 }
+        }
+      },
+      "Comment": {
+        "type": "object",
+        "required": ["id", "ticketId", "body", "visibility", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "ticketId": { "type": "string", "format": "uuid" },
+          "authorId": { "type": ["string", "null"], "format": "uuid" },
+          "body": { "type": "string" },
+          "visibility": { "$ref": "#/components/schemas/CommentVisibility" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "AddCommentRequest": {
+        "type": "object",
+        "required": ["body", "visibility"],
+        "additionalProperties": false,
+        "properties": {
+          "body": { "type": "string", "minLength": 1, "maxLength": 20000 },
+          "visibility": { "$ref": "#/components/schemas/CommentVisibility" },
+          "attachmentIds": { "type": "array", "items": { "type": "string", "format": "uuid" }, "maxItems": 10 }
+        }
+      },
+      "AttachmentMeta": {
+        "type": "object",
+        "required": ["id", "filename", "mimeType", "sizeBytes", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "ticketId": { "type": "string", "format": "uuid" },
+          "filename": { "type": "string" },
+          "mimeType": { "type": "string" },
+          "sizeBytes": { "type": "integer" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "AttachmentDownload": {
+        "type": "object",
+        "required": ["url", "expiresAt"],
+        "properties": {
+          "url": { "type": "string", "format": "uri" },
+          "expiresAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "PresignAttachmentRequest": {
+        "type": "object",
+        "required": ["filename", "mimeType", "sizeBytes"],
+        "additionalProperties": false,
+        "properties": {
+          "filename": { "type": "string", "maxLength": 255 },
+          "mimeType": { "type": "string" },
+          "sizeBytes": { "type": "integer", "minimum": 1, "maximum": 26214400 }
+        }
+      },
+      "PresignAttachmentResponse": {
+        "type": "object",
+        "required": ["attachmentId", "uploadUrl", "fields", "expiresAt"],
+        "properties": {
+          "attachmentId": { "type": "string", "format": "uuid" },
+          "uploadUrl": { "type": "string", "format": "uri" },
+          "fields": { "type": "object", "additionalProperties": { "type": "string" } },
+          "expiresAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "FinalizeAttachmentRequest": {
+        "type": "object",
+        "required": ["attachmentId"],
+        "additionalProperties": false,
+        "properties": {
+          "attachmentId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "SlaClock": {
+        "type": "object",
+        "required": ["clockType", "state", "targetAt", "startedAt", "elapsedMs", "remainingMs", "elapsedPct"],
+        "properties": {
+          "clockType": { "type": "string", "enum": ["response", "resolution"] },
+          "state": { "$ref": "#/components/schemas/SlaTimerState" },
+          "targetAt": { "type": "string", "format": "date-time" },
+          "startedAt": { "type": "string", "format": "date-time" },
+          "elapsedMs": { "type": "integer" },
+          "remainingMs": { "type": "integer" },
+          "pausedMs": { "type": "integer" },
+          "elapsedPct": { "type": "number" }
+        }
+      },
+      "TicketSlaResult": {
+        "type": "object",
+        "required": ["ticketId", "clocks"],
+        "properties": {
+          "ticketId": { "type": "string", "format": "uuid" },
+          "clocks": { "type": "array", "items": { "$ref": "#/components/schemas/SlaClock" } },
+          "reason": { "type": "string", "enum": ["no_policy", "timer_not_started"] }
+        }
+      },
+      "SlaPolicy": {
+        "type": "object",
+        "required": ["id", "name", "priority", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "priority": { "$ref": "#/components/schemas/TicketPriority" },
+          "firstResponseTargetHours": { "type": "number" },
+          "resolutionTargetHours": { "type": "number" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Organization": {
+        "type": "object",
+        "required": ["id", "tenantId", "name", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "tenantId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "domains": { "type": "array", "items": { "type": "string" } },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateOrganizationRequest": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "domains": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "UpdateOrganizationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "customFields": { "type": "object" }
+        }
+      },
+      "User": {
+        "type": "object",
+        "required": ["id", "tenantId", "email", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "tenantId": { "type": "string", "format": "uuid" },
+          "email": { "type": "string", "format": "email" },
+          "displayName": { "type": "string" },
+          "roles": { "type": "array", "items": { "type": "string" } },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "SavedView": {
+        "type": "object",
+        "required": ["id", "name", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "filters": { "type": "object" },
+          "isDefault": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "AuditLog": {
+        "type": "object",
+        "required": ["id", "tenantId", "actorId", "action", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "tenantId": { "type": "string", "format": "uuid" },
+          "actorId": { "type": "string", "format": "uuid" },
+          "action": { "type": "string" },
+          "resourceType": { "type": "string" },
+          "resourceId": { "type": "string", "format": "uuid" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Webhook": {
+        "type": "object",
+        "required": ["id", "tenantId", "url", "events", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "tenantId": { "type": "string", "format": "uuid" },
+          "url": { "type": "string", "format": "uri" },
+          "events": { "type": "array", "items": { "type": "string" } },
+          "active": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "parameters": {
+      "CursorParam": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "description": "Opaque base64url-encoded continuation token. Omit to start from the first page.",
+        "schema": { "type": "string" }
+      },
+      "LimitParam": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Number of items to return per page. Maximum 100.",
+        "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad Request — validation failed or malformed input.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+      },
+      "Unauthorized": {
+        "description": "Unauthorized — missing or invalid bearer token.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+      },
+      "Forbidden": {
+        "description": "Forbidden — insufficient permissions.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+      },
+      "NotFound": {
+        "description": "Not Found — resource does not exist or is out of scope.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+      },
+      "Conflict": {
+        "description": "Conflict — optimistic concurrency version mismatch.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+      },
+      "UnprocessableEntity": {
+        "description": "Unprocessable Entity — business rule violation.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+      },
+      "TooManyRequests": {
+        "description": "Too Many Requests — rate limit exceeded.",
+        "headers": {
+          "Retry-After": {
+            "description": "Number of seconds to wait before retrying.",
+            "schema": { "type": "integer", "example": 60 }
+          }
+        },
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+      }
+    },
+    "securitySchemes": {
+      "StaffBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "OIDC JWT issued by the tenant identity provider (Okta / Entra ID). Staff and agent principals."
+      },
+      "PortalBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Portal-scoped JWT bound to a single customer organisation."
+      },
+      "MachineToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Api-Key",
+        "description": "Long-lived tenant-issued API key for machine-to-machine integrations."
+      }
+    }
+  }
+}

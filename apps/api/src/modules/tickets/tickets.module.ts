@@ -11,8 +11,9 @@ import { AttachmentRepository } from './repositories/attachment.repository';
 import { TenantSettingsRepository } from './repositories/tenant-settings.repository';
 import { AttachmentAccessService } from './services/attachment-access.service';
 import { PortalVisibilityGuard } from './portal/portal-visibility.guard';
-import { PortalTicketsController } from './portal/portal-tickets.controller';
+import { PortalTicketsController, PortalAttachmentDownloadController } from './portal/portal-tickets.controller';
 import { PortalAttachmentsController } from './portal/portal-attachments.controller';
+import { PortalTicketReadService } from './portal/portal-ticket-read.service';
 import { QueueController } from './queue/queue.controller';
 import { QueueService } from './queue/queue.service';
 import { QueueRepository } from './queue/queue.repository';
@@ -24,6 +25,7 @@ import { CommentsService } from './comments/comments.service';
 import { AuditWriter } from '../audit/audit-writer';
 import { AttachmentsController, AttachmentDownloadController } from './attachments/attachments.controller';
 import { AttachmentsService } from './attachments/attachments.service';
+import { PortalAttachmentsService } from './portal/portal-attachments.service';
 import { S3ObjectStore } from './attachments/storage/s3-object-store';
 import { OBJECT_STORE_PORT } from './attachments/storage/object-store.port';
 import { TicketSlaController } from '../sla/ticket-sla.controller';
@@ -32,6 +34,7 @@ import { TicketSlaController } from '../sla/ticket-sla.controller';
   imports: [AuthModule, AuditModule, OrganizationsModule, ViewsModule, SlaModule],
   controllers: [
     PortalTicketsController,
+    PortalAttachmentDownloadController, // WO-090: GET /portal/attachments/:id/download
     PortalAttachmentsController,
     QueueController,
     TicketsController,                 // WO-032: POST /tickets, GET /tickets/:id, PATCH /:id, POST /:id/resolve
@@ -47,6 +50,9 @@ import { TicketSlaController } from '../sla/ticket-sla.controller';
     TenantSettingsRepository,
     AttachmentAccessService,
     PortalVisibilityGuard,
+    // WO-090: portal read service (keyset pagination, SLA projection, cache)
+    // SlaQueryService is provided by the imported SlaModule — not re-declared here.
+    PortalTicketReadService,
     // Queue (WO-040)
     QueueController,
     QueueService,
@@ -63,6 +69,8 @@ import { TicketSlaController } from '../sla/ticket-sla.controller';
     AttachmentsService,
     { provide: OBJECT_STORE_PORT, useClass: S3ObjectStore },
     S3ObjectStore,
+    // Portal attachments — pre-ticket presign/confirm workflow (WO-089)
+    PortalAttachmentsService,
   ],
   exports: [
     TicketRepository,
@@ -74,6 +82,7 @@ import { TicketSlaController } from '../sla/ticket-sla.controller';
     TicketsService,
     CommentsService,
     AttachmentsService,
+    PortalAttachmentsService,
   ],
 })
 export class TicketsModule {}

@@ -74,6 +74,35 @@ export type {
 } from './jira-metrics';
 
 // ---------------------------------------------------------------------------
+// Metrics registry (WO-071)
+// ---------------------------------------------------------------------------
+export {
+  MetricsRegistry,
+  getRegistry,
+  _resetRegistriesForTesting,
+  LATENCY_BUCKETS_S,
+  LAG_BUCKETS_MS,
+} from './metrics-registry';
+
+export type { MetricDef, MetricType } from './metrics-registry';
+
+// ---------------------------------------------------------------------------
+// Health indicators (WO-071)
+// ---------------------------------------------------------------------------
+export {
+  LivenessIndicator,
+  RedisPingIndicator,
+  PgBouncerPingIndicator,
+  ReadinessComposite,
+} from './health/readiness.indicator';
+
+export type {
+  HealthResult,
+  ReadinessIndicator,
+  ReadinessCheckResult,
+} from './health/readiness.indicator';
+
+// ---------------------------------------------------------------------------
 // PII corpus fixture (for test use)
 // ---------------------------------------------------------------------------
 export {

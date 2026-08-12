@@ -1,0 +1,138 @@
+# Realtime streaming pipeline alert rules — WO-071 AC6
+#
+# Five required alerts for the EPIC-09 streaming path
+# (dashboard aggregator, delta publisher, realtime gateway).
+#
+# Each alert carries:
+#   severity    — critical|warning|info
+#   sli         — the SLI this alert defends (see slo/realtime.slo.yaml)
+#   team        — owning team for PagerDuty routing
+#   runbook_url — per-alert runbook section link
+#
+# Alert expressions reference the metric inventory defined in:
+#   apps/realtime-gateway/src/observability/gateway.metrics.ts
+#   apps/workers/dashboard-aggregator/src/observability/pipeline.metrics.ts
+#
+# CI lint: validate rule syntax with promtool check rules before merge.
+#   promtool check rules packages/observability/alerts/realtime.rules.yaml
+#
+# Cardinality note: no alert expression uses tenantId as a label on
+# high-volume counters; per-tenant series are capped by tenant_bucket.
+
+groups:
+  - name: realtime_pipeline
+    interval: 30s
+    rules:
+
+      # ── Alert 1: No frames published for any active tenant over 60s ────────
+      # SLI: dashboard_freshness (AC5 — p95 age of newest delivered frame < 10s)
+      # Scoped to tenants that have had activity in the last 10 minutes to avoid
+      # alerting on genuinely quiet systems (AC edge case).
+      - alert: RealtimeNoFramesPublished
+        expr: >
+          (
+            sum(increase(dashboard_events_consumed_total{outcome="applied"}[10m])) > 0
+          )
+          and
+          (
+            sum(increase(realtime_frames_delivered_total[1m])) == 0
+          )
+        for: 1m
+        labels:
+          severity: critical
+          sli: dashboard_freshness
+          team: platform
+        annotations:
+          summary: "No realtime frames delivered in the last 60s despite active event consumption"
+          description: >
+            The delta publisher is consuming events but no frames have been delivered
+            to WebSocket clients in the last minute. The streaming pipeline is stalled.
+            Agents are seeing a frozen dashboard. Check the delta-publisher service,
+            Redis pub/sub connectivity, and the gateway relay path.
+          runbook_url: "https://github.com/opsninja/opsninja-api/blob/main/docs/runbooks/realtime-dashboard.md#realtimenoframespublished"
+
+      # ── Alert 2: Aggregate drift above threshold for 2+ consecutive cycles ─
+      # SLI: aggregate_correctness (AC5 — drift-free cycles > 99.9%)
+      - alert: RealtimeAggregateDriftHigh
+        expr: >
+          max(dashboard_aggregate_drift) > 50
+        for: 2m
+        labels:
+          severity: warning
+          sli: aggregate_correctness
+          team: platform
+        annotations:
+          summary: "Dashboard aggregate drift is {{ $value }} for 2+ reconcile cycles"
+          description: >
+            The difference between Redis aggregates and the authoritative Postgres values
+            has exceeded 50 for at least two consecutive reconciliation cycles (2+ minutes).
+            Agents are seeing inaccurate KPI counters. The reconciler should auto-correct
+            on the next cycle; if drift persists, the reconciler may be unhealthy.
+          runbook_url: "https://github.com/opsninja/opsninja-api/blob/main/docs/runbooks/realtime-dashboard.md#realtimeaggregatedrifthigh"
+
+      # ── Alert 3: Snapshot source database ratio above 5% over 5 minutes ───
+      # Indicates Redis cache is cold or unhealthy; snapshots coming from DB
+      # add Postgres load and latency.
+      - alert: RealtimeSnapshotSourceDatabaseHigh
+        expr: >
+          (
+            rate(dashboard_snapshot_source_total{source="database"}[5m])
+            /
+            (
+              rate(dashboard_snapshot_source_total{source="database"}[5m])
+              + rate(dashboard_snapshot_source_total{source="cache"}[5m])
+            )
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          sli: stream_availability
+          team: platform
+        annotations:
+          summary: "{{ $value | humanizePercentage }} of dashboard snapshots are sourced from Postgres (expected: cache)"
+          description: >
+            More than 5% of dashboard snapshots are being served from Postgres rather than
+            the Redis cache over the last 5 minutes. This adds Postgres read load and latency.
+            Check Redis connectivity, cache TTL configuration, and whether the reconciler
+            is writing aggregates correctly.
+          runbook_url: "https://github.com/opsninja/opsninja-api/blob/main/docs/runbooks/realtime-dashboard.md#realtimesnapshotsourcedatabasehigh"
+
+      # ── Alert 4: DLQ depth above zero on dashboard-aggregates queue ────────
+      - alert: RealtimeDlqNonEmpty
+        expr: >
+          dashboard_dlq_depth > 0
+        for: 2m
+        labels:
+          severity: warning
+          sli: aggregate_correctness
+          team: platform
+        annotations:
+          summary: "Dashboard aggregator DLQ has {{ $value }} messages"
+          description: >
+            The dashboard-aggregates dead-letter queue is non-empty. Events that could not
+            be processed are accumulating. Unprocessed events mean KPI counters are stale
+            for affected tenants. Investigate the root cause before redriving.
+          runbook_url: "https://github.com/opsninja/opsninja-api/blob/main/docs/runbooks/realtime-dashboard.md#realtimeDlqnonempty"
+
+      # ── Alert 5: Gateway readiness failing on more than one-third of pods ──
+      # SLI: stream_availability (AC5 — share of sessions in live state > 99%)
+      - alert: RealtimeGatewayReadinessDegraded
+        expr: >
+          (
+            sum(kube_pod_status_ready{condition="false", pod=~"realtime-gateway-.*"})
+            /
+            sum(kube_pod_status_ready{pod=~"realtime-gateway-.*"})
+          ) > 0.33
+        for: 1m
+        labels:
+          severity: critical
+          sli: stream_availability
+          team: platform
+        annotations:
+          summary: "{{ $value | humanizePercentage }} of gateway pods are not ready"
+          description: >
+            More than one third of realtime-gateway pods are failing their readiness probe,
+            meaning requests are being load-balanced to a shrinking pool of healthy pods.
+            If all pods become unready, agents will fall back to polling (degraded mode).
+            Check Redis connectivity and pod logs.
+          runbook_url: "https://github.com/opsninja/opsninja-api/blob/main/docs/runbooks/realtime-dashboard.md#realtimegatewayreadinessdegraded"

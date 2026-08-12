@@ -16,6 +16,7 @@ import { CustomFieldDefsRepository } from './custom-fields/custom-field-defs.rep
 import { VerifiedDomainsService } from './verified-domains/verified-domains.service';
 import { VerifiedDomainsRepository } from './verified-domains/verified-domains.repository';
 import { DomainOwnershipVerifier } from './verified-domains/domain-ownership.verifier';
+import { OrganizationChangeRequestsService } from './organization-change-requests.service';
 
 @Module({
   imports: [forwardRef(() => AuthModule), AuditModule],
@@ -32,7 +33,14 @@ import { DomainOwnershipVerifier } from './verified-domains/domain-ownership.ver
     VerifiedDomainsService,
     VerifiedDomainsRepository,
     DomainOwnershipVerifier,
+    OrganizationChangeRequestsService,
   ],
-  exports: [AgentScopesService, OrganizationsService, ContactsService, VerifiedDomainsService],
+  exports: [
+    AgentScopesService,
+    OrganizationsService,
+    ContactsService,
+    VerifiedDomainsService,
+    OrganizationChangeRequestsService,
+  ],
 })
 export class OrganizationsModule {}

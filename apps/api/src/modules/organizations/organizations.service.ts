@@ -523,6 +523,59 @@ export class OrganizationsService {
   }
 
   // --------------------------------------------------------------------------
+  // addVerifiedDomain — used by admin signup approval (WO-091)
+  // --------------------------------------------------------------------------
+
+  /**
+   * Directly add a verified domain to an organization (admin-approval path).
+   *
+   * Unlike the self-service register→verify flow, this immediately sets
+   * status='verified' so future signups from the domain auto-bind.
+   *
+   * Delegates to VerifiedDomainsService which owns the uniqueness check and
+   * emits its own audit record. Throws 409 if another org in the tenant
+   * already claims the domain.
+   */
+  async addVerifiedDomain(
+    tenantId: string,
+    organizationId: string,
+    domain: string,
+    actorId: string,
+  ): Promise<void> {
+    // Use the existing adminOverride path via a synthetic domain registration
+    // followed by immediate admin-override verification.
+    // First register the domain (gets a pending entry):
+    let domainId: string;
+    try {
+      const result = await this.verifiedDomainsService.register(tenantId, organizationId, {
+        domain,
+        includeSubdomains: false,
+      });
+      domainId = result.domain.id;
+    } catch (err) {
+      const e = err as { response?: { error?: { code?: string } } };
+      if (e.response?.error?.code === 'VERIFIED_DOMAIN_CONFLICT') {
+        throw new ConflictException({
+          error: {
+            code: 'VERIFIED_DOMAIN_CONFLICT',
+            message: `Domain "${domain}" is already claimed by another organization in this tenant.`,
+          },
+        });
+      }
+      throw err;
+    }
+
+    // Immediately promote to verified via admin override
+    await this.verifiedDomainsService.adminOverride(
+      tenantId,
+      organizationId,
+      domainId,
+      { justification: 'Admin-approved portal signup domain promotion' },
+      actorId,
+    );
+  }
+
+  // --------------------------------------------------------------------------
   // Helpers
   // --------------------------------------------------------------------------
 

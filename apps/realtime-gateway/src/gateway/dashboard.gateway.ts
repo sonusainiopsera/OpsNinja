@@ -32,6 +32,7 @@ import type { Server as HttpServer } from 'http';
 import { WsJwtVerifier } from '../auth/ws-jwt.verifier';
 import { OrgScopeResolver } from '../auth/org-scope.resolver';
 import { ConnectionRegistry } from './connection-registry';
+import { BackfillService } from './backfill.service';
 import type {
   ClientMessage,
   GoingAwayFrame,
@@ -79,6 +80,7 @@ export class DashboardGateway implements OnModuleInit, OnModuleDestroy {
     private readonly verifier: WsJwtVerifier,
     private readonly registry: ConnectionRegistry,
     private readonly scopeResolver: OrgScopeResolver,
+    private readonly backfillService: BackfillService,
   ) {
     this.heartbeatIntervalMs = parseInt(
       process.env['HEARTBEAT_INTERVAL_MS'] ?? '30000',
@@ -248,6 +250,7 @@ export class DashboardGateway implements OnModuleInit, OnModuleDestroy {
 
     ws.on('close', () => {
       this.registry.remove(ws);
+      this.backfillService.removeSocket(ws);
       this.logger.log('WebSocket closed', {
         event: 'close',
         principalId: principal.sub,
@@ -257,6 +260,7 @@ export class DashboardGateway implements OnModuleInit, OnModuleDestroy {
 
     ws.on('error', (err: Error) => {
       this.registry.remove(ws);
+      this.backfillService.removeSocket(ws);
       this.logger.warn('WebSocket error', {
         event: 'close',
         principalId: principal.sub,
@@ -282,7 +286,7 @@ export class DashboardGateway implements OnModuleInit, OnModuleDestroy {
     }
 
     if (msg.type === 'subscribe') {
-      // Channel must be 'dashboard' and must match principal's tenant.
+      // Channel must be 'dashboard'.
       if (msg.channel !== 'dashboard') {
         this.closeSocket(ws, WS_CLOSE_FORBIDDEN, 'Forbidden channel');
         this.logger.log('WebSocket closed: forbidden channel', {
@@ -296,8 +300,9 @@ export class DashboardGateway implements OnModuleInit, OnModuleDestroy {
 
       const wrapper = this.registry.get(ws);
       if (wrapper) {
-        wrapper.subscribed = true;
-        wrapper.lastDeliveredSeq = msg.lastSeq;
+        // WO-069: delegate to BackfillService which handles reconnect backfill,
+        // snapshot_required decisioning, and live-frame buffering.
+        void this.backfillService.handleSubscribe(wrapper, msg.lastSeq);
       }
       return;
     }

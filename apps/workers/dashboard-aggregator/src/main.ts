@@ -16,6 +16,7 @@ import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { WorkerModule } from './worker.module';
+import { startAggregatorMetricsServer } from './observability/pipeline.metrics';
 
 const logger = new Logger('main');
 
@@ -40,9 +41,14 @@ async function bootstrap(): Promise<void> {
     logger.log(`Health probe on :${healthPort}`);
   });
 
+  // Start internal-only Prometheus /metrics listener (127.0.0.1 only — AC1).
+  const stopMetrics = startAggregatorMetricsServer();
+  logger.log(`Internal /metrics on 127.0.0.1:${process.env['METRICS_PORT'] ?? '9465'}`);
+
   const shutdown = async (signal: string): Promise<void> => {
     logger.log(`${signal} — shutting down`);
     healthServer.close();
+    stopMetrics();
     await app.close();
     process.exit(0);
   };

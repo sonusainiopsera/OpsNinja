@@ -5,7 +5,9 @@
     "rootDir": "./src",
     "paths": {
       "@opsninja/db": ["../../packages/db/src/index.ts"],
-      "@opsninja/db/*": ["../../packages/db/src/*"]
+      "@opsninja/db/*": ["../../packages/db/src/*"],
+      "@opsninja/api-types": ["../../packages/api-types/src/index.ts"],
+      "@opsninja/api-types/*": ["../../packages/api-types/src/*"]
     }
   },
   "include": ["src/**/*"],

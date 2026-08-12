@@ -504,3 +504,108 @@
 - **Files:** 9 (+1457/-3)
 - **Duration:** 487ss
 - **Approach:** N/A
+
+## WO-059: User Story: WO-059 - Jira Integration Audit Trail and Sync Observability Instrumentation
+- **Status:** completed
+- **Commit:** `09d4024`
+- **Files:** 9 (+1257/-1)
+- **Duration:** 683ss
+- **Approach:** N/A
+
+## WO-063: User Story: WO-063 - Per-tenant AI token budget and opt-out policy
+- **Status:** completed
+- **Commit:** `f362079`
+- **Files:** 9 (+975/-9)
+- **Duration:** 452ss
+- **Approach:** N/A
+
+## WO-064: User Story: WO-064 - Synthesis retry cap, DLQ and operator alerting
+- **Status:** completed
+- **Commit:** `36a9225`
+- **Files:** 12 (+973/-79)
+- **Duration:** 575ss
+- **Approach:** N/A
+
+## WO-068: User Story: WO-068 - Dashboard Snapshot API with Postgres Fallback Path
+- **Status:** completed
+- **Commit:** `be0c296`
+- **Files:** 4 (+207/-0)
+- **Duration:** 341ss
+- **Approach:** N/A
+
+## WO-088: User Story: WO-088 - Guided onboarding wizard with resumable progress persistence
+- **Status:** completed
+- **Commit:** `5487ad3`
+- **Files:** 11 (+994/-3)
+- **Duration:** 522ss
+- **Approach:** N/A
+
+## WO-089: User Story: WO-089 - Portal support request submission with secure attachment uploads
+- **Status:** completed
+- **Commit:** `a1c6173`
+- **Files:** 9 (+785/-13)
+- **Duration:** 562ss
+- **Approach:** N/A
+
+## WO-098: User Story: WO-098 - Cross-Tenant Isolation and RBAC Negative Test Suite
+- **Status:** completed
+- **Commit:** `a821284`
+- **Files:** 9 (+2636/-0)
+- **Duration:** 796ss
+- **Approach:** N/A
+
+## WO-065: User Story: WO-065 - Agent-facing AI summary review, edit and regenerate
+- **Status:** completed
+- **Commit:** `061e8a3`
+- **Files:** 3 (+62/-1)
+- **Duration:** 233ss
+- **Approach:** N/A
+
+## WO-069: User Story: WO-069 - Five-Second Delta Publisher and Sequenced Reconnect Backfill
+- **Status:** completed
+- **Commit:** `62bf026`
+- **Files:** 16 (+1915/-45)
+- **Duration:** 1135ss
+- **Approach:** N/A
+
+## WO-090: User Story: WO-090 - Portal ticket tracking with public-only comment visibility
+- **Status:** completed
+- **Commit:** `fb0abf4`
+- **Files:** 9 (+1585/-94)
+- **Duration:** 673ss
+- **Approach:** N/A
+
+## WO-099: User Story: WO-099 - Generate OpenAPI 3.1 Specification From Code
+- **Status:** completed
+- **Commit:** `f01db50`
+- **Files:** 17 (+5611/-2)
+- **Duration:** 1103ss
+- **Approach:** N/A
+
+## WO-070: User Story: WO-070 - Live Dashboard UI with Countdown Interpolation and Polling Fallback
+- **Status:** completed
+- **Commit:** `a346516`
+- **Files:** 11 (+1346/-2)
+- **Duration:** 677ss
+- **Approach:** N/A
+
+## WO-091: User Story: WO-091 - Administrator approval queue for pending portal signups
+- **Status:** completed
+- **Commit:** `36077a8`
+- **Files:** 8 (+1211/-1)
+- **Duration:** 452ss
+- **Approach:** N/A
+
+## WO-102: User Story: WO-102 - Performance And SLO Validation Test Suite
+- **Status:** completed
+- **Commit:** `6f81f97`
+- **Files:** 18 (+3267/-0)
+- **Duration:** 853ss
+- **Approach:** N/A
+
+## WO-071: User Story: WO-071 - Streaming Pipeline Observability, SLIs and Degradation Alerting
+- **Status:** completed
+- **Commit:** `b93dd02`
+- **Files:** 13 (+1068/-16)
+- **Duration:** 461ss
+- **Approach:** N/A
