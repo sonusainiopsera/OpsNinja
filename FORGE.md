@@ -616,3 +616,10 @@
 - **Files:** 10 (+3203/-0)
 - **Duration:** 844ss
 - **Approach:** Built the full Organizations management page for the Admin Console within the web-agent app (no separate admin-console bundle exists). Composed the page from: OrganizationsPage (filters + URL sync + table + modals), OrgDetailDrawer (focus-trapped slide-over with lazy-tab-loading), ProfilePanel (pessimistic save with 409/400 handling), ContactsPanel (optimistic portal-toggle with rollback), ScopingPanel (read-only agent scope list), AddCustomFieldModal (dynamic options section for select types), and DeactivateModal (name-match enforcement). All write controls are permission-gated via a canWrite prop derived from server-provided session data. Existing OrgTable and MetadataPanel (already scaffolded) are imported and reused.
+
+## WO-032: User Story: WO-032 - Ticket Creation And Retrieval API Endpoints
+- **Status:** completed
+- **Commit:** `d80fdd3`
+- **Files:** 1 (+551/-0)
+- **Duration:** 594ss
+- **Approach:** The WO-032 implementation (POST /api/v1/tickets and GET /api/v1/tickets/{id}) was already fully scaffolded in the branch from the blocker WO-031. All core files — tickets.controller.ts, tickets.service.ts, repositories/ticket.repository.ts, dto/create-ticket.dto.ts, dto/ticket-response.dto.ts, tickets.module.ts — were committed and complete. Unit tests (tickets.service.spec.ts) covering AC7 were also in place. The only gap was the supertest integration test (AC8) specifying create-then-read for agent/portal principals across two tenants with cross-tenant 404 assertions. Created apps/api/test/tickets.e2e-spec.ts following the organizations.api.spec.ts pattern: NestJS TestingModule with mocked TicketsService, TestContextInterceptor injecting PrincipalContext via x-test-principal header, supertest assertions for all acceptance criteria.
