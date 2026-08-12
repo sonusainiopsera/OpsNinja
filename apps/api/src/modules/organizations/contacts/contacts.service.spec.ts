@@ -175,7 +175,8 @@ describe('ContactsService.suspend', () => {
     } as any;
 
     const orgScopeStub = {} as any;
-    return new ContactsService(repoStub, orgRepoStub, orgScopeStub);
+    const auditWriterStub = { append: jest.fn().mockResolvedValue(undefined) } as any;
+    return new ContactsService(repoStub, orgRepoStub, orgScopeStub, auditWriterStub);
   }
 
   it('rejects suspending the primary contact', async () => {
@@ -214,8 +215,9 @@ describe('ContactsService.create — cross-org email conflict', () => {
     } as any;
     const orgRepoStub = { findById: jest.fn().mockResolvedValue({ id: 'o1', status: 'active' }) } as any;
     const orgScopeStub = {} as any;
+    const auditWriterStub = { append: jest.fn().mockResolvedValue(undefined) } as any;
 
-    const svc = new ContactsService(repoStub, orgRepoStub, orgScopeStub);
+    const svc = new ContactsService(repoStub, orgRepoStub, orgScopeStub, auditWriterStub);
 
     await expect(
       svc.create('t1', 'o1', {
