@@ -945,3 +945,10 @@
 - **Files:** 3 (+886/-0)
 - **Duration:** 707ss
 - **Approach:** N/A
+
+## WO-071: User Story: WO-071 - Streaming Pipeline Observability, SLIs and Degradation Alerting
+- **Status:** completed
+- **Commit:** `29797ca`
+- **Files:** 8 (+1735/-1)
+- **Duration:** 665ss
+- **Approach:** The bulk of WO-071's implementation (metrics-registry, health indicators, gateway/pipeline metrics, alert rules, SLO definitions, health controller, internal metrics server) was already committed in prior WOs. The remaining gaps were: the runbook document (AC8), unit tests for metrics-registry and health indicators (AC10), synthetic metric scrape fixtures (AC12), and alert expression evaluation tests (AC11). Created the runbook at docs/runbooks/realtime-dashboard.md covering all five alert degradation rungs with per-alert symptom/blast-radius/first-checks/mitigation/escalation/verification sections, plus a manual reconciliation procedure and Redis-vs-Postgres drift verification script. Added metrics-registry.spec.ts testing duplicate registration safety, cardinality guard enforcement (tenantId/ticketId/userId blocked on counters, allowed on gauges with allowTenantLabel), counter/gauge/histogram operations, Prometheus text format output and the singleton factory. Added readiness.indicator.spec.ts covering LivenessIndicator, RedisPingIndicator (with hysteresis), PgBouncerPingIndicator, ReadinessComposite (all-pass, one-fail, throwing indicator) and a readiness-flip integration simulation. Created three Prometheus text-format fixture files (healthy, stalled-publisher, drift) and alert-expressions.spec.ts which parses the fixtures and evaluates the alert conditions in-process, asserting the stalled fixture fires RealtimeNoFramesPublished, the drift fixture fires RealtimeAggregateDriftHigh/DlqNonEmpty/SnapshotSourceDatabaseHigh, and the healthy fixture fires none. Also validates the YAML structure of realtime.rules.yaml and realtime.slo.yaml. Added a validate-rules npm script for promtool-based CI lint.
