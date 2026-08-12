@@ -854,3 +854,10 @@
 - **Files:** 3 (+1722/-0)
 - **Duration:** 785ss
 - **Approach:** WO-055 delivers the inbound Jira sync worker pipeline. All core source files were already committed from blocker WOs (WO-054, WO-053): inbound.handler.ts (714-line pipeline with guarded claim, RLS binding, event classification, status translation, comment mirroring, loop prevention, link metadata update, Redis publish), event-classifier.ts (pure-function classifier with loop detection and stale-event guard), adf-converter.ts (ADF→plain-text converter with allow-list and truncation), worker.module.ts (InboundHandler registered with Pool+Redis injection), and migration 0032_jira_inbound_sync.sql (external_ref unique index, jira_updated_at, orphaned flag, integration_account_id). The implementation gap was the test surface (AC10–AC12): created event-classifier.spec.ts (22 unit tests for the pure classifier), inbound.handler.spec.ts (27 handler tests with FakePool/FakeRedis covering all AC paths), and test/fixtures/inbound-sync.fixtures.ts (8 envelope fixtures + factory helpers). All mock-based tests run without Postgres or Redis; DB-backed stubs in maybeDescribe document real-DB assertions for CI with DATABASE_URL.
+
+## WO-056: User Story: WO-056 - Outbound Jira Sync Resilience: Retry, Rate Limit, DLQ
+- **Status:** completed
+- **Commit:** `1a0d8de`
+- **Files:** 7 (+1321/-0)
+- **Duration:** 713ss
+- **Approach:** N/A

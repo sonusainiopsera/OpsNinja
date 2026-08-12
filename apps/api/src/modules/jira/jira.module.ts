@@ -25,6 +25,10 @@ import { RedisCacheService } from '../../infra/cache/redis-cache';
 // WO-059: audit trail and observability
 import { JiraAuditController } from './audit/jira-audit.controller';
 import { JiraAuditRecorder } from './audit/jira-audit.recorder';
+// WO-056: DLQ inspection and replay
+import { JiraDlqController } from './dlq/jira-dlq.controller';
+import { JiraDlqService } from './dlq/jira-dlq.service';
+import { JiraDlqRepository } from './dlq/jira-dlq.repository';
 
 @Module({
   imports: [AuditModule],
@@ -34,6 +38,7 @@ import { JiraAuditRecorder } from './audit/jira-audit.recorder';
     JiraLinksController,
     JiraHealthController,
     JiraAuditController,
+    JiraDlqController,
   ],
   providers: [
     JiraConnectionsService,
@@ -67,6 +72,10 @@ import { JiraAuditRecorder } from './audit/jira-audit.recorder';
     RedisCacheService,
     // WO-059: audit recorder
     JiraAuditRecorder,
+    // WO-056: DLQ inspection and replay
+    JiraDlqController,
+    JiraDlqService,
+    JiraDlqRepository,
   ],
   exports: [JiraConnectionsService, JiraTokenProvider, JiraLinksService, JiraAuditRecorder],
 })
