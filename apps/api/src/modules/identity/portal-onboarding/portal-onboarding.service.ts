@@ -23,7 +23,7 @@ import {
 import { eq, and } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
-import { portalOnboardingStates, outboxEvents } from '@opsninja/db';
+import { portalOnboardingStates, outboxEvents, auditLogs } from '@opsninja/db';
 import type { PortalOnboardingState } from '@opsninja/db';
 import { TenantRepository } from '../../../data/tenant-repository';
 import { getPrincipalContext } from '../../../observability/request-context';
@@ -226,6 +226,7 @@ export class PortalOnboardingService extends TenantRepository {
         ),
       );
 
+    // Outbox event — portal_user.onboarded (AC-8)
     await this.tx.insert(outboxEvents).values({
       id:             randomUUID(),
       tenantId,
@@ -235,6 +236,21 @@ export class PortalOnboardingService extends TenantRepository {
       payload:        { tenantId, userId, completedAt: now.toISOString() } as never,
       status:         'pending',
       createdAt:      now,
+    });
+
+    // Audit log entry — same transaction as state update (AC-8)
+    await this.tx.insert(auditLogs).values({
+      id:           randomUUID(),
+      tenantId,
+      actorId:      userId,
+      actorKind:    'portal',
+      eventType:    'portal.onboarding.completed',
+      outcome:      'allowed',
+      resourceType: 'portal_onboarding_state',
+      resourceId:   userId,
+      action:       'complete',
+      traceId:      randomUUID(),
+      createdAt:    now,
     });
 
     this.emitMetric('portal_onboarding_completed_total', tenantId);

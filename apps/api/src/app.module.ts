@@ -18,6 +18,7 @@ import { TenantContextInterceptor } from './common/tenant/tenant-context.interce
 import { AuditInterceptor } from './modules/audit/audit.interceptor';
 import { AuthGuard } from './common/auth/auth.guard';
 import { AuthModule } from './common/auth/auth.module';
+import { OnboardingRequiredGuard } from './modules/identity/guards/onboarding-required.guard';
 import { RedisModule } from './common/redis/redis.module';
 import { HealthModule } from './health/health.module';
 import { IdentityModule } from './modules/identity/identity.module';
@@ -67,6 +68,14 @@ import { AiModule } from './modules/ai/ai.module';
     {
       provide: APP_GUARD,
       useClass: AuthGuard,
+    },
+    // ── Global guard: OnboardingRequiredGuard ─────────────────────────────────
+    // Runs after AuthGuard (second APP_GUARD registration).
+    // Blocks portal write endpoints with 403 ONBOARDING_REQUIRED until the
+    // wizard is complete. Wizard routes and read-only methods are exempt.
+    {
+      provide: APP_GUARD,
+      useClass: OnboardingRequiredGuard,
     },
     // ── Global interceptor: TenantContextInterceptor ──────────────────────────
     // Reads request.user (set by AuthGuard), opens the tenant-scoped transaction,

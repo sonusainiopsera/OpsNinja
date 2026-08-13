@@ -26,6 +26,7 @@ import { PortalSignupService } from './portal-signup/portal-signup.service';
 import { SignupThrottleGuard } from './guards/signup-throttle.guard';
 import { PortalOnboardingController } from './portal-onboarding/portal-onboarding.controller';
 import { PortalOnboardingService } from './portal-onboarding/portal-onboarding.service';
+import { OnboardingRequiredGuard } from './guards/onboarding-required.guard';
 import { AdminPortalSignupsController } from './admin/admin-portal-signups.controller';
 import { AdminPortalSignupsService } from './admin/admin-portal-signups.service';
 import { SignupExpiryWorker } from '../../workers/cleanup/signup-expiry.worker';
@@ -55,6 +56,7 @@ import { SignupExpiryWorker } from '../../workers/cleanup/signup-expiry.worker';
     PortalSignupService,
     SignupThrottleGuard,
     PortalOnboardingService,
+    OnboardingRequiredGuard,
     AdminPortalSignupsService,
     SignupExpiryWorker,
     {
@@ -62,6 +64,6 @@ import { SignupExpiryWorker } from '../../workers/cleanup/signup-expiry.worker';
       useClass: RefreshSessionRepository,
     },
   ],
-  exports: [TokenService, SessionService, AuditService, AuthAuditEmitter, SignupExpiryWorker],
+  exports: [TokenService, SessionService, AuditService, AuthAuditEmitter, SignupExpiryWorker, OnboardingRequiredGuard],
 })
 export class IdentityModule {}
