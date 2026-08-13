@@ -1,14 +1,15 @@
-import React from 'react';
+/**
+ * Portal tickets list page — WO-090 AC1, AC2, AC9.
+ *
+ * Renders the TicketListPage feature component which provides:
+ *   - Paginated list of the authenticated user's organisation tickets
+ *   - Status badge + SLA hint per row
+ *   - Allow-listed status and subject search filters
+ *   - Cursor pagination
+ */
+
+import { TicketListPage } from '../../../src/features/tickets/TicketListPage';
 
 export default function TicketsPage() {
-  return (
-    <section aria-labelledby="tickets-heading" style={{ padding: 24 }}>
-      <h1 id="tickets-heading" style={{ margin: '0 0 16px', fontSize: 22, fontWeight: 600 }}>
-        My Tickets
-      </h1>
-      <p style={{ color: 'var(--portal-fg-muted, #6b7280)' }}>
-        Your support tickets will appear here.
-      </p>
-    </section>
-  );
+  return <TicketListPage />;
 }
