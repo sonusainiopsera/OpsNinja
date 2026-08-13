@@ -4,11 +4,13 @@
  * Rules applied (in order):
  *   1. Strip null bytes (\0).
  *   2. Normalise unicode (NFC) to collapse combining characters.
- *   3. Strip path separators (/ \) and directory traversal sequences (.. ./).
- *   4. Strip leading dots (hidden file convention, e.g. .bash_history).
- *   5. Strip trailing dots and spaces (Windows filename edge cases).
- *   6. Truncate to MAX_FILENAME_LENGTH characters.
- *   7. If the result is empty after sanitisation, return FALLBACK_FILENAME.
+ *   3. Strip dangerous unicode control characters (bidirectional overrides,
+ *      zero-width spaces, etc.) used in homograph / RTLO attacks.
+ *   4. Strip path separators (/ \) and directory traversal sequences (.. ./).
+ *   5. Strip leading dots (hidden file convention, e.g. .bash_history).
+ *   6. Strip trailing dots and spaces (Windows filename edge cases).
+ *   7. Truncate to MAX_FILENAME_LENGTH characters.
+ *   8. If the result is empty after sanitisation, return FALLBACK_FILENAME.
  *
  * The output is ONLY used as a display name in the API response. The S3 storage
  * key is ALWAYS a server-generated UUID path — it never derives from this value.
@@ -18,6 +20,17 @@
 
 const MAX_FILENAME_LENGTH = 255;
 const FALLBACK_FILENAME = 'attachment';
+
+/**
+ * Dangerous Unicode ranges stripped from filenames:
+ *   U+200B-U+200F  zero-width space, ZWNJ, ZWJ, LRM, RLM
+ *   U+202A-U+202E  LRE, RLE, PDF, LRO, RLO (incl. RTLO U+202E)
+ *   U+2028-U+2029  line / paragraph separator
+ *   U+206A-U+206F  deprecated formatting characters
+ *   U+FEFF         byte order mark / zero-width no-break space
+ */
+
+const DANGEROUS_UNICODE_RE = /[\u200B-\u200F\u202A-\u202E\u2028-\u2029\u206A-\u206F\uFEFF]/g;
 
 /**
  * Sanitise a user-supplied filename into a safe display name.
@@ -36,26 +49,30 @@ export function sanitiseFilename(raw: string): string {
   // 2. Normalise unicode
   name = name.normalize('NFC');
 
-  // 3. Take only the basename — strip everything up to and including the
-  //    last path separator (covers both / and \).
+  // 3. Strip dangerous bidirectional and invisible unicode control characters
+  //    (RTLO U+202E and friends used in homograph / extension-spoofing attacks)
+  name = name.replace(DANGEROUS_UNICODE_RE, '');
+
+  // 4. Take only the basename — strip everything up to and including the
+  //    last path separator (covers both / and \\).
   const lastSep = Math.max(name.lastIndexOf('/'), name.lastIndexOf('\\'));
   if (lastSep !== -1) {
     name = name.slice(lastSep + 1);
   }
 
-  // 4. Remove directory traversal sequences
-  name = name.replace(/\.\./g, '').replace(/\.\//g, '').replace(/\.\\/g, '');
+  // 5. Remove directory traversal sequences
+  name = name.replace(/\.\./g, '').replace(/\.\/g, '').replace(/\.\\\\/g, '');
 
-  // 5. Remove remaining path separator characters
-  name = name.replace(/[/\\]/g, '');
+  // 6. Remove remaining path separator characters
+  name = name.replace(/[\/\\\\]/g, '');
 
-  // 6. Strip leading dots (hidden files)
+  // 7. Strip leading dots (hidden files)
   name = name.replace(/^\.+/, '');
 
-  // 7. Strip trailing dots and spaces
+  // 8. Strip trailing dots and spaces
   name = name.replace(/[.\s]+$/, '');
 
-  // 8. Truncate
+  // 9. Truncate
   if (name.length > MAX_FILENAME_LENGTH) {
     // Preserve extension when truncating
     const dotIdx = name.lastIndexOf('.');
@@ -68,7 +85,7 @@ export function sanitiseFilename(raw: string): string {
     }
   }
 
-  // 9. Fallback for empty result
+  // 10. Fallback for empty result
   if (!name) return FALLBACK_FILENAME;
 
   return name;

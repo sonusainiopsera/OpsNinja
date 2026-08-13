@@ -29,6 +29,7 @@ import { PortalAttachmentsService } from './portal/portal-attachments.service';
 import { S3ObjectStore } from './attachments/storage/s3-object-store';
 import { OBJECT_STORE_PORT } from './attachments/storage/object-store.port';
 import { TicketSlaController } from '../sla/ticket-sla.controller';
+import { OrphanAttachmentReaper } from '../../workers/cleanup/orphan-attachment-reaper';
 
 @Module({
   imports: [AuthModule, AuditModule, OrganizationsModule, ViewsModule, SlaModule],
@@ -71,6 +72,8 @@ import { TicketSlaController } from '../sla/ticket-sla.controller';
     S3ObjectStore,
     // Portal attachments — pre-ticket presign/confirm workflow (WO-089)
     PortalAttachmentsService,
+    // Orphan attachment reaper — hourly cleanup of unfinalized attachments (WO-089, AC-10)
+    OrphanAttachmentReaper,
   ],
   exports: [
     TicketRepository,
@@ -83,6 +86,7 @@ import { TicketSlaController } from '../sla/ticket-sla.controller';
     CommentsService,
     AttachmentsService,
     PortalAttachmentsService,
+    OrphanAttachmentReaper,
   ],
 })
 export class TicketsModule {}

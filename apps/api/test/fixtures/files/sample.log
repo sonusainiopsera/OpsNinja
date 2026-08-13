@@ -1,0 +1,5 @@
+2026-01-15T10:01:23.123Z [INFO] Pipeline started: build-12345
+2026-01-15T10:01:23.456Z [INFO] Checking out refs/heads/main at abc1234
+2026-01-15T10:01:45.789Z [ERROR] npm install failed: ERESOLVE could not resolve
+2026-01-15T10:01:45.790Z [ERROR] peer dep react@^18 required by foo@1.2.3 but got react@19.0.0
+2026-01-15T10:01:45.791Z [INFO] Exit code 1 — pipeline failed
